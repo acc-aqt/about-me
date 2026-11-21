@@ -1,5 +1,18 @@
-import kaplay from "kaplay";
+import kaplay, { type Vec2 } from "kaplay";
 import type { Content, PointOfInterest, Zone } from "./content";
+import {
+  PLAYER_ANIMS,
+  Pixels,
+  TILE_COLUMNS,
+  TILE_ROWS,
+  TILE_SIZE,
+  TILES,
+  ZONE_ART,
+  paintFilmRoll,
+  paintPlayerSheet,
+  paintSky,
+  type ZoneArt,
+} from "./art";
 import { photoPaths } from "./photos";
 
 const VIEW_WIDTH = 320;
@@ -16,10 +29,7 @@ const PRINT_SPACING = 34;
 const PRINT_Y = GROUND_Y - 64;
 const CUE_ABOVE_PRINTS_Y = PRINT_Y - 18;
 
-const ZONE_COLORS: [number, number, number][] = [
-  [135, 190, 230],
-  [160, 170, 190],
-];
+const CUE_BOB = 2;
 
 export type GameButton = "left" | "right" | "shutter";
 
@@ -83,15 +93,70 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   const route = layOutRoute(content);
 
-  route.zones.forEach(({ zone, x }, index) => {
-    k.add([k.rect(zone.width, GROUND_Y), k.pos(x, 0), k.color(...ZONE_COLORS[index % ZONE_COLORS.length])]);
-    k.add([k.text(zone.title, { size: 8 }), k.pos(x + 8, 8), k.color(20, 20, 30)]);
-  });
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  k.add([k.rect(route.routeWidth, VIEW_HEIGHT - GROUND_Y), k.pos(0, GROUND_Y), k.color(90, 160, 70)]);
+  k.loadSprite("tiles", import.meta.env.BASE_URL + "art/kenney-pixel-platformer-tiles.png", {
+    sliceX: TILE_COLUMNS,
+    sliceY: TILE_ROWS,
+  });
+  k.loadSprite("player", paintPlayerSheet(), { sliceX: 5, anims: PLAYER_ANIMS });
+  k.loadSprite("film-roll", paintFilmRoll());
+
+  const parallaxLayers = route.zones.flatMap((placed) => addZoneBackdrop(placed, ZONE_ART[placed.zone.id] ?? ZONE_ART.start));
+
+  function addZoneBackdrop({ zone, x }: PlacedZone, art: ZoneArt) {
+    const skyName = `sky-${zone.id}`;
+    k.loadSprite(skyName, paintSky(art.sky, GROUND_Y));
+    const frame = k.add([k.rect(zone.width, GROUND_Y), k.pos(x, 0), k.mask("intersect")]);
+    frame.add([k.sprite(skyName, { width: zone.width, height: GROUND_Y })]);
+
+    const cameraAtCentre = Math.min(Math.max(x + zone.width / 2, VIEW_WIDTH / 2), route.routeWidth - VIEW_WIDTH / 2);
+    const layers = art.layers.map((layer, index) => {
+      const depth = reducedMotion ? 0 : layer.depth;
+      const margin = Math.ceil((zone.width / 2 + VIEW_WIDTH) * depth);
+      const pixels = new Pixels(zone.width + margin * 2, GROUND_Y, -margin);
+      layer.paint(pixels, -margin, zone.width + margin);
+      const name = `backdrop-${zone.id}-${index}`;
+      k.loadSprite(name, pixels.canvas);
+      const object = frame.add([k.sprite(name), k.pos(-margin, 0)]);
+      return { object, depth, restX: -margin, cameraAtCentre };
+    });
+
+    addLabelPlate(zone.title, k.vec2(x + 8, 8), "topleft");
+    k.add([k.text(zone.title, { size: 8 }), k.pos(x + 8, 8), k.color(...art.label)]);
+    k.add([
+      k.sprite("tiles", { frame: art.ground, tiled: true, width: zone.width, height: TILE_SIZE }),
+      k.pos(x, GROUND_Y),
+      k.color(...art.groundTint),
+    ]);
+    k.add([
+      k.sprite("tiles", { frame: TILES.dirt, tiled: true, width: zone.width, height: TILE_SIZE }),
+      k.pos(x, GROUND_Y + TILE_SIZE),
+      k.color(...art.groundTint),
+    ]);
+    for (const prop of art.props) {
+      k.add([k.sprite("tiles", { frame: prop.frame }), k.pos(x + prop.x, GROUND_Y), k.anchor("bot"), k.color(...art.groundTint)]);
+    }
+    return layers;
+  }
+
+  function addLabelPlate(text: string, position: Vec2, anchor: "topleft" | "bot", wrapWidth?: number) {
+    const lineWidth = k.formatText({ text, size: 8 }).width;
+    const height = k.formatText({ text, size: 8, width: wrapWidth }).height;
+    const width = Math.min(lineWidth, wrapWidth ?? lineWidth);
+    const offset = anchor === "bot" ? k.vec2(0, 1) : k.vec2(-2, -2);
+    k.add([k.rect(width + 4, height + 3), k.pos(position.add(offset)), k.anchor(anchor), k.color(251, 248, 240), k.opacity(0.7)]);
+  }
+
+  function updateParallax(cameraX: number) {
+    for (const layer of parallaxLayers) {
+      if (layer.depth > 0) layer.object.pos.x = Math.round(layer.restX + (cameraX - layer.cameraAtCentre) * layer.depth);
+    }
+  }
 
   for (const { poi, x } of route.pointsOfInterest) {
-    k.add([k.rect(16, 24), k.pos(x, GROUND_Y), k.anchor("bot"), k.color(230, 180, 60), k.outline(1)]);
+    k.add([k.sprite("tiles", { frame: TILES.sign }), k.pos(x, GROUND_Y), k.anchor("bot")]);
+    addLabelPlate(poi.title, k.vec2(x, GROUND_Y - 30), "bot", POI_LABEL_WIDTH);
     k.add([
       k.text(poi.title, { size: 8, width: POI_LABEL_WIDTH, align: "center" }),
       k.pos(x, GROUND_Y - 30),
@@ -115,7 +180,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   const filmRolls = route.filmRolls.map(({ zone, x }) => ({
     zone,
     x,
-    sprite: k.add([k.rect(4, 5), k.pos(x, GROUND_Y), k.anchor("bot"), k.color(30, 30, 30), k.outline(1, k.rgb(230, 180, 60))]),
+    sprite: k.add([k.sprite("film-roll"), k.pos(x, GROUND_Y), k.anchor("bot")]),
   }));
 
   const proximityCue = k.add([
@@ -127,8 +192,13 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     k.opacity(0),
   ]);
 
-  const player = k.add([k.rect(12, 20), k.pos(PLAYER_START_X, GROUND_Y), k.anchor("bot"), k.color(200, 60, 60)]);
-  player.add([k.rect(6, 4), k.pos(4, -12), k.anchor("center"), k.color(30, 30, 30)]);
+  const player = k.add([k.sprite("player", { anim: "idle" }), k.pos(PLAYER_START_X, GROUND_Y), k.anchor("bot")]);
+
+  function animatePlayer(direction: number) {
+    if (direction !== 0) player.flipX = direction < 0;
+    const anim = direction === 0 ? "idle" : "walk";
+    if (player.getCurAnim()?.name !== anim) player.play(anim);
+  }
 
   let nearby: PointOfInterest | null = null;
 
@@ -143,9 +213,12 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     const direction = Number(k.isButtonDown("right")) - Number(k.isButtonDown("left"));
     const previousX = player.pos.x;
     player.pos.x = Math.min(Math.max(player.pos.x + direction * PLAYER_SPEED * k.dt(), 0), route.routeWidth);
+    animatePlayer(direction);
 
     const halfView = VIEW_WIDTH / 2;
-    k.setCamPos(Math.min(Math.max(player.pos.x, halfView), route.routeWidth - halfView), VIEW_HEIGHT / 2);
+    const cameraX = Math.min(Math.max(player.pos.x, halfView), route.routeWidth - halfView);
+    k.setCamPos(cameraX, VIEW_HEIGHT / 2);
+    updateParallax(cameraX);
 
     const sweptFrom = Math.min(previousX, player.pos.x) - FILM_ROLL_PICKUP_RANGE;
     const sweptTo = Math.max(previousX, player.pos.x) + FILM_ROLL_PICKUP_RANGE;
@@ -164,7 +237,8 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     proximityCue.opacity = current ? 1 : 0;
     if (current) {
       const cueY = current.poi.photos?.length ? CUE_ABOVE_PRINTS_Y : GROUND_Y - 56;
-      proximityCue.pos = k.vec2(current.x, cueY + Math.sin(k.time() * 8) * 2);
+      const bob = reducedMotion ? 0 : Math.sin(k.time() * 8) * CUE_BOB;
+      proximityCue.pos = k.vec2(current.x, cueY + bob);
     }
   });
 

@@ -156,6 +156,25 @@ body {
   background: rgb(0 0 0 / 0.7);
 }
 
+.viewfinder[open] {
+  animation: shutter-open 180ms steps(4, end);
+}
+
+@keyframes shutter-open {
+  from {
+    clip-path: inset(50% 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewfinder[open] {
+    animation: none;
+  }
+}
+
 .viewfinder article {
   position: relative;
   padding: 1.5rem;

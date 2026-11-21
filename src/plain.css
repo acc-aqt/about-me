@@ -82,3 +82,9 @@ a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+.plain-footer {
+  margin-top: 3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
