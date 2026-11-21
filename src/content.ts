@@ -26,8 +26,17 @@ export type PointOfInterest = {
   placement: Placement;
 };
 
+export type ZoneId =
+  | "start"
+  | "career-road"
+  | "maker-workshop"
+  | "photography-trail"
+  | "sport"
+  | "music-and-games"
+  | "contact";
+
 export type Zone = {
-  id: string;
+  id: ZoneId;
   title: string;
   /** Length of the Zone along the Route, in world pixels. */
   width: number;

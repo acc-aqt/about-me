@@ -1,7 +1,12 @@
 // Original pixel art, painted in code at start-up so no large image files ship.
 // Only the ground, signs and small props come from Kenney's CC0 Pixel Platformer tiles (see CREDITS.md).
 
+import type { ZoneId } from "./content";
+
 export type Rgb = [number, number, number];
+
+/** The ground line, in view pixels from the top; the Player and every prop stand on it. */
+export const GROUND_Y = 156;
 
 export const TILE_SIZE = 18;
 export const TILE_COLUMNS = 20;
@@ -66,6 +71,8 @@ function hex(value: string): Rgb {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+export const INK = hex("#1d1d24");
+
 function hash(n: number): number {
   let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
@@ -91,15 +98,14 @@ export function paintSky([top, bottom]: [Rgb, Rgb], height: number): HTMLCanvasE
   return pixels.canvas;
 }
 
-// ---------- Player: a photographer in a beanie holding a camera, facing right ----------
 
 const PLAYER_COLORS: Record<string, Rgb> = {
-  k: hex("#1d1d24"),
+  k: INK,
   b: hex("#d8613a"),
   B: hex("#a8452a"),
   h: hex("#5a3825"),
   s: hex("#f1c9a0"),
-  e: hex("#1d1d24"),
+  e: INK,
   j: hex("#3c8c84"),
   J: hex("#2a645f"),
   c: hex("#2b2b33"),
@@ -173,17 +179,21 @@ const PLAYER_LEGS = [
   ],
 ];
 
+/** Leg pose per sheet frame: frame 0 stands idle, the rest form the walk cycle. */
+const PLAYER_LEG_SEQUENCE = [0, 1, 2, 3, 2];
+
+export const PLAYER_FRAME_COUNT = PLAYER_LEG_SEQUENCE.length;
+
 export const PLAYER_ANIMS = {
   idle: 0,
-  walk: { from: 1, to: 4, loop: true, speed: 10 },
+  walk: { from: 1, to: PLAYER_FRAME_COUNT - 1, loop: true, speed: 10 },
 };
 
 export function paintPlayerSheet(): HTMLCanvasElement {
-  const frames = [0, 1, 2, 3, 2];
-  const pixels = new Pixels(PLAYER_FRAME_WIDTH * frames.length, PLAYER_FRAME_HEIGHT);
-  frames.forEach((legs, frame) => {
+  const pixels = new Pixels(PLAYER_FRAME_WIDTH * PLAYER_FRAME_COUNT, PLAYER_FRAME_HEIGHT);
+  PLAYER_LEG_SEQUENCE.forEach((legs, frame) => {
     const bob = legs === 2 ? 1 : 0;
-    const rows = [...PLAYER_BODY.map((row, y) => ({ row, y: y + bob })), ...PLAYER_LEGS[legs].map((row, y) => ({ row, y: y + 16 }))];
+    const rows = [...PLAYER_BODY.map((row, y) => ({ row, y: y + bob })), ...PLAYER_LEGS[legs].map((row, y) => ({ row, y: y + PLAYER_BODY.length }))];
     for (const { row, y } of rows) {
       [...row].forEach((char, x) => {
         const color = PLAYER_COLORS[char];
@@ -196,22 +206,19 @@ export function paintPlayerSheet(): HTMLCanvasElement {
 
 export function paintFilmRoll(): HTMLCanvasElement {
   const rows = [".ggg..", "kkkkk.", "krrrkk", "krkrk.", "krrrk.", "kkkkk.", ".ggg.."];
-  const colors: Record<string, Rgb> = { g: hex("#c4c8d0"), k: hex("#1d1d24"), r: hex("#e6b43c") };
+  const colors: Record<string, Rgb> = { g: hex("#c4c8d0"), k: INK, r: hex("#e6b43c") };
   const pixels = new Pixels(6, rows.length);
   rows.forEach((row, y) => [...row].forEach((char, x) => colors[char] && pixels.dot(x, y, colors[char])));
   return pixels.canvas;
 }
 
-// ---------- Backdrop painters (x is local to the Zone; y is in view pixels, ground at `base`) ----------
-
-const BASE = 156;
 
 function hills(color: Rgb, height: number, amplitude: number, period: number, seed: number): Painter {
   return (pixels, from, to) => {
     for (let x = Math.floor(from); x < to; x++) {
       const wave = Math.sin(x / period + seed) * 0.6 + Math.sin(x / (period * 0.37) + seed * 2) * 0.4;
-      const top = Math.round(BASE - height - wave * amplitude);
-      pixels.rect(x, top, 1, BASE - top, color);
+      const top = Math.round(GROUND_Y - height - wave * amplitude);
+      pixels.rect(x, top, 1, GROUND_Y - top, color);
     }
   };
 }
@@ -228,21 +235,21 @@ function mountains(style: MountainStyle, range?: [number, number]): Painter {
     for (let i = firstPeak; i <= lastPeak; i++) {
       peaks.push({
         x: i * style.spacing + (hash(i * 7 + style.seed) - 0.5) * style.spacing * 0.6,
-        top: BASE - style.height * (0.6 + hash(i * 13 + style.seed) * 0.4),
+        top: GROUND_Y - style.height * (0.6 + hash(i * 13 + style.seed) * 0.4),
       });
     }
     for (let x = start; x < end; x++) {
-      let best = { y: BASE, peak: peaks[0] };
+      let best = { y: GROUND_Y, peak: peaks[0] };
       for (const peak of peaks) {
         const y = peak.top + Math.abs(x - peak.x) * 1.1;
         if (y < best.y) best = { y, peak };
       }
-      if (range) best.y = Math.max(best.y, BASE - (BASE - best.y) * Math.min(1, (x - range[0]) / 40, (range[1] - x) / 40));
+      if (range) best.y = Math.max(best.y, GROUND_Y - (GROUND_Y - best.y) * Math.min(1, (x - range[0]) / 40, (range[1] - x) / 40));
       const top = Math.round(best.y);
       const lit = x <= best.peak.x;
-      const snowBottom = Math.min(BASE, best.peak.top + style.snowDepth + (hash(x) > 0.5 ? 1 : 0) + ((x >> 2) % 2) * 2);
+      const snowBottom = Math.min(GROUND_Y, best.peak.top + style.snowDepth + (hash(x) > 0.5 ? 1 : 0) + ((x >> 2) % 2) * 2);
       if (top < snowBottom) pixels.rect(x, top, 1, snowBottom - top, lit ? style.snow : style.snowShade);
-      pixels.rect(x, Math.max(top, snowBottom), 1, BASE - Math.max(top, snowBottom), lit ? style.lit : style.shade);
+      pixels.rect(x, Math.max(top, snowBottom), 1, GROUND_Y - Math.max(top, snowBottom), lit ? style.lit : style.shade);
     }
   };
 }
@@ -255,9 +262,9 @@ function pines(color: Rgb, spacing: number, seed: number, range?: [number, numbe
       const height = 10 + Math.round(hash(i * 3 + seed) * 10);
       for (let row = 0; row < height; row++) {
         const half = Math.floor((row % 6) / 2) + Math.floor(row / 6);
-        pixels.rect(x - half, BASE - height - 2 + row, half * 2 + 1, 1, color);
+        pixels.rect(x - half, GROUND_Y - height - 2 + row, half * 2 + 1, 1, color);
       }
-      pixels.rect(x, BASE - 2, 1, 2, mix(color, [40, 30, 20], 0.5));
+      pixels.rect(x, GROUND_Y - 2, 1, 2, mix(color, [40, 30, 20], 0.5));
     }
   };
 }
@@ -270,7 +277,7 @@ function skyline(body: Rgb, shade: Rgb, window: Rgb, seed: number, tall: number)
       const r = hash(slot * 31 + seed);
       const width = 14 + Math.round(hash(slot * 17 + seed) * 18);
       const height = Math.round(tall * (0.45 + r * 0.55));
-      const top = BASE - height;
+      const top = GROUND_Y - height;
       const kind = Math.floor(hash(slot * 5 + seed) * 6);
       pixels.rect(x, top, width, height, body);
       pixels.rect(x + width - 2, top, 2, height, shade);
@@ -292,7 +299,7 @@ function skyline(body: Rgb, shade: Rgb, window: Rgb, seed: number, tall: number)
       } else if (kind === 3) {
         pixels.rect(x + 3, top - 6, 2, 6, shade);
       }
-      for (let wy = top + 4; wy < BASE - 6; wy += 6) {
+      for (let wy = top + 4; wy < GROUND_Y - 6; wy += 6) {
         for (let wx = x + 3; wx < x + width - 4; wx += 4) {
           if (hash(wx * 3 + wy * 7 + seed) > 0.55) pixels.rect(wx, wy, 2, 3, window);
         }
@@ -339,7 +346,7 @@ function clouds(color: Rgb, spacing: number, seed: number): Painter {
 function workshop(x: number, width: number, body: Rgb, glow: Rgb): Painter {
   return (pixels, from, to) => {
     if (x + width < from || x > to) return;
-    const top = BASE - 46;
+    const top = GROUND_Y - 46;
     pixels.rect(x, top, width, 46, body);
     for (let tooth = x; tooth < x + width; tooth += 16) {
       for (let step = 0; step < 10; step++) pixels.rect(tooth, top - 10 + step, Math.min(16, step * 1.6 + 1), 1, body);
@@ -354,7 +361,7 @@ function jetEngineHangar(cx: number): Painter {
   const width = 176;
   const height = 100;
   const left = cx - width / 2;
-  const top = BASE - height;
+  const top = GROUND_Y - height;
   const wall = hex("#c3c9d2");
   const wallShade = hex("#8c95a3");
   const roof = hex("#5d6878");
@@ -366,34 +373,34 @@ function jetEngineHangar(cx: number): Painter {
   const bladeB = hex("#9aa3b2");
   const spinner = hex("#eef0f3");
   const stand = hex("#e0b030");
-  const hazard = hex("#1d1d24");
+  const hazard = INK;
   return (pixels, from, to) => {
     if (left + width < from || left > to) return;
     for (let x = 0; x < width; x++) {
       const t = x / (width - 1) - 0.5;
       const roofTop = top + 26 - Math.round(26 * (1 - 4 * t * t));
       pixels.rect(left + x, roofTop, 1, 4, roof);
-      pixels.rect(left + x, roofTop + 4, 1, BASE - roofTop - 4, x % 12 === 0 ? wallShade : wall);
+      pixels.rect(left + x, roofTop + 4, 1, GROUND_Y - roofTop - 4, x % 12 === 0 ? wallShade : wall);
     }
     const doorLeft = left + 22;
     const doorWidth = width - 44;
     const doorTop = top + 30;
-    pixels.rect(doorLeft, doorTop, doorWidth, BASE - doorTop, interior);
-    for (let y = doorTop; y < BASE; y += 4) {
+    pixels.rect(doorLeft, doorTop, doorWidth, GROUND_Y - doorTop, interior);
+    for (let y = doorTop; y < GROUND_Y; y += 4) {
       pixels.rect(doorLeft - 3, y, 3, 2, stand);
       pixels.rect(doorLeft - 3, y + 2, 3, 2, hazard);
       pixels.rect(doorLeft + doorWidth, y, 3, 2, stand);
       pixels.rect(doorLeft + doorWidth, y + 2, 3, 2, hazard);
     }
-    pixels.rect(doorLeft, BASE - 6, doorWidth, 6, floor);
+    pixels.rect(doorLeft, GROUND_Y - 6, doorWidth, 6, floor);
     for (let lamp = doorLeft + 8; lamp < doorLeft + doorWidth; lamp += 20) pixels.rect(lamp, doorTop + 2, 6, 2, hex("#fff1b8"));
 
     const radius = 24;
     const ex = cx;
-    const ey = BASE - 12 - radius;
-    pixels.rect(ex - 14, ey + radius - 2, 4, BASE - 6 - (ey + radius - 2), stand);
-    pixels.rect(ex + 10, ey + radius - 2, 4, BASE - 6 - (ey + radius - 2), stand);
-    pixels.rect(ex - 20, BASE - 8, 40, 3, stand);
+    const ey = GROUND_Y - 12 - radius;
+    pixels.rect(ex - 14, ey + radius - 2, 4, GROUND_Y - 6 - (ey + radius - 2), stand);
+    pixels.rect(ex + 10, ey + radius - 2, 4, GROUND_Y - 6 - (ey + radius - 2), stand);
+    pixels.rect(ex - 20, GROUND_Y - 8, 40, 3, stand);
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -434,7 +441,7 @@ const MOUNTAIN_NEAR: MountainStyle = {
   snowDepth: 12,
 };
 
-export const ZONE_ART: Record<string, ZoneArt> = {
+export const ZONE_ART: Record<ZoneId, ZoneArt> = {
   start: {
     sky: [hex("#7fa9d8"), hex("#f7d3aa")],
     ground: TILES.grass,

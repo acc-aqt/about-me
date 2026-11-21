@@ -1,7 +1,10 @@
 import kaplay, { type Vec2 } from "kaplay";
-import type { Content, PointOfInterest, Zone } from "./content";
+import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
 import {
+  GROUND_Y,
+  INK,
   PLAYER_ANIMS,
+  PLAYER_FRAME_COUNT,
   Pixels,
   TILE_COLUMNS,
   TILE_ROWS,
@@ -11,6 +14,7 @@ import {
   paintFilmRoll,
   paintPlayerSheet,
   paintSky,
+  type Rgb,
   type ZoneArt,
 } from "./art";
 import { photoPaths } from "./photos";
@@ -18,22 +22,25 @@ import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CHARS, PIXEL_
 
 const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 180;
-const GROUND_Y = VIEW_HEIGHT - 24;
 const PLAYER_SPEED = 160;
 const PLAYER_START_X = 40;
 const SHUTTER_RANGE = 28;
 const FILM_ROLL_PICKUP_RANGE = 8;
 const FAST_TRAVEL_OFFSET = 16;
 const POI_LABEL_WIDTH = 120;
-const PRINTS_PER_POINT = 3;
+const PRINTS_PER_POI = 3;
 const PRINT_SPACING = 34;
 const PRINT_Y = GROUND_Y - 64;
+const PRINT_FRAME_SIZE = 30;
+const PRINT_MAT_SIZE = 26;
+const PRINT_FRAME_COLOR: Rgb = [60, 40, 25];
+const PRINT_MAT_COLOR: Rgb = [245, 240, 225];
+const CUE_Y = GROUND_Y - 56;
 const CUE_ABOVE_PRINTS_Y = PRINT_Y - 18;
-
 const CUE_BOB = 2;
+const BACKGROUND: Rgb = [20, 20, 30];
 const LABEL_PADDING = 2;
-const LABEL_PLATE_COLOR: [number, number, number] = [251, 248, 240];
-const LABEL_INK: [number, number, number] = [20, 20, 30];
+const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 const ZONE_TITLE_Y = 8;
 const SIGN_LABEL_Y = GROUND_Y - 30;
 
@@ -42,7 +49,7 @@ export type GameButton = "left" | "right" | "shutter";
 export type GameControls = {
   press(button: GameButton): void;
   release(button: GameButton): void;
-  travelTo(zoneId: string): void;
+  travelTo(zoneId: ZoneId): void;
 };
 
 type PlacedPointOfInterest = { poi: PointOfInterest; x: number };
@@ -90,7 +97,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     texFilter: "nearest",
     global: false,
     debug: false,
-    background: [20, 20, 30],
+    background: BACKGROUND,
     buttons: {
       left: { keyboard: ["left", "a"] },
       right: { keyboard: ["right", "d"] },
@@ -106,13 +113,13 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     sliceX: TILE_COLUMNS,
     sliceY: TILE_ROWS,
   });
-  k.loadSprite("player", paintPlayerSheet(), { sliceX: 5, anims: PLAYER_ANIMS });
+  k.loadSprite("player", paintPlayerSheet(), { sliceX: PLAYER_FRAME_COUNT, anims: PLAYER_ANIMS });
   k.loadSprite("film-roll", paintFilmRoll());
   k.loadBitmapFont(PIXEL_FONT_NAME, paintPixelFont(), PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CELL_HEIGHT, {
     chars: PIXEL_FONT_CHARS,
   });
 
-  const parallaxLayers = route.zones.flatMap((placed) => addZoneBackdrop(placed, ZONE_ART[placed.zone.id] ?? ZONE_ART.start));
+  const parallaxLayers = route.zones.flatMap((placed) => addZoneBackdrop(placed, ZONE_ART[placed.zone.id]));
 
   function addZoneBackdrop({ zone, x }: PlacedZone, art: ZoneArt) {
     const skyName = `sky-${zone.id}`;
@@ -132,16 +139,8 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       return { object, depth, restX: -margin, cameraAtCentre };
     });
 
-    k.add([
-      k.sprite("tiles", { frame: art.ground, tiled: true, width: zone.width, height: TILE_SIZE }),
-      k.pos(x, GROUND_Y),
-      k.color(...art.groundTint),
-    ]);
-    k.add([
-      k.sprite("tiles", { frame: TILES.dirt, tiled: true, width: zone.width, height: TILE_SIZE }),
-      k.pos(x, GROUND_Y + TILE_SIZE),
-      k.color(...art.groundTint),
-    ]);
+    addTiles(art.ground, x, GROUND_Y, zone.width, art.groundTint);
+    addTiles(TILES.dirt, x, GROUND_Y + TILE_SIZE, zone.width, art.groundTint);
     for (const prop of art.props) {
       k.add([k.sprite("tiles", { frame: prop.frame }), k.pos(x + prop.x, GROUND_Y), k.anchor("bot"), k.color(...art.groundTint)]);
     }
@@ -149,6 +148,10 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   }
 
   // Zone titles sit top-centre of the Zone's first screen, clear of the DOM corner controls.
+  function addTiles(frame: number, x: number, y: number, width: number, tint: Rgb) {
+    k.add([k.sprite("tiles", { frame, tiled: true, width, height: TILE_SIZE }), k.pos(x, y), k.color(...tint)]);
+  }
+
   function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
     const plate = k.add([
       k.rect(0, 0),
@@ -163,7 +166,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width: wrapWidth, align: "center" }),
       k.pos(0, textY),
       k.anchor(anchor),
-      k.color(...LABEL_INK),
+      k.color(...INK),
     ]);
     plate.onUpdate(() => {
       plate.width = Math.ceil(label.width) + LABEL_PADDING * 2;
@@ -184,13 +187,13 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   }
 
   for (const { poi, x } of route.pointsOfInterest) {
-    const prints = (poi.photos ?? []).slice(0, PRINTS_PER_POINT);
+    const prints = (poi.photos ?? []).slice(0, PRINTS_PER_POI);
     prints.forEach((photo, index) => {
       const sprite = photoPaths(photo).thumb;
       k.loadSprite(sprite, import.meta.env.BASE_URL + sprite);
       const printX = x + (index - (prints.length - 1) / 2) * PRINT_SPACING;
-      k.add([k.rect(30, 30), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(60, 40, 25)]);
-      k.add([k.rect(26, 26), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(245, 240, 225)]);
+      k.add([k.rect(PRINT_FRAME_SIZE, PRINT_FRAME_SIZE), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(...PRINT_FRAME_COLOR)]);
+      k.add([k.rect(PRINT_MAT_SIZE, PRINT_MAT_SIZE), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(...PRINT_MAT_COLOR)]);
       k.add([k.sprite(sprite), k.pos(printX, PRINT_Y), k.anchor("center")]);
     });
   }
@@ -206,7 +209,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     k.pos(0, 0),
     k.anchor("bot"),
     k.color(255, 240, 120),
-    k.outline(2, k.rgb(20, 20, 30)),
+    k.outline(2, k.rgb(...INK)),
     k.opacity(0),
   ]);
 
@@ -262,7 +265,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     }
     proximityCue.opacity = current ? 1 : 0;
     if (current) {
-      const cueY = current.poi.photos?.length ? CUE_ABOVE_PRINTS_Y : GROUND_Y - 56;
+      const cueY = current.poi.photos?.length ? CUE_ABOVE_PRINTS_Y : CUE_Y;
       const bob = reducedMotion ? 0 : Math.sin(k.time() * 8) * CUE_BOB;
       proximityCue.pos = k.vec2(current.x, cueY + bob);
     }

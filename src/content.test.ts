@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { content } from "./content";
+import { content, type ZoneId } from "./content";
 import { neverShowItemsIn } from "./never-show";
 import { PIXEL_FONT_CHARS } from "./pixel-font";
 
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
 
-function zoneById(id: string) {
+function zoneById(id: ZoneId) {
   const zone = content.zones.find((candidate) => candidate.id === id);
   if (!zone) throw new Error(`No Zone with id ${id}`);
   return zone;
@@ -81,10 +81,16 @@ describe("Content file", () => {
     expect(xs).toEqual([...xs].sort((a, b) => a - b));
   });
 
-  it("orders the Zones it has along the Route as the spec does", () => {
-    const routeOrder = ["start", "career-road", "maker-workshop", "photography-trail", "sport", "music-and-games", "contact"];
-    const present = content.zones.map((zone) => zone.id).filter((id) => routeOrder.includes(id));
-    expect(present).toEqual(routeOrder.filter((id) => present.includes(id)));
+  it("orders the Zones along the Route as the spec does", () => {
+    expect(content.zones.map((zone) => zone.id)).toEqual([
+      "start",
+      "career-road",
+      "maker-workshop",
+      "photography-trail",
+      "sport",
+      "music-and-games",
+      "contact",
+    ]);
   });
 
   it("has a Maker workshop with framewise, lens caps, ReelMaker and preset fitting", () => {
