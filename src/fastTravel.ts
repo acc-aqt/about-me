@@ -1,5 +1,10 @@
 import type { Zone } from "./content";
 
+function fastTravelLabel(zone: Zone): string {
+  const landing = zone.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
+  return landing ? `${zone.title} · ${landing.title}` : zone.title;
+}
+
 export function createFastTravel(nav: HTMLElement, zones: Zone[], onTravel: (zoneId: string) => void) {
   const toggle = nav.querySelector<HTMLButtonElement>(".fast-travel-toggle");
   const list = nav.querySelector<HTMLUListElement>(".fast-travel-zones");
@@ -14,7 +19,7 @@ export function createFastTravel(nav: HTMLElement, zones: Zone[], onTravel: (zon
     ...zones.map((zone) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = zone.title;
+      button.textContent = fastTravelLabel(zone);
       button.addEventListener("click", () => {
         setOpen(false);
         onTravel(zone.id);

@@ -54,14 +54,18 @@ test("Fast-travel to Contact shows LinkedIn, GitHub, Instagram and carrels.photo
   }
 });
 
-test("Fast-travel lists every Zone from the Content file", async ({ page }) => {
+test("Fast-travel lists every Zone from the Content file, naming where it lands", async ({ page }) => {
   await openGame(page);
 
   await page.getByRole("button", { name: "Fast-travel" }).click();
 
   await expect(page.getByRole("navigation", { name: "Fast-travel" }).getByRole("listitem")).toHaveText(
-    content.zones.map((zone) => zone.title),
+    content.zones.map((zone) => {
+      const landing = zone.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
+      return landing ? `${zone.title} · ${landing.title}` : zone.title;
+    }),
   );
+  await expect(page.getByRole("button", { name: "Career road · MTU Aero Engines" })).toBeVisible();
 });
 
 test("Fast-travel works with the keyboard alone", async ({ page }) => {
