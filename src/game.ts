@@ -13,6 +13,13 @@ const ZONE_COLORS: [number, number, number][] = [
   [160, 170, 190],
 ];
 
+export type GameButton = "left" | "right" | "shutter";
+
+export type GameControls = {
+  press(button: GameButton): void;
+  release(button: GameButton): void;
+};
+
 type PlacedPointOfInterest = { poi: PointOfInterest; x: number };
 type PlacedZone = { zone: Zone; x: number };
 
@@ -36,7 +43,7 @@ function layOutRoute(content: Content) {
   return { zones, pointsOfInterest, routeWidth: x };
 }
 
-export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents) {
+export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents): GameControls {
   const k = kaplay({
     canvas,
     width: VIEW_WIDTH,
@@ -99,4 +106,9 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   k.onButtonPress("shutter", () => {
     if (nearby && events.canFireShutter()) events.onShutter(nearby);
   });
+
+  return {
+    press: (button) => k.pressButton(button),
+    release: (button) => k.releaseButton(button),
+  };
 }
