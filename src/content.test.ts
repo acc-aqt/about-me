@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { content } from "./content";
+import { neverShowItemsIn } from "./never-show";
 
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
 
@@ -13,24 +14,6 @@ function linkUrls(poiId: string) {
   const poi = pointsOfInterest.find((candidate) => candidate.id === poiId);
   if (!poi) throw new Error(`No Point of Interest with id ${poiId}`);
   return (poi.links ?? []).map((link) => link.url);
-}
-
-const NEVER_SHOW: { item: string; pattern: RegExp }[] = [
-  { item: "email", pattern: /[\w.+-]+@[\w-]+\.[\w.]+|mailto:/i },
-  { item: "phone", pattern: /tel:|\+\d[\d\s/-]{6,}\d|\b0\d{2,4}[\s/-]?\d{4,}\b/ },
-  {
-    item: "street address",
-    pattern: /\b\w*(straße|strasse|str\.|weg|platz|gasse)\s+\d+|\b\d+\s+\w+\s+(street|st\.|road|avenue|ave\.)/i,
-  },
-  { item: "CV", pattern: /\bCV\b|curriculum vitae|\bresum[eé]\b|lebenslauf/i },
-  { item: "dj-urska", pattern: /dj[-\s]?urska/i },
-  { item: "tado-cli", pattern: /tado[-\s]?cli/i },
-  { item: "lisp-skills", pattern: /lisp[-\s]?skills/i },
-  { item: "swimming coaching", pattern: /swim\w*\s+(coach|train(er|ing)\s+(kids|children|others))/i },
-];
-
-function neverShowItemsIn(text: string): string[] {
-  return NEVER_SHOW.filter(({ pattern }) => pattern.test(text)).map(({ item }) => item);
 }
 
 describe("Content file", () => {
