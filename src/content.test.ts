@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { content } from "./content";
 import { neverShowItemsIn } from "./never-show";
+import { PIXEL_FONT_CHARS } from "./pixel-font";
 
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
 
@@ -261,6 +262,14 @@ describe("Content file", () => {
       for (const photo of poi.photos ?? []) {
         expect(photo.alt.trim().split(/\s+/).length, `${poi.id}: ${photo.src}`).toBeGreaterThanOrEqual(4);
       }
+    }
+  });
+
+  it("only uses characters the in-world pixel font can draw in Zone and Point of Interest titles", () => {
+    const titles = [...content.zones.map((zone) => zone.title), ...pointsOfInterest.map((poi) => poi.title)];
+    for (const title of titles) {
+      const missing = [...title].filter((char) => !PIXEL_FONT_CHARS.includes(char));
+      expect(missing, title).toEqual([]);
     }
   });
 

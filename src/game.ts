@@ -14,6 +14,7 @@ import {
   type ZoneArt,
 } from "./art";
 import { photoPaths } from "./photos";
+import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CHARS, PIXEL_FONT_NAME, paintPixelFont } from "./pixel-font";
 
 const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 180;
@@ -30,6 +31,11 @@ const PRINT_Y = GROUND_Y - 64;
 const CUE_ABOVE_PRINTS_Y = PRINT_Y - 18;
 
 const CUE_BOB = 2;
+const LABEL_PADDING = 2;
+const LABEL_PLATE_COLOR: [number, number, number] = [251, 248, 240];
+const LABEL_INK: [number, number, number] = [20, 20, 30];
+const ZONE_TITLE_Y = 8;
+const SIGN_LABEL_Y = GROUND_Y - 30;
 
 export type GameButton = "left" | "right" | "shutter";
 
@@ -42,6 +48,7 @@ export type GameControls = {
 type PlacedPointOfInterest = { poi: PointOfInterest; x: number };
 type PlacedZone = { zone: Zone; x: number };
 type PlacedFilmRoll = { zone: Zone; x: number };
+type LabelOptions = { wrapWidth?: number; fixed?: boolean };
 
 export type GameEvents = {
   onNearbyChange(poi: PointOfInterest | null): void;
@@ -101,6 +108,9 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   });
   k.loadSprite("player", paintPlayerSheet(), { sliceX: 5, anims: PLAYER_ANIMS });
   k.loadSprite("film-roll", paintFilmRoll());
+  k.loadBitmapFont(PIXEL_FONT_NAME, paintPixelFont(), PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CELL_HEIGHT, {
+    chars: PIXEL_FONT_CHARS,
+  });
 
   const parallaxLayers = route.zones.flatMap((placed) => addZoneBackdrop(placed, ZONE_ART[placed.zone.id] ?? ZONE_ART.start));
 
@@ -122,8 +132,6 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       return { object, depth, restX: -margin, cameraAtCentre };
     });
 
-    addLabelPlate(zone.title, k.vec2(x + 8, 8), "topleft");
-    k.add([k.text(zone.title, { size: 8 }), k.pos(x + 8, 8), k.color(...art.label)]);
     k.add([
       k.sprite("tiles", { frame: art.ground, tiled: true, width: zone.width, height: TILE_SIZE }),
       k.pos(x, GROUND_Y),
@@ -140,12 +148,28 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     return layers;
   }
 
-  function addLabelPlate(text: string, position: Vec2, anchor: "topleft" | "bot", wrapWidth?: number) {
-    const lineWidth = k.formatText({ text, size: 8 }).width;
-    const height = k.formatText({ text, size: 8, width: wrapWidth }).height;
-    const width = Math.min(lineWidth, wrapWidth ?? lineWidth);
-    const offset = anchor === "bot" ? k.vec2(0, 1) : k.vec2(-2, -2);
-    k.add([k.rect(width + 4, height + 3), k.pos(position.add(offset)), k.anchor(anchor), k.color(251, 248, 240), k.opacity(0.7)]);
+  // Zone titles sit top-centre of the Zone's first screen, clear of the DOM corner controls.
+  function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
+    const plate = k.add([
+      k.rect(0, 0),
+      k.pos(position),
+      k.anchor(anchor),
+      k.color(...LABEL_PLATE_COLOR),
+      k.opacity(0.9),
+      ...(fixed ? [k.fixed()] : []),
+    ]);
+    const textY = anchor === "top" ? LABEL_PADDING + 1 : -LABEL_PADDING + 1;
+    const label = plate.add([
+      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width: wrapWidth, align: "center" }),
+      k.pos(0, textY),
+      k.anchor(anchor),
+      k.color(...LABEL_INK),
+    ]);
+    plate.onUpdate(() => {
+      plate.width = Math.ceil(label.width) + LABEL_PADDING * 2;
+      plate.height = Math.ceil(label.height) + LABEL_PADDING * 2;
+    });
+    return label;
   }
 
   function updateParallax(cameraX: number) {
@@ -156,13 +180,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   for (const { poi, x } of route.pointsOfInterest) {
     k.add([k.sprite("tiles", { frame: TILES.sign }), k.pos(x, GROUND_Y), k.anchor("bot")]);
-    addLabelPlate(poi.title, k.vec2(x, GROUND_Y - 30), "bot", POI_LABEL_WIDTH);
-    k.add([
-      k.text(poi.title, { size: 8, width: POI_LABEL_WIDTH, align: "center" }),
-      k.pos(x, GROUND_Y - 30),
-      k.anchor("bot"),
-      k.color(20, 20, 30),
-    ]);
+    addLabel(poi.title, k.vec2(x, SIGN_LABEL_Y), "bot", { wrapWidth: POI_LABEL_WIDTH });
   }
 
   for (const { poi, x } of route.pointsOfInterest) {
@@ -192,12 +210,19 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     k.opacity(0),
   ]);
 
+  // The current Zone's title sits top-centre of the view, clear of the DOM corner controls.
+  const zoneTitle = addLabel("", k.vec2(VIEW_WIDTH / 2, ZONE_TITLE_Y), "top", { fixed: true });
+
   const player = k.add([k.sprite("player", { anim: "idle" }), k.pos(PLAYER_START_X, GROUND_Y), k.anchor("bot")]);
 
   function animatePlayer(direction: number) {
     if (direction !== 0) player.flipX = direction < 0;
     const anim = direction === 0 ? "idle" : "walk";
     if (player.getCurAnim()?.name !== anim) player.play(anim);
+  }
+
+  function zoneAt(x: number): Zone {
+    return route.zones.filter((placed) => placed.x <= x).at(-1)!.zone;
   }
 
   let nearby: PointOfInterest | null = null;
@@ -214,10 +239,11 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     const previousX = player.pos.x;
     player.pos.x = Math.min(Math.max(player.pos.x + direction * PLAYER_SPEED * k.dt(), 0), route.routeWidth);
     animatePlayer(direction);
+    zoneTitle.text = zoneAt(player.pos.x).title;
 
     const halfView = VIEW_WIDTH / 2;
     const cameraX = Math.min(Math.max(player.pos.x, halfView), route.routeWidth - halfView);
-    k.setCamPos(cameraX, VIEW_HEIGHT / 2);
+    k.setCamPos(Math.round(cameraX), VIEW_HEIGHT / 2);
     updateParallax(cameraX);
 
     const sweptFrom = Math.min(previousX, player.pos.x) - FILM_ROLL_PICKUP_RANGE;

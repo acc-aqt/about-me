@@ -30,7 +30,6 @@ export type BackdropLayer = { depth: number; paint: Painter };
 
 export type ZoneArt = {
   sky: [Rgb, Rgb];
-  label: Rgb;
   ground: number;
   groundTint: Rgb;
   layers: BackdropLayer[];
@@ -438,7 +437,6 @@ const MOUNTAIN_NEAR: MountainStyle = {
 export const ZONE_ART: Record<string, ZoneArt> = {
   start: {
     sky: [hex("#7fa9d8"), hex("#f7d3aa")],
-    label: hex("#1d1d24"),
     ground: TILES.grass,
     groundTint: [255, 255, 255],
     layers: [
@@ -454,7 +452,6 @@ export const ZONE_ART: Record<string, ZoneArt> = {
   },
   "career-road": {
     sky: [hex("#4f9ee0"), hex("#cdeaf7")],
-    label: hex("#1d1d24"),
     ground: TILES.grass,
     groundTint: [255, 255, 255],
     layers: [
@@ -474,7 +471,6 @@ export const ZONE_ART: Record<string, ZoneArt> = {
   },
   "maker-workshop": {
     sky: [hex("#d4734f"), hex("#f6d58e")],
-    label: hex("#1d1d24"),
     ground: TILES.sand,
     groundTint: [255, 240, 225],
     layers: [
@@ -489,7 +485,6 @@ export const ZONE_ART: Record<string, ZoneArt> = {
   },
   "photography-trail": {
     sky: [hex("#3d8f9a"), hex("#f4d79a")],
-    label: hex("#1d1d24"),
     ground: TILES.grass,
     groundTint: [235, 255, 235],
     layers: [
@@ -511,7 +506,6 @@ export const ZONE_ART: Record<string, ZoneArt> = {
   },
   sport: {
     sky: [hex("#2f6cc0"), hex("#c4e3f5")],
-    label: hex("#1d1d24"),
     ground: TILES.snow,
     groundTint: [255, 255, 255],
     layers: [
@@ -526,7 +520,6 @@ export const ZONE_ART: Record<string, ZoneArt> = {
   },
   "music-and-games": {
     sky: [hex("#171436"), hex("#4b2c6c")],
-    label: hex("#f2efe6"),
     ground: TILES.grass,
     groundTint: [140, 130, 200],
     layers: [
@@ -539,7 +532,6 @@ export const ZONE_ART: Record<string, ZoneArt> = {
   },
   contact: {
     sky: [hex("#e0706a"), hex("#fcd8a0")],
-    label: hex("#1d1d24"),
     ground: TILES.grass,
     groundTint: [255, 225, 205],
     layers: [
