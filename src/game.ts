@@ -7,6 +7,7 @@ const GROUND_Y = VIEW_HEIGHT - 24;
 const PLAYER_SPEED = 160;
 const PLAYER_START_X = 40;
 const SHUTTER_RANGE = 28;
+const POI_LABEL_WIDTH = 120;
 
 const ZONE_COLORS: [number, number, number][] = [
   [135, 190, 230],
@@ -66,20 +67,33 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   for (const { poi, x } of route.pointsOfInterest) {
     k.add([k.rect(16, 24), k.pos(x, GROUND_Y), k.anchor("bot"), k.color(230, 180, 60), k.outline(1)]);
-    k.add([k.text(poi.title, { size: 8 }), k.pos(x, GROUND_Y - 30), k.anchor("bot"), k.color(20, 20, 30)]);
+    k.add([
+      k.text(poi.title, { size: 8, width: POI_LABEL_WIDTH, align: "center" }),
+      k.pos(x, GROUND_Y - 30),
+      k.anchor("bot"),
+      k.color(20, 20, 30),
+    ]);
   }
+
+  const proximityCue = k.add([
+    k.text("!", { size: 16 }),
+    k.pos(0, 0),
+    k.anchor("bot"),
+    k.color(255, 240, 120),
+    k.outline(2, k.rgb(20, 20, 30)),
+    k.opacity(0),
+  ]);
 
   const player = k.add([k.rect(12, 20), k.pos(PLAYER_START_X, GROUND_Y), k.anchor("bot"), k.color(200, 60, 60)]);
   player.add([k.rect(6, 4), k.pos(4, -12), k.anchor("center"), k.color(30, 30, 30)]);
 
   let nearby: PointOfInterest | null = null;
 
-  function nearestInRange(): PointOfInterest | null {
+  function nearestInRange(): PlacedPointOfInterest | null {
     const inRange = route.pointsOfInterest
-      .map(({ poi, x }) => ({ poi, distance: Math.abs(player.pos.x - x) }))
-      .filter(({ distance }) => distance <= SHUTTER_RANGE)
-      .sort((a, b) => a.distance - b.distance);
-    return inRange[0]?.poi ?? null;
+      .filter(({ x }) => Math.abs(player.pos.x - x) <= SHUTTER_RANGE)
+      .sort((a, b) => Math.abs(player.pos.x - a.x) - Math.abs(player.pos.x - b.x));
+    return inRange[0] ?? null;
   }
 
   k.onUpdate(() => {
@@ -90,10 +104,12 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     k.setCamPos(Math.min(Math.max(player.pos.x, halfView), route.routeWidth - halfView), VIEW_HEIGHT / 2);
 
     const current = nearestInRange();
-    if (current !== nearby) {
-      nearby = current;
+    if (current?.poi !== nearby) {
+      nearby = current?.poi ?? null;
       events.onNearbyChange(nearby);
     }
+    proximityCue.opacity = current ? 1 : 0;
+    if (current) proximityCue.pos = k.vec2(current.x, GROUND_Y - 56 + Math.sin(k.time() * 8) * 2);
   });
 
   k.onButtonPress("shutter", () => {
