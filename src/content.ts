@@ -29,6 +29,8 @@ export type Zone = {
   title: string;
   /** Length of the Zone along the Route, in world pixels. */
   width: number;
+  /** Id of the Point of Interest Fast-travel lands at; otherwise the Zone's left edge. */
+  fastTravelTo?: string;
   pointsOfInterest: PointOfInterest[];
   /** Where this Zone's hidden Film roll lies; every Zone should carry one. */
   filmRoll?: Placement;
@@ -62,9 +64,57 @@ export const content: Content = {
     {
       id: "career-road",
       title: "Career road",
-      width: 480,
-      filmRoll: { x: 400 },
+      width: 1040,
+      fastTravelTo: "mtu",
+      filmRoll: { x: 810 },
       pointsOfInterest: [
+        {
+          id: "tum",
+          title: "Technical University of Munich",
+          subtitle: "BSc Vehicle & Engine Technology, MSc Mechanical Engineering",
+          dates: "2010–2017",
+          body:
+            "I studied vehicle and engine technology (BSc, 2010–2014) and mechanical engineering (MSc, 2014–2017, grade 1.3).",
+          links: [{ label: "Technical University of Munich", url: "https://www.tum.de/" }],
+          placement: { x: 80 },
+        },
+        {
+          id: "bmw-group",
+          title: "BMW Group",
+          subtitle: "Chassis engineering intern; CFRP research project",
+          dates: "2013 & 2016",
+          body:
+            "I interned in chassis engineering and worked on a research project on CFRP (carbon-fibre-reinforced plastic) technology.",
+          links: [{ label: "BMW Group", url: "https://www.bmwgroup.com/" }],
+          placement: { x: 240 },
+        },
+        {
+          id: "canberra-detour",
+          title: "Canberra detour",
+          subtitle: "Research at the Australian National University",
+          dates: "2014–2015",
+          body: "I took a detour to Canberra to do research at the Australian National University.",
+          links: [{ label: "Australian National University", url: "https://www.anu.edu.au/" }],
+          placement: { x: 400 },
+        },
+        {
+          id: "forward-engineering",
+          title: "Forward Engineering",
+          subtitle: "Development engineer, composites",
+          dates: "2017–2018",
+          body: "I developed structural simulation methods for composite parts in LS-DYNA.",
+          links: [{ label: "Forward Engineering", url: "https://www.forward-engineering.com/" }],
+          placement: { x: 560 },
+        },
+        {
+          id: "arrk-engineering",
+          title: "ARRK Engineering",
+          subtitle: "Software developer",
+          dates: "2018–2020",
+          body: "I built tooling that automates simulation pre- and post-processing.",
+          links: [{ label: "ARRK Engineering", url: "https://engineering.arrk.com/" }],
+          placement: { x: 720 },
+        },
         {
           id: "mtu",
           title: "MTU Aero Engines",
@@ -73,7 +123,7 @@ export const content: Content = {
           body:
             "I build a platform that coordinates engineering design processes and workflows and stores the engineering data behind them.",
           links: [{ label: "MTU Aero Engines", url: "https://www.mtu.de/" }],
-          placement: { x: 240 },
+          placement: { x: 900 },
         },
       ],
     },
@@ -161,6 +211,27 @@ export const content: Content = {
           links: [
             { label: "Play the track-back web demo", url: "https://acc-aqt.github.io/track-back/web_ui/index.html" },
             { label: "track-back on GitHub", url: "https://github.com/acc-aqt/track-back" },
+          ],
+          placement: { x: 160 },
+        },
+      ],
+    },
+    {
+      id: "contact",
+      title: "Contact",
+      width: 320,
+      fastTravelTo: "contact-board",
+      filmRoll: { x: 270 },
+      pointsOfInterest: [
+        {
+          id: "contact-board",
+          title: "Say hello",
+          body: "Thanks for walking the Route. Find me here:",
+          links: [
+            { label: "LinkedIn", url: "https://de.linkedin.com/in/alexander-carrels-8b98b0182" },
+            { label: "GitHub", url: "https://github.com/acc-aqt" },
+            { label: "Instagram", url: "https://www.instagram.com/carrels.photography/" },
+            { label: "carrels.photography", url: "https://www.carrels.photography/" },
           ],
           placement: { x: 160 },
         },

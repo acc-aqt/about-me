@@ -1,4 +1,5 @@
 import { content } from "./content";
+import { createFastTravel } from "./fastTravel";
 import { startGame, type GameButton, type GameControls } from "./game";
 import { createViewfinder } from "./viewfinder";
 
@@ -20,6 +21,7 @@ let collectedFilmRolls = 0;
 function showFilmRollCount() {
   filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls}/${totalFilmRolls}`;
 }
+const fastTravelNav = document.querySelector<HTMLElement>(".fast-travel")!;
 
 const viewfinder = createViewfinder(dialog, () => canvas.focus());
 
@@ -51,6 +53,11 @@ function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
 document
   .querySelectorAll<HTMLButtonElement>("[data-game-button]")
   .forEach((element) => bindTouchButton(element, controls));
+
+createFastTravel(fastTravelNav, content.zones, (zoneId) => {
+  controls.travelTo(zoneId);
+  canvas.focus();
+});
 
 hint.textContent = CONTROLS_HINT;
 showFilmRollCount();
