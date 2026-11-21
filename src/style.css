@@ -125,3 +125,18 @@ body {
 [hidden] {
   display: none !important;
 }
+
+.inventory-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.inventory-items li {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--ink);
+}

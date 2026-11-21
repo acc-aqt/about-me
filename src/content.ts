@@ -32,8 +32,15 @@ export type Zone = {
   pointsOfInterest: PointOfInterest[];
 };
 
+export type InventoryItem = {
+  id: string;
+  name: string;
+  description: string;
+};
+
 export type Content = {
   zones: Zone[];
+  inventory: InventoryItem[];
 };
 
 export const content: Content = {
@@ -147,5 +154,20 @@ export const content: Content = {
         },
       ],
     },
+  ],
+  inventory: [
+    { id: "python", name: "Python", description: "My everyday language: framewise and the track-back server are written in it." },
+    { id: "java", name: "Java", description: "Programming language." },
+    { id: "matlab", name: "MATLAB", description: "Numerical computing and engineering scripts." },
+    { id: "ls-dyna", name: "LS-DYNA", description: "Structural simulation methods for composites." },
+    { id: "abaqus", name: "Abaqus", description: "FEM simulation." },
+    { id: "cae-automation", name: "CAE automation", description: "Automated simulation pre- and post-processing tooling." },
+    { id: "catia-v5", name: "CATIA V5", description: "CAD modelling." },
+    { id: "git", name: "Git", description: "Version control." },
+    { id: "scrum", name: "Scrum", description: "Agile teamwork." },
+    { id: "ai-coding-agents", name: "AI coding agents", description: "Building tools with agents, with design and review by me." },
+    { id: "lightroom-classic", name: "Lightroom Classic", description: "Photo editing and presets." },
+    { id: "cameras", name: "Fujifilm & Leica cameras", description: "My cameras for travel and landscape photography." },
+    { id: "3d-printing", name: "3D printing", description: "Printing parts such as my slip-over lens caps." },
   ],
 };

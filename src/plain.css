@@ -38,7 +38,8 @@ body.plain {
   margin-block: 2.5rem;
 }
 
-.zone h2 {
+.zone h2,
+.inventory h2 {
   border-bottom: 3px solid var(--ink);
   padding-bottom: 0.25rem;
 }
