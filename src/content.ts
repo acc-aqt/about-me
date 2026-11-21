@@ -63,7 +63,7 @@ export const content: Content = {
           id: "bmw-group",
           title: "BMW Group",
           subtitle: "Chassis engineering intern; CFRP research project",
-          dates: "During my studies",
+          dates: "2013 & 2016",
           body:
             "I interned in chassis engineering and worked on a research project on CFRP (carbon-fibre-reinforced plastic) technology.",
           links: [{ label: "BMW Group", url: "https://www.bmwgroup.com/" }],

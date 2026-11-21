@@ -1,11 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
-test.skip(({ isMobile }) => isMobile, "On-screen buttons for phones arrive in a later ticket");
-
 async function openGame(page: Page) {
   await page.goto("./");
   await page.getByRole("application", { name: /game/i }).focus();
-  await expect(page.getByRole("status")).toContainText("Press Space near a sign");
+  await expect(page.getByRole("status")).toContainText("near a sign");
 }
 
 async function walkRightUntilStatus(page: Page, matches: (status: string) => boolean) {
@@ -24,10 +22,10 @@ test("a proximity cue appears near a Career road stop and clears when walking on
   const status = page.getByRole("status");
 
   await walkRightUntilStatus(page, (text) => text.includes("Technical University of Munich"));
-  await expect(status).toHaveText("Press Space to photograph Technical University of Munich");
+  await expect(status).toHaveText(/to photograph Technical University of Munich$/);
 
   await walkRightUntilStatus(page, (text) => !text.includes("Technical University of Munich"));
-  await expect(status).toContainText("Press Space near a sign");
+  await expect(status).toContainText("near a sign");
 });
 
 test("photographing the BMW Group stop shows its role and summary in the Viewfinder", async ({ page }) => {
