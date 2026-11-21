@@ -44,6 +44,7 @@ test("Fast-travel to Contact shows LinkedIn, GitHub, Instagram and carrels.photo
   await openGame(page);
 
   await fastTravelByClick(page, "Contact");
+  await expect(page.getByRole("status")).toContainText("Say hello");
   await page.keyboard.press("Space");
 
   const links = page.getByRole("dialog").getByRole("link");
@@ -82,4 +83,28 @@ test("Fast-travel works with the keyboard alone", async ({ page }) => {
   await expect(page.getByRole("status")).toContainText("Say hello");
   await page.keyboard.press("Space");
   await expect(page.getByRole("dialog", { name: "Say hello" })).toBeVisible();
+});
+
+test("the corner controls and skip link do not overlap and each takes its own clicks", async ({ page }) => {
+  await openGame(page);
+  const controls = [
+    page.getByRole("button", { name: "Fast-travel" }),
+    page.getByRole("button", { name: "Sound" }),
+    page.getByRole("link", { name: /skip the game/i }),
+  ];
+  const boxes = await Promise.all(controls.map(async (control) => (await control.boundingBox())!));
+  for (const [i, a] of boxes.entries()) {
+    for (const b of boxes.slice(i + 1)) {
+      const overlaps = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+      expect(overlaps).toBe(false);
+    }
+  }
+  for (const [i, control] of controls.entries()) {
+    const box = boxes[i];
+    const isTopmost = await control.evaluate(
+      (element, point) => element.contains(document.elementFromPoint(point.x, point.y)),
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    );
+    expect(isTopmost).toBe(true);
+  }
 });
