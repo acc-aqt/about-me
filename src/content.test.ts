@@ -3,6 +3,18 @@ import { content } from "./content";
 
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
 
+function zoneById(id: string) {
+  const zone = content.zones.find((candidate) => candidate.id === id);
+  if (!zone) throw new Error(`No Zone with id ${id}`);
+  return zone;
+}
+
+function linkUrls(poiId: string) {
+  const poi = pointsOfInterest.find((candidate) => candidate.id === poiId);
+  if (!poi) throw new Error(`No Point of Interest with id ${poiId}`);
+  return (poi.links ?? []).map((link) => link.url);
+}
+
 const NEVER_SHOW: { item: string; pattern: RegExp }[] = [
   { item: "email", pattern: /[\w.+-]+@[\w-]+\.[\w.]+|mailto:/i },
   { item: "phone", pattern: /tel:|\+\d[\d\s/-]{6,}\d|\b0\d{2,4}[\s/-]?\d{4,}\b/ },
@@ -33,8 +45,8 @@ describe("Content file", () => {
   });
 
   it("walks the Career road from TUM to the MTU Aero Engines hangar", () => {
-    const careerRoad = content.zones.find((zone) => zone.id === "career-road");
-    expect(careerRoad?.pointsOfInterest.map((poi) => poi.title)).toEqual([
+    const careerRoad = zoneById("career-road");
+    expect(careerRoad.pointsOfInterest.map((poi) => poi.title)).toEqual([
       "Technical University of Munich",
       "BMW Group",
       "Canberra detour",
@@ -45,7 +57,7 @@ describe("Content file", () => {
   });
 
   it("gives every Career road stop a role, dates and a one-line summary", () => {
-    const careerRoad = content.zones.find((zone) => zone.id === "career-road")!;
+    const careerRoad = zoneById("career-road");
     for (const poi of careerRoad.pointsOfInterest) {
       expect(poi.subtitle?.trim(), poi.id).toBeTruthy();
       expect(poi.dates?.trim(), poi.id).toBeTruthy();
@@ -54,9 +66,59 @@ describe("Content file", () => {
   });
 
   it("places Career road stops left to right", () => {
-    const careerRoad = content.zones.find((zone) => zone.id === "career-road")!;
+    const careerRoad = zoneById("career-road");
     const xs = careerRoad.pointsOfInterest.map((poi) => poi.placement.x);
     expect(xs).toEqual([...xs].sort((a, b) => a - b));
+  });
+
+  it("orders the Zones it has along the Route as the spec does", () => {
+    const routeOrder = ["start", "career-road", "maker-workshop", "photography-trail", "sport", "music-and-games", "contact"];
+    const present = content.zones.map((zone) => zone.id).filter((id) => routeOrder.includes(id));
+    expect(present).toEqual(routeOrder.filter((id) => present.includes(id)));
+  });
+
+  it("has a Maker workshop with framewise, lens caps, ReelMaker and preset fitting", () => {
+    const zone = zoneById("maker-workshop");
+    expect(zone.title).toBe("Maker workshop");
+    expect(zone.pointsOfInterest.map((poi) => poi.title)).toEqual([
+      "framewise",
+      "3D-printed lens caps",
+      "ReelMaker",
+      "Lightroom preset fitting",
+    ]);
+  });
+
+  it("links framewise to GitHub and to PyPI as framewise-cull", () => {
+    expect(linkUrls("framewise")).toEqual([
+      "https://github.com/acc-aqt/framewise",
+      "https://pypi.org/project/framewise-cull/",
+    ]);
+  });
+
+  it("links the lens caps to their public repo and leaves private projects unlinked", () => {
+    expect(linkUrls("lens-caps")).toEqual(["https://github.com/acc-aqt/lens-cap-model"]);
+    expect(linkUrls("reelmaker")).toEqual([]);
+    expect(linkUrls("preset-fitting")).toEqual([]);
+  });
+
+  it("has a Sport Zone with a swimming pool, tennis court and ski-touring slope", () => {
+    const zone = zoneById("sport");
+    expect(zone.title).toBe("Sport");
+    expect(zone.pointsOfInterest.map((poi) => poi.title)).toEqual([
+      "Swimming pool",
+      "Tennis court",
+      "Ski-touring slope",
+    ]);
+  });
+
+  it("has a Music & games Zone with the track-back jukebox linking to its web demo", () => {
+    const zone = zoneById("music-and-games");
+    expect(zone.title).toBe("Music & games");
+    expect(zone.pointsOfInterest.map((poi) => poi.id)).toEqual(["track-back"]);
+    expect(linkUrls("track-back")).toEqual([
+      "https://acc-aqt.github.io/track-back/web_ui/index.html",
+      "https://github.com/acc-aqt/track-back",
+    ]);
   });
 
   it("gives every Zone an id, title and positive width", () => {
