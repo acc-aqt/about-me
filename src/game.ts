@@ -14,6 +14,14 @@ const ZONE_COLORS: [number, number, number][] = [
   [160, 170, 190],
 ];
 
+export type GameButton = "left" | "right" | "shutter";
+
+export type GameControls = {
+  press(button: GameButton): void;
+  release(button: GameButton): void;
+  travelTo(zoneId: string): void;
+};
+
 type PlacedPointOfInterest = { poi: PointOfInterest; x: number };
 type PlacedZone = { zone: Zone; x: number };
 
@@ -37,17 +45,13 @@ function layOutRoute(content: Content) {
   return { zones, pointsOfInterest, routeWidth: x };
 }
 
-export type Game = {
-  travelTo(zoneId: string): void;
-};
-
 function fastTravelX(placed: PlacedZone): number {
   const target = placed.zone.pointsOfInterest.find((poi) => poi.id === placed.zone.fastTravelTo);
   if (target) return placed.x + target.placement.x - FAST_TRAVEL_OFFSET;
   return placed.x + FAST_TRAVEL_OFFSET;
 }
 
-export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents): Game {
+export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents): GameControls {
   const k = kaplay({
     canvas,
     width: VIEW_WIDTH,
@@ -112,6 +116,8 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   });
 
   return {
+    press: (button) => k.pressButton(button),
+    release: (button) => k.releaseButton(button),
     travelTo(zoneId) {
       const placed = route.zones.find(({ zone }) => zone.id === zoneId);
       if (placed) player.pos.x = fastTravelX(placed);

@@ -1,11 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import { content } from "../src/content";
 
-test.skip(({ isMobile }) => isMobile, "On-screen buttons for phones arrive in a later ticket");
-
 async function openGame(page: Page) {
   await page.goto("./");
-  await expect(page.getByRole("status")).toContainText("Press Space near a sign");
+  await expect(page.getByRole("status")).toContainText("near a sign");
 }
 
 async function fastTravelByClick(page: Page, zoneTitle: string | RegExp) {
@@ -23,6 +21,21 @@ test("Fast-travel to the Career road lands at MTU, and the Shutter opens its Vie
   const viewfinder = page.getByRole("dialog", { name: "MTU Aero Engines" });
   await expect(viewfinder).toBeVisible();
   await expect(viewfinder).toContainText("engineering design processes and workflows");
+});
+
+test("on a phone, Fast-travel to the Career road and the on-screen Shutter open the MTU Viewfinder", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, "On-screen Shutter is for touch devices");
+  await openGame(page);
+
+  await page.getByRole("button", { name: "Fast-travel" }).tap();
+  await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: "Career road" }).tap();
+  await expect(page.getByRole("status")).toContainText("MTU Aero Engines");
+  await page.getByRole("button", { name: "Shutter" }).tap();
+
+  await expect(page.getByRole("dialog", { name: "MTU Aero Engines" })).toBeVisible();
 });
 
 test("Fast-travel to Contact shows LinkedIn, GitHub, Instagram and carrels.photography, opening in a new tab", async ({

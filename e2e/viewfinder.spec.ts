@@ -1,11 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
-test.skip(({ isMobile }) => isMobile, "On-screen buttons for phones arrive in a later ticket");
-
 async function openGame(page: Page) {
   await page.goto("./");
   await page.getByRole("application", { name: /game/i }).focus();
-  await expect(page.getByRole("status")).toContainText("Press Space near a sign");
+  await expect(page.getByRole("status")).toContainText("near a sign");
 }
 
 async function walkRightUntilNear(page: Page, title: string) {
