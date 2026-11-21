@@ -151,6 +151,47 @@ export const content: Content = {
       ],
     },
     {
+      id: "photography-trail",
+      title: "Photography trail",
+      width: 320,
+      pointsOfInterest: [
+        {
+          id: "norway",
+          title: "Norway ski touring",
+          dates: "2023/2024",
+          body: "Ski touring in Northern Norway over the winters of 2023 and 2024: skinning up from the fjords, boat rides along the coast and long runs down towards the sea.",
+          photos: [
+            {
+              src: "norway-skitouring/DSC5936-Pano-Bearbeitet-2_med_q80.jpg",
+              alt: "Panorama from a snowy summit ridge over a dark fjord ringed by snow-covered mountains, a jagged rock spire glowing orange in the low sun.",
+            },
+            {
+              src: "norway-skitouring/DSC2483-Bearbeitet_med_q80.jpg",
+              alt: "A ski tourer in an orange jacket skinning across a wide snowfield towards a row of rocky white peaks under a blue sky.",
+            },
+            {
+              src: "norway-skitouring/DSC5446-Bearbeitet_med_q80.jpg",
+              alt: "View down a snowy slope onto a calm fjord, with low clouds drifting around snow-dusted islands and peaks in soft evening light.",
+            },
+            {
+              src: "norway-skitouring/DSC2320_med_q80.jpg",
+              alt: "Ski tourers with backpacks climbing a ladder from a rocky shore onto a small boat, snowy mountains across the fjord behind them.",
+            },
+            {
+              src: "norway-skitouring/DSC0627_med_q80.jpg",
+              alt: "Red fishing boats moored in a snowy harbour, seen past a snow-covered railing and a red boathouse with a life ring.",
+            },
+            {
+              src: "norway-skitouring/DSC2511-Bearbeitet-2_med_q80.jpg",
+              alt: "Wide glacier panorama with a lone skier leaving a track towards distant snowy peaks.",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/norway-skitouring/" }],
+          placement: { x: 160 },
+        },
+      ],
+    },
+    {
       id: "sport",
       title: "Sport",
       width: 480,

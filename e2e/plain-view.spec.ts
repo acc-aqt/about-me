@@ -4,7 +4,7 @@ import { content } from "../src/content";
 test.describe("Plain view without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("shows every Zone and Point of Interest from the Content file", async ({ page }) => {
+  test("shows every Zone and Point of Interest from the Content file", async ({ page, request }) => {
     await page.goto("./plain/");
     const main = page.getByRole("main");
 
@@ -22,7 +22,9 @@ test.describe("Plain view without JavaScript", () => {
           await expect(poiArticle.getByRole("link", { name: link.label, exact: true })).toHaveAttribute("href", link.url);
         }
         for (const photo of poi.photos ?? []) {
-          await expect(poiArticle.getByRole("img", { name: photo.alt, exact: true })).toHaveAttribute("src", photo.src);
+          const src = await poiArticle.getByRole("img", { name: photo.alt, exact: true }).getAttribute("src");
+          const image = await request.get(new URL(src!, page.url()).href);
+          expect(image.headers()["content-type"], photo.src).toMatch(/^image\//);
         }
       }
     }

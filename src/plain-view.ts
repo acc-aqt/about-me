@@ -1,4 +1,5 @@
 import type { Content, PointOfInterest, Zone } from "./content";
+import { photoPaths } from "./photos.ts";
 
 export const PLAIN_VIEW_PLACEHOLDER = "<!-- plain-view-content -->";
 
@@ -18,7 +19,7 @@ function optionalParagraph(className: string, text: string | undefined): string 
 function renderPointOfInterest(poi: PointOfInterest): string {
   const headingId = `poi-${poi.id}`;
   const photos = (poi.photos ?? [])
-    .map((photo) => `<img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt)}" loading="lazy" />`)
+    .map((photo) => `<img src="../${escapeHtml(photoPaths(photo).full)}" alt="${escapeHtml(photo.alt)}" loading="lazy" />`)
     .join("");
   const links = (poi.links ?? [])
     .map(

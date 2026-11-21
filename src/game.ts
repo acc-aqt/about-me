@@ -1,5 +1,6 @@
 import kaplay from "kaplay";
 import type { Content, PointOfInterest, Zone } from "./content";
+import { photoPaths } from "./photos";
 
 const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 180;
@@ -9,6 +10,10 @@ const PLAYER_START_X = 40;
 const SHUTTER_RANGE = 28;
 const FAST_TRAVEL_OFFSET = 16;
 const POI_LABEL_WIDTH = 120;
+const PRINTS_PER_POINT = 3;
+const PRINT_SPACING = 34;
+const PRINT_Y = GROUND_Y - 64;
+const CUE_ABOVE_PRINTS_Y = PRINT_Y - 18;
 
 const ZONE_COLORS: [number, number, number][] = [
   [135, 190, 230],
@@ -90,6 +95,18 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     ]);
   }
 
+  for (const { poi, x } of route.pointsOfInterest) {
+    const prints = (poi.photos ?? []).slice(0, PRINTS_PER_POINT);
+    prints.forEach((photo, index) => {
+      const sprite = photoPaths(photo).thumb;
+      k.loadSprite(sprite, import.meta.env.BASE_URL + sprite);
+      const printX = x + (index - (prints.length - 1) / 2) * PRINT_SPACING;
+      k.add([k.rect(30, 30), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(60, 40, 25)]);
+      k.add([k.rect(26, 26), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(245, 240, 225)]);
+      k.add([k.sprite(sprite), k.pos(printX, PRINT_Y), k.anchor("center")]);
+    });
+  }
+
   const proximityCue = k.add([
     k.text("!", { size: 16 }),
     k.pos(0, 0),
@@ -124,7 +141,10 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       events.onNearbyChange(nearby);
     }
     proximityCue.opacity = current ? 1 : 0;
-    if (current) proximityCue.pos = k.vec2(current.x, GROUND_Y - 56 + Math.sin(k.time() * 8) * 2);
+    if (current) {
+      const cueY = current.poi.photos?.length ? CUE_ABOVE_PRINTS_Y : GROUND_Y - 56;
+      proximityCue.pos = k.vec2(current.x, cueY + Math.sin(k.time() * 8) * 2);
+    }
   });
 
   k.onButtonPress("shutter", () => {

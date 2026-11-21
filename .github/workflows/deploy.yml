@@ -22,6 +22,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - uses: actions/cache@v6
+        with:
+          path: .cache/photos
+          key: photos-${{ hashFiles('src/photos.ts', 'src/content.ts') }}
+          restore-keys: photos-
       - run: npm run lint
       - run: npm test
       - run: npx playwright install --with-deps chromium
