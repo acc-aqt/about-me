@@ -129,7 +129,7 @@ body {
 .sound-toggle {
   position: absolute;
   top: 0.75rem;
-  right: 0.75rem;
+  left: 0.75rem;
   padding: 0.3rem 0.6rem;
   border: 2px solid var(--fg);
   border-radius: 4px;
