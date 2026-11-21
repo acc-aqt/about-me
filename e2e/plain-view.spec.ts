@@ -29,6 +29,17 @@ test.describe("Plain view without JavaScript", () => {
       }
     }
   });
+
+  test("shows every Inventory item from the Content file", async ({ page }) => {
+    await page.goto("./plain/");
+    const inventory = page.getByRole("main").getByRole("region", { name: "Inventory", exact: true });
+
+    await expect(inventory.getByRole("heading", { level: 2, name: "Inventory" })).toBeVisible();
+    await expect(inventory.getByRole("listitem")).toHaveCount(content.inventory.length);
+    for (const item of content.inventory) {
+      await expect(inventory.getByRole("listitem").filter({ hasText: item.name })).toContainText(item.description);
+    }
+  });
 });
 
 test("every link in the Plain view is reachable with the keyboard", async ({ page }) => {

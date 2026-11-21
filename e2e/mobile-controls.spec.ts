@@ -66,7 +66,7 @@ test.describe("on a phone", () => {
       await openGame(page);
 
       await expectInsideViewport(page, page.getByRole("application", { name: /game/i }));
-      for (const name of ["Walk left", "Walk right", "Shutter"]) {
+      for (const name of ["Walk left", "Walk right", "Shutter", "Inventory"]) {
         await expectInsideViewport(page, page.getByRole("button", { name }));
       }
 
@@ -83,7 +83,7 @@ test("on a desktop the on-screen buttons are not shown", async ({ page, isMobile
   test.skip(isMobile, "Desktop only");
   await openGame(page);
 
-  for (const name of ["Walk left", "Walk right", "Shutter"]) {
+  for (const name of ["Walk left", "Walk right", "Shutter", "Inventory"]) {
     await expect(page.getByRole("button", { name })).toBeHidden();
   }
 });

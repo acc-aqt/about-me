@@ -1,4 +1,4 @@
-import type { Content, PointOfInterest, Zone } from "./content";
+import type { Content, InventoryItem, PointOfInterest, Zone } from "./content";
 import { photoPaths } from "./photos.ts";
 
 export const PLAIN_VIEW_PLACEHOLDER = "<!-- plain-view-content -->";
@@ -44,6 +44,16 @@ ${zone.pointsOfInterest.map(renderPointOfInterest).join("\n")}
 </section>`;
 }
 
+function renderInventory(items: InventoryItem[]): string {
+  const listItems = items
+    .map((item) => `<li><strong>${escapeHtml(item.name)}</strong> – ${escapeHtml(item.description)}</li>`)
+    .join("");
+  return `<section class="inventory" id="inventory" aria-labelledby="inventory-heading">
+<h2 id="inventory-heading">Inventory</h2>
+<ul class="inventory-items">${listItems}</ul>
+</section>`;
+}
+
 export function renderPlainView(content: Content): string {
-  return content.zones.map(renderZone).join("\n");
+  return [...content.zones.map(renderZone), renderInventory(content.inventory)].join("\n");
 }

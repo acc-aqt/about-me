@@ -26,7 +26,10 @@
           <button type="button" class="touch-button" data-game-button="left" aria-label="Walk left">◀</button>
           <button type="button" class="touch-button" data-game-button="right" aria-label="Walk right">▶</button>
         </div>
-        <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">◉</button>
+        <div class="touch-controls-actions">
+          <button type="button" class="touch-button touch-button-inventory" aria-label="Inventory">▤</button>
+          <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">◉</button>
+        </div>
       </div>
     </main>
 
@@ -48,6 +51,14 @@
         <p class="viewfinder-body"></p>
         <ul class="viewfinder-links"></ul>
         <button type="button" class="viewfinder-close" aria-label="Close Viewfinder">×</button>
+      </article>
+    </dialog>
+
+    <dialog id="inventory" class="viewfinder inventory" aria-labelledby="inventory-title" tabindex="-1">
+      <article>
+        <h2 id="inventory-title">Inventory</h2>
+        <ul class="inventory-items"></ul>
+        <button type="button" class="viewfinder-close inventory-close" aria-label="Close Inventory">×</button>
       </article>
     </dialog>
 

@@ -73,9 +73,17 @@ body {
     pointer-events: none;
   }
 
-  .touch-controls-walk {
+  .touch-controls-walk,
+  .touch-controls-actions {
     display: flex;
+    align-items: flex-end;
     gap: 0.75rem;
+  }
+
+  .touch-button-inventory {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.25rem;
   }
 
   .touch-button {
@@ -273,4 +281,19 @@ body {
 .sound-toggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.inventory-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.inventory-items li {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--ink);
 }

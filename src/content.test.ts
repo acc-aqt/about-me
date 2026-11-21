@@ -140,6 +140,21 @@ describe("Content file", () => {
     ]);
   });
 
+  it("has an Inventory of skills and tools, including the CAE and photography ones", () => {
+    const names = content.inventory.map((item) => item.name);
+    expect(names).toEqual(expect.arrayContaining(["Python", "LS-DYNA", "Abaqus", "CATIA V5", "Git", "Lightroom Classic"]));
+  });
+
+  it("gives every Inventory item a unique id, a name and a description", () => {
+    for (const item of content.inventory) {
+      expect(item.id, item.name).toMatch(/^[a-z0-9-]+$/);
+      expect(item.name.trim(), item.id).not.toBe("");
+      expect(item.description.trim(), item.id).not.toBe("");
+    }
+    const ids = content.inventory.map((item) => item.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("gives every Zone an id, title and positive width", () => {
     for (const zone of content.zones) {
       expect(zone.id, JSON.stringify(zone)).toMatch(/^[a-z0-9-]+$/);
