@@ -175,6 +175,22 @@ describe("Content file", () => {
     }
   });
 
+  it("hides one Film roll inside every Zone, away from its Points of Interest", () => {
+    for (const zone of content.zones) {
+      expect(zone.filmRoll, zone.id).toBeDefined();
+      expect(zone.filmRoll!.x, zone.id).toBeGreaterThanOrEqual(0);
+      expect(zone.filmRoll!.x, zone.id).toBeLessThanOrEqual(zone.width);
+      for (const poi of zone.pointsOfInterest) {
+        expect(Math.abs(zone.filmRoll!.x - poi.placement.x), `${zone.id} roll vs ${poi.id}`).toBeGreaterThan(40);
+      }
+    }
+  });
+
+  it("has a Film roll bonus that teases the Analog gallery", () => {
+    expect(content.filmRollBonus.title.trim()).not.toBe("");
+    expect(content.filmRollBonus.body).toMatch(/Analog gallery/);
+  });
+
   it("uses unique ids across Zones and Points of Interest", () => {
     const ids = [...content.zones.map((zone) => zone.id), ...pointsOfInterest.map((poi) => poi.id)];
     expect(new Set(ids).size).toBe(ids.length);

@@ -85,12 +85,13 @@ test("Fast-travel works with the keyboard alone", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Say hello" })).toBeVisible();
 });
 
-test("the corner controls and skip link do not overlap and each takes its own clicks", async ({ page }) => {
+test("the corner controls, skip link and Film roll counter do not overlap and each takes its own clicks", async ({ page }) => {
   await openGame(page);
   const controls = [
     page.getByRole("button", { name: "Fast-travel" }),
     page.getByRole("button", { name: "Sound" }),
     page.getByRole("link", { name: /skip the game/i }),
+    page.getByText(/^Film rolls:/),
   ];
   const boxes = await Promise.all(controls.map(async (control) => (await control.boundingBox())!));
   for (const [i, a] of boxes.entries()) {

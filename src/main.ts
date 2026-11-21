@@ -15,6 +15,15 @@ const SHUTTER_PROMPT = isTouch ? "Tap the Shutter to photograph" : "Press Space 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const hint = document.querySelector<HTMLElement>("#hint")!;
 const dialog = document.querySelector<HTMLDialogElement>("#viewfinder")!;
+const filmRollCounter = document.querySelector<HTMLElement>("#film-rolls")!;
+
+const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
+let collectedFilmRolls = 0;
+
+function showFilmRollCount() {
+  filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls}/${totalFilmRolls}`;
+}
+
 const fastTravelNav = document.querySelector<HTMLElement>(".fast-travel")!;
 const soundToggle = document.querySelector<HTMLButtonElement>("#sound-toggle")!;
 const soundToggleState = soundToggle.querySelector<HTMLElement>(".sound-toggle-state")!;
@@ -50,6 +59,11 @@ const controls = startGame(canvas, content, {
     viewfinder.open(poi);
   },
   canFireShutter: () => !viewfinder.isOpen() && !inventory.isOpen(),
+  onFilmRollCollected() {
+    collectedFilmRolls++;
+    showFilmRollCount();
+    if (collectedFilmRolls === totalFilmRolls) viewfinder.open(content.filmRollBonus);
+  },
 });
 
 function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
@@ -78,3 +92,4 @@ createFastTravel(fastTravelNav, content.zones, (zoneId) => {
 });
 
 hint.textContent = CONTROLS_HINT;
+showFilmRollCount();

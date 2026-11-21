@@ -1,8 +1,10 @@
 import type { Photo, PointOfInterest } from "./content";
 import { photoPaths } from "./photos";
 
+export type ViewfinderContent = Pick<PointOfInterest, "title" | "subtitle" | "dates" | "body" | "photos" | "links">;
+
 export type Viewfinder = {
-  open(poi: PointOfInterest): void;
+  open(poi: ViewfinderContent): void;
   isOpen(): boolean;
 };
 
@@ -60,7 +62,7 @@ export function createViewfinder(dialog: HTMLDialogElement, onClose: () => void)
   });
   dialog.addEventListener("close", onClose);
 
-  function render(poi: PointOfInterest) {
+  function render(poi: ViewfinderContent) {
     title.textContent = poi.title;
     setOptionalText(subtitle, poi.subtitle);
     setOptionalText(dates, poi.dates);

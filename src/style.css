@@ -52,13 +52,24 @@ body {
   text-align: center;
 }
 
+.film-rolls {
+  position: absolute;
+  top: 3rem;
+  right: 0.75rem;
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  background: rgb(0 0 0 / 0.6);
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
 .touch-controls {
   display: none;
 }
 
 @media (pointer: coarse) {
   .hint {
-    top: 3.5rem;
+    top: 5.75rem;
     bottom: auto;
   }
 
