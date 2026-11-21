@@ -1,4 +1,5 @@
 import type { InventoryItem } from "./content";
+import { query } from "./dom";
 
 export type Inventory = {
   toggle(): void;
@@ -10,8 +11,8 @@ export function isInventoryKey(event: KeyboardEvent): boolean {
 }
 
 export function createInventory(dialog: HTMLDialogElement, items: InventoryItem[], onClose: () => void): Inventory {
-  const list = dialog.querySelector<HTMLUListElement>(".inventory-items");
-  if (!list) throw new Error("Inventory markup is missing .inventory-items");
+  const list = query<HTMLUListElement>(dialog, ".inventory-items");
+  const closeButton = query<HTMLButtonElement>(dialog, ".inventory-close");
 
   list.replaceChildren(
     ...items.map((item) => {
@@ -25,7 +26,7 @@ export function createInventory(dialog: HTMLDialogElement, items: InventoryItem[
     }),
   );
 
-  dialog.querySelector(".inventory-close")?.addEventListener("click", () => dialog.close());
+  closeButton.addEventListener("click", () => dialog.close());
   dialog.addEventListener("keydown", (event) => {
     if (isInventoryKey(event)) {
       event.preventDefault();

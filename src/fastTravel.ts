@@ -1,18 +1,18 @@
-import type { Zone } from "./content";
+import type { Zone, ZoneId } from "./content";
+import { query } from "./dom";
 
 function fastTravelLabel(zone: Zone): string {
   const landing = zone.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
   return landing ? `${zone.title} · ${landing.title}` : zone.title;
 }
 
-export function createFastTravel(nav: HTMLElement, zones: Zone[], onTravel: (zoneId: string) => void) {
-  const toggle = nav.querySelector<HTMLButtonElement>(".fast-travel-toggle");
-  const list = nav.querySelector<HTMLUListElement>(".fast-travel-zones");
-  if (!toggle || !list) throw new Error("Fast-travel markup is missing its toggle or Zone list");
+export function createFastTravel(nav: HTMLElement, zones: Zone[], onTravel: (zoneId: ZoneId) => void) {
+  const toggle = query<HTMLButtonElement>(nav, ".fast-travel-toggle");
+  const list = query<HTMLUListElement>(nav, ".fast-travel-zones");
 
   function setOpen(open: boolean) {
-    toggle!.setAttribute("aria-expanded", String(open));
-    list!.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    list.hidden = !open;
   }
 
   list.replaceChildren(

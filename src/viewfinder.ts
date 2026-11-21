@@ -1,4 +1,5 @@
 import type { Photo, PointOfInterest } from "./content";
+import { query } from "./dom";
 import { photoPaths } from "./photos";
 
 export type ViewfinderContent = Pick<PointOfInterest, "title" | "subtitle" | "dates" | "body" | "photos" | "links">;
@@ -7,12 +8,6 @@ export type Viewfinder = {
   open(poi: ViewfinderContent): void;
   isOpen(): boolean;
 };
-
-function query<T extends Element>(root: ParentNode, selector: string): T {
-  const element = root.querySelector<T>(selector);
-  if (!element) throw new Error(`Viewfinder markup is missing ${selector}`);
-  return element;
-}
 
 function setOptionalText(element: HTMLElement, text: string | undefined) {
   element.textContent = text ?? "";

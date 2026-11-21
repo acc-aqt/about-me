@@ -4,6 +4,7 @@ import { createFastTravel } from "./fastTravel";
 import { startGame, type GameButton, type GameControls } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
 import { createViewfinder } from "./viewfinder";
+import { query } from "./dom";
 
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
 
@@ -12,10 +13,10 @@ const CONTROLS_HINT = isTouch
   : "Walk with ← → or A D. Press Space near a sign to take a photo. Press I for the Inventory.";
 const SHUTTER_PROMPT = isTouch ? "Tap the Shutter to photograph" : "Press Space to photograph";
 
-const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
-const hint = document.querySelector<HTMLElement>("#hint")!;
-const dialog = document.querySelector<HTMLDialogElement>("#viewfinder")!;
-const filmRollCounter = document.querySelector<HTMLElement>("#film-rolls")!;
+const canvas = query<HTMLCanvasElement>(document, "#game");
+const hint = query<HTMLElement>(document, "#hint");
+const dialog = query<HTMLDialogElement>(document, "#viewfinder");
+const filmRollCounter = query<HTMLElement>(document, "#film-rolls");
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
 let collectedFilmRolls = 0;
@@ -24,9 +25,9 @@ function showFilmRollCount() {
   filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls}/${totalFilmRolls}`;
 }
 
-const fastTravelNav = document.querySelector<HTMLElement>(".fast-travel")!;
-const soundToggle = document.querySelector<HTMLButtonElement>("#sound-toggle")!;
-const soundToggleState = soundToggle.querySelector<HTMLElement>(".sound-toggle-state")!;
+const fastTravelNav = query<HTMLElement>(document, ".fast-travel");
+const soundToggle = query<HTMLButtonElement>(document, "#sound-toggle");
+const soundToggleState = query<HTMLElement>(soundToggle, ".sound-toggle-state");
 
 const audio = createAudio();
 
@@ -38,7 +39,7 @@ soundToggle.addEventListener("click", (event) => {
   if (event.detail > 0) canvas.focus();
 });
 
-const inventoryDialog = document.querySelector<HTMLDialogElement>("#inventory")!;
+const inventoryDialog = query<HTMLDialogElement>(document, "#inventory");
 
 const viewfinder = createViewfinder(dialog, () => canvas.focus());
 const inventory = createInventory(inventoryDialog, content.inventory, () => canvas.focus());
@@ -82,7 +83,7 @@ document
   .querySelectorAll<HTMLButtonElement>("[data-game-button]")
   .forEach((element) => bindTouchButton(element, controls));
 
-document.querySelector<HTMLButtonElement>(".touch-button-inventory")!.addEventListener("click", () => {
+query<HTMLButtonElement>(document, ".touch-button-inventory").addEventListener("click", () => {
   if (!viewfinder.isOpen()) inventory.toggle();
 });
 

@@ -141,7 +141,7 @@ body {
   outline-offset: 2px;
 }
 
-.viewfinder {
+.overlay {
   width: min(40rem, calc(100% - 2rem));
   max-height: calc(100dvh - 2rem);
   overflow: auto;
@@ -152,11 +152,11 @@ body {
   color: var(--ink);
 }
 
-.viewfinder::backdrop {
+.overlay::backdrop {
   background: rgb(0 0 0 / 0.7);
 }
 
-.viewfinder[open] {
+.overlay[open] {
   animation: shutter-open 180ms steps(4, end);
 }
 
@@ -170,17 +170,17 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .viewfinder[open] {
+  .overlay[open] {
     animation: none;
   }
 }
 
-.viewfinder article {
+.overlay article {
   position: relative;
   padding: 1.5rem;
 }
 
-.viewfinder h2 {
+.overlay h2 {
   margin: 0 2.5rem 0.25rem 0;
 }
 
@@ -227,7 +227,7 @@ body {
   cursor: pointer;
 }
 
-.viewfinder-close {
+.overlay-close {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;

@@ -34,7 +34,7 @@
       </div>
     </main>
 
-    <dialog id="viewfinder" class="viewfinder" aria-labelledby="viewfinder-title" tabindex="-1">
+    <dialog id="viewfinder" class="overlay viewfinder" aria-labelledby="viewfinder-title" tabindex="-1">
       <article>
         <header>
           <h2 id="viewfinder-title"></h2>
@@ -52,15 +52,15 @@
         </figure>
         <p class="viewfinder-body"></p>
         <ul class="viewfinder-links"></ul>
-        <button type="button" class="viewfinder-close" aria-label="Close Viewfinder">×</button>
+        <button type="button" class="overlay-close viewfinder-close" aria-label="Close Viewfinder">×</button>
       </article>
     </dialog>
 
-    <dialog id="inventory" class="viewfinder inventory" aria-labelledby="inventory-title" tabindex="-1">
+    <dialog id="inventory" class="overlay inventory" aria-labelledby="inventory-title" tabindex="-1">
       <article>
         <h2 id="inventory-title">Inventory</h2>
         <ul class="inventory-items"></ul>
-        <button type="button" class="viewfinder-close inventory-close" aria-label="Close Inventory">×</button>
+        <button type="button" class="overlay-close inventory-close" aria-label="Close Inventory">×</button>
       </article>
     </dialog>
 
