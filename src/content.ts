@@ -68,7 +68,16 @@ export const content: Content = {
       title: "Start – Munich",
       width: 320,
       filmRoll: { x: 200 },
-      pointsOfInterest: [],
+      pointsOfInterest: [
+        {
+          id: "intro",
+          title: "Hi, I'm Alexander",
+          subtitle: "Software developer, mechanical engineer, photographer",
+          body:
+            "I'm a software developer for computer-aided engineering methods at MTU Aero Engines in Munich, and a mechanical engineer from TUM. I'm also a travel and landscape photographer. I like building tools, and I swim, play tennis and go ski touring.",
+          placement: { x: 140 },
+        },
+      ],
     },
     {
       id: "career-road",

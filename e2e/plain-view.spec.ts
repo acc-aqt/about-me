@@ -31,6 +31,14 @@ test.describe("Plain view without JavaScript", () => {
     }
   });
 
+  test("opens with the intro from the Start Zone", async ({ page }) => {
+    await page.goto("./plain/");
+    const intro = content.zones[0].pointsOfInterest[0];
+
+    await expect(page.getByRole("main").getByRole("article").first()).toHaveAccessibleName(intro.title);
+    await expect(page.getByRole("main").getByRole("article").first()).toContainText(intro.body);
+  });
+
   test("shows every Inventory item from the Content file", async ({ page }) => {
     await page.goto("./plain/");
     const inventory = page.getByRole("main").getByRole("region", { name: "Inventory", exact: true });

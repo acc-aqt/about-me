@@ -39,6 +39,13 @@ describe("Content file", () => {
     expect(content.zones[0].title).toMatch(/Munich/);
   });
 
+  it("opens the Start Zone with an intro Point of Interest about Alexander", () => {
+    const [intro] = zoneById("start").pointsOfInterest;
+    expect(intro?.id).toBe("intro");
+    expect(intro.body).toMatch(/MTU Aero Engines/);
+    expect(intro.body).toMatch(/photographer/);
+  });
+
   it("has an MTU Aero Engines Point of Interest", () => {
     const mtu = pointsOfInterest.find((poi) => poi.id === "mtu");
     expect(mtu?.title).toBe("MTU Aero Engines");
