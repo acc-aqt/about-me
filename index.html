@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alexander Carrels</title>
+    <meta name="description" content="Alexander Carrels – software developer, engineer and photographer. An interactive 16-bit portfolio." />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <canvas id="game" tabindex="0" role="application" aria-label="Portfolio game" aria-describedby="hint"></canvas>
+      <p id="hint" class="hint" role="status"></p>
+    </main>
+
+    <dialog id="viewfinder" class="viewfinder" aria-labelledby="viewfinder-title" tabindex="-1">
+      <article>
+        <header>
+          <h2 id="viewfinder-title"></h2>
+          <p class="viewfinder-subtitle"></p>
+          <p class="viewfinder-dates"></p>
+        </header>
+        <div class="viewfinder-photos"></div>
+        <p class="viewfinder-body"></p>
+        <ul class="viewfinder-links"></ul>
+        <button type="button" class="viewfinder-close" aria-label="Close Viewfinder">×</button>
+      </article>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
