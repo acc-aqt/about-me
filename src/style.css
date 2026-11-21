@@ -108,3 +108,34 @@ body {
 [hidden] {
   display: none !important;
 }
+
+.sound-toggle {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  border: 2px solid var(--fg);
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.6);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.sound-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+
+.sound-toggle-state {
+  color: var(--muted);
+}
+
+.sound-toggle[aria-pressed="true"] .sound-toggle-state {
+  color: var(--accent);
+}
+
+.sound-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
