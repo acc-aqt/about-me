@@ -25,6 +25,7 @@ test.describe("Plain view without JavaScript", () => {
           const src = await poiArticle.getByRole("img", { name: photo.alt, exact: true }).getAttribute("src");
           const image = await request.get(new URL(src!, page.url()).href);
           expect(image.headers()["content-type"], photo.src).toMatch(/^image\//);
+          if (photo.caption) await expect(poiArticle).toContainText(photo.caption);
         }
       }
     }

@@ -1,7 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import { content } from "../src/content.ts";
 
-const norway = content.zones.flatMap((zone) => zone.pointsOfInterest).find((poi) => poi.id === "norway")!;
+const trail = content.zones.find((zone) => zone.id === "photography-trail")!;
+const norway = trail.pointsOfInterest.find((poi) => poi.id === "norway")!;
+const darkroom = trail.pointsOfInterest.find((poi) => poi.id === "darkroom")!;
 const photos = norway.photos!;
 
 async function walkRightUntilNear(page: Page, title: string) {
@@ -48,8 +50,25 @@ test("the Norway Viewfinder shows a full-resolution photo and steps through the 
   await expect(photo).toHaveAccessibleName(photos[photos.length - 1].alt);
 });
 
-test("the site serves a pixelated thumbnail for every Norway photo", async ({ request }) => {
-  for (const { src } of photos) {
+test("the darkroom Viewfinder shows the Analog gallery with the film each frame was shot on", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "Fast-travel" }).click();
+  await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: trail.title }).click();
+  await page.getByRole("application", { name: /game/i }).focus();
+  await walkRightUntilNear(page, darkroom.title);
+  await page.keyboard.press("Space");
+
+  const viewfinder = page.getByRole("dialog", { name: darkroom.title });
+  await expect(viewfinder).toBeVisible();
+  await expect(viewfinder.getByRole("img")).toHaveAccessibleName(darkroom.photos![0].alt);
+  await expect(viewfinder).toContainText(darkroom.photos![0].caption!);
+  await page.keyboard.press("ArrowLeft");
+  await expect(viewfinder).toContainText(darkroom.photos!.at(-1)!.caption!);
+  await expect(viewfinder.getByRole("link", { name: darkroom.links![0].label })).toHaveAttribute("href", darkroom.links![0].url);
+});
+
+test("the site serves a pixelated thumbnail for every photo on the Photography trail", async ({ request }) => {
+  for (const { src } of trail.pointsOfInterest.flatMap((poi) => poi.photos ?? [])) {
     const thumbnail = src.replace(/_med_q80\.jpg$/i, "-thumb.png");
     const response = await request.get(`photos/${thumbnail}`);
     expect(response.status(), thumbnail).toBe(200);

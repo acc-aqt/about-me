@@ -1,4 +1,4 @@
-import type { Content, InventoryItem, PointOfInterest, Zone } from "./content";
+import type { Content, InventoryItem, Photo, PointOfInterest, Zone } from "./content";
 import { photoPaths } from "./photos.ts";
 
 export const PLAIN_VIEW_PLACEHOLDER = "<!-- plain-view-content -->";
@@ -16,11 +16,15 @@ function optionalParagraph(className: string, text: string | undefined): string 
   return text ? `<p class="${className}">${escapeHtml(text)}</p>` : "";
 }
 
+function renderPhoto(photo: Photo): string {
+  const image = `<img src="../${escapeHtml(photoPaths(photo).full)}" alt="${escapeHtml(photo.alt)}" loading="lazy" />`;
+  if (!photo.caption) return image;
+  return `<figure>${image}<figcaption>${escapeHtml(photo.caption)}</figcaption></figure>`;
+}
+
 function renderPointOfInterest(poi: PointOfInterest): string {
   const headingId = `poi-${poi.id}`;
-  const photos = (poi.photos ?? [])
-    .map((photo) => `<img src="../${escapeHtml(photoPaths(photo).full)}" alt="${escapeHtml(photo.alt)}" loading="lazy" />`)
-    .join("");
+  const photos = (poi.photos ?? []).map(renderPhoto).join("");
   const links = (poi.links ?? [])
     .map(
       (link) =>

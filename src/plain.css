@@ -64,6 +64,16 @@ body.plain {
   margin-block: 1rem;
 }
 
+.poi-photos figure {
+  margin: 0;
+}
+
+.poi-photos figcaption {
+  margin-top: -0.6rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 a {
   color: var(--link);
 }

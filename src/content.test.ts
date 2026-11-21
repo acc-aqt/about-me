@@ -221,6 +221,43 @@ describe("Content file", () => {
     expect(norway?.photos?.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("walks the Photography trail through the trips in chronological order, ending in the darkroom", () => {
+    const trail = zoneById("photography-trail");
+    expect(trail.pointsOfInterest.map((poi) => poi.title)).toEqual([
+      "Jordan",
+      "Norway ski touring",
+      "New York",
+      "Nepal",
+      "Lisbon",
+      "Eastern Adriatic",
+      "Peru",
+      "Darkroom",
+    ]);
+    const xs = trail.pointsOfInterest.map((poi) => poi.placement.x);
+    expect(xs).toEqual([...xs].sort((a, b) => a - b));
+  });
+
+  it("gives every trip on the Photography trail a few curated photos and a link to its carrels.photography gallery", () => {
+    for (const poi of zoneById("photography-trail").pointsOfInterest) {
+      const galleries = new Set((poi.photos ?? []).map((photo) => photo.src.split("/")[0]));
+      expect(poi.photos?.length, poi.id).toBeGreaterThanOrEqual(4);
+      expect(poi.photos?.length, poi.id).toBeLessThanOrEqual(6);
+      expect(galleries.size, poi.id).toBe(1);
+      expect(linkUrls(poi.id), poi.id).toContain(`https://www.carrels.photography/${[...galleries][0]}/`);
+    }
+  });
+
+  it("holds the Analog gallery in the darkroom, captioned with the film each photo was shot on", () => {
+    const darkroom = zoneById("photography-trail").pointsOfInterest.find((poi) => poi.id === "darkroom")!;
+    expect(darkroom.body).toMatch(/35mm/);
+    expect(darkroom.body).toMatch(/medium format/);
+    expect(linkUrls("darkroom")).toEqual(["https://www.carrels.photography/analog/"]);
+    for (const photo of darkroom.photos ?? []) {
+      expect(photo.src).toMatch(/^analog\//);
+      expect(photo.caption, photo.src).toMatch(/Film: .+ \((35mm|120 medium format)\)/);
+    }
+  });
+
   it("names a carrels-photography gallery file as the source of every photo", () => {
     for (const poi of pointsOfInterest) {
       for (const photo of poi.photos ?? []) {

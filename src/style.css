@@ -182,6 +182,13 @@ body {
   background: var(--ink);
 }
 
+.viewfinder-photo-caption {
+  margin: 0.4rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #5a5648;
+}
+
 .viewfinder-photo-nav {
   display: flex;
   align-items: center;

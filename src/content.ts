@@ -6,6 +6,8 @@ export type Link = {
 export type Photo = {
   src: string;
   alt: string;
+  /** Shown beneath the photo, e.g. where it was taken and on which film. */
+  caption?: string;
 };
 
 export type Placement = {
@@ -177,9 +179,39 @@ export const content: Content = {
     {
       id: "photography-trail",
       title: "Photography trail",
-      width: 320,
+      width: 1440,
       filmRoll: { x: 60 },
       pointsOfInterest: [
+        {
+          id: "jordan",
+          title: "Jordan",
+          dates: "2022",
+          body: "A trip through Jordan: tea brewed over embers, bakeries and fruit stalls in the markets, and sunsets over the desert.",
+          photos: [
+            {
+              src: "jordan/DSC7979-Bearbeitet-5_med_q80.jpg",
+              alt: "An older man in a patterned headscarf sits cross-legged in a rock shelter, smiling and raising a small glass of tea, a kettle on the embers beside him.",
+            },
+            {
+              src: "jordan/DSC3489-2_med_q80.jpg",
+              alt: "A smiling young baker in glasses leans out of a shop window next to a tall stack of flatbreads.",
+            },
+            {
+              src: "jordan/DSC7281-Bearbeitet-2_finale_korrekturen_med_q80.jpg",
+              alt: "A woman in a headscarf works a hand press to squeeze pomegranate juice at a market stall piled with oranges and pomegranates.",
+            },
+            {
+              src: "jordan/DSC8760-Bearbeitet_med_q80.jpg",
+              alt: "Two men in headscarves lean under the raised bonnet of a car to work on its engine, out on the pale desert sand.",
+            },
+            {
+              src: "jordan/DSC9068-Bearbeitet_med_q80.jpg",
+              alt: "The sun setting behind rock formations on the horizon of a wide, empty desert plain.",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/jordan/" }],
+          placement: { x: 160 },
+        },
         {
           id: "norway",
           title: "Norway ski touring",
@@ -212,7 +244,213 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/norway-skitouring/" }],
-          placement: { x: 160 },
+          placement: { x: 320 },
+        },
+        {
+          id: "new-york",
+          title: "New York",
+          dates: "2024",
+          body: "New York City: the bridges and skyline of Lower Manhattan, Lady Liberty at sunset, Times Square at night and live jazz.",
+          photos: [
+            {
+              src: "newyork/DSC7494-Bearbeitet_med_q80.jpg",
+              alt: "The Brooklyn Bridge and the Lower Manhattan skyline across the East River, seen from a rocky shore under a blue sky.",
+            },
+            {
+              src: "newyork/DSC7444-Bearbeitet-2_med_q80.jpg",
+              alt: "The Manhattan Bridge framed between red-brick warehouses at the end of a cobbled street lined with parked cars.",
+            },
+            {
+              src: "newyork/DSC8625-Pano-Bearbeitet_med_q80.jpg",
+              alt: "One World Trade Center towering over glass skyscrapers above the dark, square pool of the 9/11 Memorial.",
+            },
+            {
+              src: "newyork/DSC8263-Bearbeitet_med_q80.jpg",
+              alt: "The Statue of Liberty in silhouette against an orange sky as the sun sets beside it.",
+            },
+            {
+              src: "newyork/DSC6696-HDR-Bearbeitet_med_q80.jpg",
+              alt: "Times Square at night, glowing billboards on every side and a yellow taxi crossing the busy street.",
+            },
+            {
+              src: "newyork/DSC8469-Bearbeitet-2_med_q80.jpg",
+              alt: "A jazz band playing in a brick-walled bar: a singer, a saxophonist, a pianist and a tuba player behind him.",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/newyork/" }],
+          placement: { x: 480 },
+        },
+        {
+          id: "nepal",
+          title: "Nepal",
+          dates: "2024",
+          body: "Nepal: Himalayan peaks at dawn, stupas and prayer flags, temple squares and boat rides on the lakes.",
+          photos: [
+            {
+              src: "nepal/DSC0151x-Bearbeitet_med_q80.jpg",
+              alt: "Snow-capped Himalayan peaks glowing pink at dawn above hazy hills, a lake and a sprawling city in the valley.",
+            },
+            {
+              src: "nepal/DSC0241_med_q80.jpg",
+              alt: "A white stupa with a golden spire lit by the sun at the end of a narrow, shaded street with a walking silhouette.",
+            },
+            {
+              src: "nepal/DSC9996x_med_q80.jpg",
+              alt: "A boatman in a sun hat and blue jacket smiles as he paddles a light blue wooden boat across a lake.",
+            },
+            {
+              src: "nepal/DSC0065-3_med_q80.jpg",
+              alt: "A golden Buddhist statue on a lotus throne raising a sword against a blue sky, with monkeys sitting at its feet.",
+            },
+            {
+              src: "nepal/DSC0251_med_q80.jpg",
+              alt: "Small children laughing and running through a flock of pigeons on a stone temple square.",
+            },
+            {
+              src: "nepal/DSC0333-HDR-Bearbeitet_med_q80.jpg",
+              alt: "Tiered pagoda temples with red-trimmed roofs beyond a stone walkway under a soft evening sky.",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/nepal/" }],
+          placement: { x: 640 },
+        },
+        {
+          id: "lisbon",
+          title: "Lisbon",
+          dates: "2025",
+          body: "Lisbon: yellow trams and funiculars climbing the steep, tiled streets, and an evening sail on the Tagus.",
+          photos: [
+            {
+              src: "lisbon/DSC2848-2_med_q80.jpg",
+              alt: "A yellow tram rounding a curve in a narrow street between pale, sunlit apartment buildings.",
+            },
+            {
+              src: "lisbon/DSC2717_med_q80.jpg",
+              alt: "Two vintage yellow trams waiting behind a dark grey car in front of a pink building.",
+            },
+            {
+              src: "lisbon/DSC3258-Bearbeitet_med_q80.jpg",
+              alt: "A yellow funicular car at the foot of a steep track, beside a tiled facade above a restaurant entrance.",
+            },
+            {
+              src: "lisbon/DSC3296-Bearbeitet_med_q80.jpg",
+              alt: "A smiling woman in sunglasses and a checked blazer rides in a wood-panelled funicular with tiled walls outside.",
+            },
+            {
+              src: "lisbon/DSC2253-Bearbeitet_med_q80.jpg",
+              alt: "A woman lounges on the deck of a sailing boat on the river, a red suspension bridge in the background.",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/lisbon/" }],
+          placement: { x: 800 },
+        },
+        {
+          id: "eastern-adriatic",
+          title: "Eastern Adriatic",
+          dates: "2025",
+          body: "A summer along the eastern Adriatic coast: Venetian-style old towns, cobbled alleys and evening light over the sea.",
+          photos: [
+            {
+              src: "eastern_adriatic/L1002346_med_q80.jpg",
+              alt: "A wide town square paved in pale stone, lined with pastel houses below a tall bell tower in late sun.",
+            },
+            {
+              src: "eastern_adriatic/L1002333_med_q80.jpg",
+              alt: "A seaside restaurant with blue dolphin statues on its steps, swimmers in the sea behind it and a woman walking past.",
+            },
+            {
+              src: "eastern_adriatic/L1002193_med_q80.jpg",
+              alt: "Two scooters parked on a cobbled lane below weathered houses with green shutters and climbing plants.",
+            },
+            {
+              src: "eastern_adriatic/L1002219_med_q80.jpg",
+              alt: "A black-and-white cat sitting on an old stone wall in front of a green garden.",
+            },
+            {
+              src: "eastern_adriatic/L1002260_med_q80.jpg",
+              alt: "Stone steps leading up a narrow alley of old houses and wisteria towards a church bell tower.",
+            },
+            {
+              src: "eastern_adriatic/L1002270-Bearbeitet_med_q80.jpg",
+              alt: "A lone umbrella pine in silhouette against the low sun shimmering on the sea.",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/eastern_adriatic/" }],
+          placement: { x: 960 },
+        },
+        {
+          id: "peru",
+          title: "Peru",
+          dates: "2025",
+          body: "Peru: from the cliffs and streets of Lima to a volcano towering over a city, weavers and the train towards Machu Picchu.",
+          photos: [
+            {
+              src: "peru/L1012145-Bearbeitet-4_med_q80.jpg",
+              alt: "A weaver in a red embroidered jacket and an orange-and-black hat works at a loom strung with colourful threads.",
+            },
+            {
+              src: "peru/L1020812-Bearbeitet-2-2_med_q80.jpg",
+              alt: "An older woman in a checked coat holding a purple scarf beside a striped ice-cream cart, a large mural behind her.",
+            },
+            {
+              src: "peru/L1011210-2_med_q80.jpg",
+              alt: "A coastal highway winding along the foot of green cliffs, high-rise buildings above the hazy Pacific shore.",
+            },
+            {
+              src: "peru/L1011355_med_q80.jpg",
+              alt: "A pier reaching out into rolling Pacific waves, seen from a green clifftop with a single tree.",
+            },
+            {
+              src: "peru/L1012304-Bearbeitet_med_q80.jpg",
+              alt: "A cone-shaped volcano rising over a city in the evening light, seen from above a plaza with stone columns.",
+            },
+            {
+              src: "peru/L1020579-Bearbeitet-4_med_q80.jpg",
+              alt: "Passengers in a train carriage with skylight windows while a performer in a colourful costume and feathered headdress walks the aisle.",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/peru/" }],
+          placement: { x: 1120 },
+        },
+        {
+          id: "darkroom",
+          title: "Darkroom",
+          subtitle: "Analog gallery",
+          body: "The end of the trail is the darkroom: selected frames on film, shot in 35mm and medium format.",
+          photos: [
+            {
+              src: "analog/DSCF0805-4_med_q80.jpg",
+              alt: "People on a sunny wooden waterfront under a dark overhang, looking across a harbour to brick warehouses and a spire.",
+              caption: "Copenhagen, 2026 – Film: Kodak Portra 160 (35mm)",
+            },
+            {
+              src: "analog/DSCF0856_med_q80.jpg",
+              alt: "A man climbing out of a deep concrete stairwell towards a red metro sign in hard sunlight and shadow.",
+              caption: "Copenhagen, 2026 – Film: Kodak Portra 160 (35mm)",
+            },
+            {
+              src: "analog/DSCF0691-2_med_q80.jpg",
+              alt: "A man with long hair flips through crates of records in a shop hung with colourful pop-art portraits and lamps.",
+              caption: "Copenhagen, 2026 – Film: Kodak Portra 400 (35mm)",
+            },
+            {
+              src: "analog/DSCF0391-2_med_q80.jpg",
+              alt: "Black-and-white photo through a shop window of a cook in a paper hat pulling noodles, the photographer reflected in the glass.",
+              caption: "Munich, 2026 – Film: Ilford FP4+ (35mm)",
+            },
+            {
+              src: "analog/L1043343_med_q80.jpg",
+              alt: "A snowboarder in a tan jacket and goggles standing on a snowy, windswept slope beside a T-bar lift.",
+              caption: "Hintertux, 2026 – Film: Kodak Gold 200 (35mm)",
+            },
+            {
+              src: "analog/L1022783_med_q80.jpg",
+              alt: "Black-and-white square frame looking up through large veined leaves at the steel and glass roof of a greenhouse.",
+              caption: "Munich Botanical Garden, 2026 – Film: Ilford HP5+ (120 medium format)",
+            },
+          ],
+          links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/analog/" }],
+          placement: { x: 1280 },
         },
       ],
     },

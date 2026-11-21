@@ -25,6 +25,7 @@ export function createViewfinder(dialog: HTMLDialogElement, onClose: () => void)
   const dates = query<HTMLElement>(dialog, ".viewfinder-dates");
   const photos = query<HTMLElement>(dialog, ".viewfinder-photos");
   const photo = query<HTMLImageElement>(dialog, ".viewfinder-photo");
+  const photoCaption = query<HTMLElement>(dialog, ".viewfinder-photo-caption");
   const photoNav = query<HTMLElement>(dialog, ".viewfinder-photo-nav");
   const photoCount = query<HTMLElement>(dialog, ".viewfinder-photo-count");
   const previousButton = query<HTMLButtonElement>(dialog, ".viewfinder-previous");
@@ -41,6 +42,7 @@ export function createViewfinder(dialog: HTMLDialogElement, onClose: () => void)
     const shown = shownPhotos[photoIndex];
     photo.src = import.meta.env.BASE_URL + photoPaths(shown).full;
     photo.alt = shown.alt;
+    setOptionalText(photoCaption, shown.caption);
     photoCount.textContent = `Photo ${photoIndex + 1} of ${shownPhotos.length}`;
   }
 
