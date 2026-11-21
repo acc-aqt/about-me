@@ -32,6 +32,33 @@ describe("Content file", () => {
     expect(mtu?.title).toBe("MTU Aero Engines");
   });
 
+  it("walks the Career road from TUM to the MTU Aero Engines hangar", () => {
+    const careerRoad = content.zones.find((zone) => zone.id === "career-road");
+    expect(careerRoad?.pointsOfInterest.map((poi) => poi.title)).toEqual([
+      "Technical University of Munich",
+      "BMW Group",
+      "Canberra detour",
+      "Forward Engineering",
+      "ARRK Engineering",
+      "MTU Aero Engines",
+    ]);
+  });
+
+  it("gives every Career road stop a role, dates and a one-line summary", () => {
+    const careerRoad = content.zones.find((zone) => zone.id === "career-road")!;
+    for (const poi of careerRoad.pointsOfInterest) {
+      expect(poi.subtitle?.trim(), poi.id).toBeTruthy();
+      expect(poi.dates?.trim(), poi.id).toBeTruthy();
+      expect(poi.body, poi.id).not.toContain("\n");
+    }
+  });
+
+  it("places Career road stops left to right", () => {
+    const careerRoad = content.zones.find((zone) => zone.id === "career-road")!;
+    const xs = careerRoad.pointsOfInterest.map((poi) => poi.placement.x);
+    expect(xs).toEqual([...xs].sort((a, b) => a - b));
+  });
+
   it("gives every Zone an id, title and positive width", () => {
     for (const zone of content.zones) {
       expect(zone.id, JSON.stringify(zone)).toMatch(/^[a-z0-9-]+$/);
