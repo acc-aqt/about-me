@@ -52,6 +52,59 @@ body {
   text-align: center;
 }
 
+.touch-controls {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .hint {
+    top: 3.5rem;
+    bottom: auto;
+  }
+
+  .touch-controls {
+    position: absolute;
+    inset: auto 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
+      max(1rem, env(safe-area-inset-left));
+    pointer-events: none;
+  }
+
+  .touch-controls-walk {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .touch-button {
+    width: 4rem;
+    height: 4rem;
+    border: 3px solid var(--fg);
+    border-radius: 8px;
+    background: rgb(0 0 0 / 0.45);
+    color: var(--fg);
+    font-size: 1.5rem;
+    line-height: 1;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .touch-button:active {
+    background: rgb(255 255 255 / 0.25);
+  }
+
+  .touch-button-shutter {
+    border-color: var(--accent);
+    border-radius: 50%;
+    color: var(--accent);
+  }
+}
+
 .skip-link {
   position: fixed;
   top: 0.75rem;
@@ -72,6 +125,7 @@ body {
 .viewfinder {
   width: min(40rem, calc(100% - 2rem));
   max-height: calc(100dvh - 2rem);
+  overflow: auto;
   padding: 0;
   border: 6px solid var(--ink);
   border-radius: 4px;
