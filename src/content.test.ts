@@ -63,6 +63,33 @@ describe("Content file", () => {
     }
   });
 
+  it("walks the Career road from TUM to the MTU Aero Engines hangar", () => {
+    const careerRoad = zoneById("career-road");
+    expect(careerRoad.pointsOfInterest.map((poi) => poi.title)).toEqual([
+      "Technical University of Munich",
+      "BMW Group",
+      "Canberra detour",
+      "Forward Engineering",
+      "ARRK Engineering",
+      "MTU Aero Engines",
+    ]);
+  });
+
+  it("gives every Career road stop a role, dates and a one-line summary", () => {
+    const careerRoad = zoneById("career-road");
+    for (const poi of careerRoad.pointsOfInterest) {
+      expect(poi.subtitle?.trim(), poi.id).toBeTruthy();
+      expect(poi.dates?.trim(), poi.id).toBeTruthy();
+      expect(poi.body, poi.id).not.toContain("\n");
+    }
+  });
+
+  it("places Career road stops left to right", () => {
+    const careerRoad = zoneById("career-road");
+    const xs = careerRoad.pointsOfInterest.map((poi) => poi.placement.x);
+    expect(xs).toEqual([...xs].sort((a, b) => a - b));
+  });
+
   it("orders the Zones it has along the Route as the spec does", () => {
     const routeOrder = ["start", "career-road", "maker-workshop", "photography-trail", "sport", "music-and-games", "contact"];
     const present = content.zones.map((zone) => zone.id).filter((id) => routeOrder.includes(id));
