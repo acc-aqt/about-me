@@ -20,7 +20,14 @@
           <p class="viewfinder-subtitle"></p>
           <p class="viewfinder-dates"></p>
         </header>
-        <div class="viewfinder-photos"></div>
+        <figure class="viewfinder-photos">
+          <img class="viewfinder-photo" alt="" />
+          <figcaption class="viewfinder-photo-nav">
+            <button type="button" class="viewfinder-previous" aria-label="Previous photo">‹</button>
+            <span class="viewfinder-photo-count" aria-live="polite"></span>
+            <button type="button" class="viewfinder-next" aria-label="Next photo">›</button>
+          </figcaption>
+        </figure>
         <p class="viewfinder-body"></p>
         <ul class="viewfinder-links"></ul>
         <button type="button" class="viewfinder-close" aria-label="Close Viewfinder">×</button>

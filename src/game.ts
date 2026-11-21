@@ -1,5 +1,6 @@
 import kaplay from "kaplay";
 import type { Content, PointOfInterest, Zone } from "./content";
+import { photoPaths } from "./photos";
 
 const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 180;
@@ -7,6 +8,9 @@ const GROUND_Y = VIEW_HEIGHT - 24;
 const PLAYER_SPEED = 160;
 const PLAYER_START_X = 40;
 const SHUTTER_RANGE = 28;
+const PRINTS_PER_POINT = 3;
+const PRINT_SPACING = 34;
+const PRINT_Y = GROUND_Y - 64;
 
 const ZONE_COLORS: [number, number, number][] = [
   [135, 190, 230],
@@ -67,6 +71,18 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   for (const { poi, x } of route.pointsOfInterest) {
     k.add([k.rect(16, 24), k.pos(x, GROUND_Y), k.anchor("bot"), k.color(230, 180, 60), k.outline(1)]);
     k.add([k.text(poi.title, { size: 8 }), k.pos(x, GROUND_Y - 30), k.anchor("bot"), k.color(20, 20, 30)]);
+  }
+
+  for (const { poi, x } of route.pointsOfInterest) {
+    const prints = (poi.photos ?? []).slice(0, PRINTS_PER_POINT);
+    prints.forEach((photo, index) => {
+      const sprite = photoPaths(photo).thumb;
+      k.loadSprite(sprite, import.meta.env.BASE_URL + sprite);
+      const printX = x + (index - (prints.length - 1) / 2) * PRINT_SPACING;
+      k.add([k.rect(30, 30), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(60, 40, 25)]);
+      k.add([k.rect(26, 26), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(245, 240, 225)]);
+      k.add([k.sprite(sprite), k.pos(printX, PRINT_Y), k.anchor("center")]);
+    });
   }
 
   const player = k.add([k.rect(12, 20), k.pos(PLAYER_START_X, GROUND_Y), k.anchor("bot"), k.color(200, 60, 60)]);

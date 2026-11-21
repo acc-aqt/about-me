@@ -1,0 +1,60 @@
+import { expect, test, type Page } from "@playwright/test";
+import { content } from "../src/content.ts";
+
+test.skip(({ isMobile }) => isMobile, "On-screen buttons for phones arrive in a later ticket");
+
+const norway = content.zones.flatMap((zone) => zone.pointsOfInterest).find((poi) => poi.id === "norway")!;
+const photos = norway.photos!;
+
+async function walkRightUntilNear(page: Page, title: string) {
+  const status = page.getByRole("status");
+  for (let step = 0; step < 400; step++) {
+    if ((await status.textContent())?.includes(title)) return;
+    await page.keyboard.down("ArrowRight");
+    await page.waitForTimeout(100);
+    await page.keyboard.up("ArrowRight");
+  }
+  throw new Error(`Never got near ${title}`);
+}
+
+async function openNorwayViewfinder(page: Page) {
+  await page.goto("./");
+  await page.getByRole("application", { name: /game/i }).focus();
+  await walkRightUntilNear(page, norway.title);
+  await page.keyboard.press("Space");
+  const viewfinder = page.getByRole("dialog", { name: norway.title });
+  await expect(viewfinder).toBeVisible();
+  return viewfinder;
+}
+
+test("the Norway Viewfinder shows a full-resolution photo and steps through the trip", async ({ page }) => {
+  const viewfinder = await openNorwayViewfinder(page);
+
+  const photo = viewfinder.getByRole("img");
+  await expect(photo).toHaveAccessibleName(photos[0].alt);
+  await expect(viewfinder).toContainText(`Photo 1 of ${photos.length}`);
+  await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(1000);
+
+  await page.keyboard.press("ArrowRight");
+  await expect(photo).toHaveAccessibleName(photos[1].alt);
+  await expect(viewfinder).toContainText(`Photo 2 of ${photos.length}`);
+
+  await viewfinder.getByRole("button", { name: "Next photo" }).click();
+  await expect(photo).toHaveAccessibleName(photos[2].alt);
+
+  await viewfinder.getByRole("button", { name: "Previous photo" }).click();
+  await page.keyboard.press("ArrowLeft");
+  await expect(photo).toHaveAccessibleName(photos[0].alt);
+
+  await page.keyboard.press("ArrowLeft");
+  await expect(photo).toHaveAccessibleName(photos[photos.length - 1].alt);
+});
+
+test("the site serves a pixelated thumbnail for every Norway photo", async ({ request }) => {
+  for (const { src } of photos) {
+    const thumbnail = src.replace(/_med_q80\.jpg$/i, "-thumb.png");
+    const response = await request.get(`photos/${thumbnail}`);
+    expect(response.status(), thumbnail).toBe(200);
+    expect(response.headers()["content-type"], thumbnail).toContain("image/png");
+  }
+});

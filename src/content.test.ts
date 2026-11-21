@@ -75,6 +75,29 @@ describe("Content file", () => {
     }
   });
 
+  it("puts Norway ski touring on the Photography trail with several photos", () => {
+    const trail = content.zones.find((zone) => zone.id === "photography-trail");
+    const norway = trail?.pointsOfInterest.find((poi) => poi.id === "norway");
+    expect(norway?.title).toMatch(/Norway/);
+    expect(norway?.photos?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("names a carrels-photography gallery file as the source of every photo", () => {
+    for (const poi of pointsOfInterest) {
+      for (const photo of poi.photos ?? []) {
+        expect(photo.src, poi.id).toMatch(/^[a-z0-9_-]+\/[A-Za-z0-9_-]+_med_q80\.jpg$/i);
+      }
+    }
+  });
+
+  it("describes every photo in alt text of at least a few words", () => {
+    for (const poi of pointsOfInterest) {
+      for (const photo of poi.photos ?? []) {
+        expect(photo.alt.trim().split(/\s+/).length, `${poi.id}: ${photo.src}`).toBeGreaterThanOrEqual(4);
+      }
+    }
+  });
+
   it("contains none of the never-show items", () => {
     expect(neverShowItemsIn(JSON.stringify(content))).toEqual([]);
   });

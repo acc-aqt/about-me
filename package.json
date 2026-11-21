@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "photos": "node scripts/build-photos.ts",
+    "predev": "npm run photos",
     "dev": "vite",
+    "prebuild": "npm run photos",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
@@ -17,6 +20,7 @@
   "devDependencies": {
     "@playwright/test": "1.65.1",
     "@types/node": "26.6.6",
+    "sharp": "0.35.5",
     "typescript": "7.0.2",
     "vite": "8.3.8",
     "vitest": "5.1.1"
