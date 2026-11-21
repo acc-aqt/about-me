@@ -50,6 +50,23 @@ test("the Norway Viewfinder shows a full-resolution photo and steps through the 
   await expect(photo).toHaveAccessibleName(photos[photos.length - 1].alt);
 });
 
+test("Space activates the focused photo button or link instead of closing the Viewfinder", async ({ page }) => {
+  const viewfinder = await openNorwayViewfinder(page);
+
+  await viewfinder.getByRole("button", { name: "Next photo" }).focus();
+  await page.keyboard.press("Space");
+  await expect(viewfinder).toContainText(`Photo 2 of ${photos.length}`);
+  await expect(viewfinder).toBeVisible();
+
+  await viewfinder.getByRole("link").first().focus();
+  await page.keyboard.press("Space");
+  await expect(viewfinder).toBeVisible();
+
+  await viewfinder.getByRole("button", { name: /close/i }).focus();
+  await page.keyboard.press("Space");
+  await expect(viewfinder).toBeHidden();
+});
+
 test("the darkroom Viewfinder shows the Analog gallery with the film each frame was shot on", async ({ page }) => {
   await page.goto("./");
   await page.getByRole("button", { name: "Fast-travel" }).click();

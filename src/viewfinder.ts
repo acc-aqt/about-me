@@ -54,7 +54,7 @@ export function createViewfinder(dialog: HTMLDialogElement, onClose: () => void)
   previousButton.addEventListener("click", () => stepPhoto(-1));
   nextButton.addEventListener("click", () => stepPhoto(1));
   dialog.addEventListener("keydown", (event) => {
-    if (event.key === " ") {
+    if (event.key === " " && event.target === dialog) {
       event.preventDefault();
       dialog.close();
     } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
