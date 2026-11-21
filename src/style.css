@@ -176,6 +176,43 @@ body {
   color: #1f4fa8;
 }
 
+.fast-travel {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.fast-travel button {
+  padding: 0.4rem 0.8rem;
+  border: 2px solid var(--fg);
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.6);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.fast-travel button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fast-travel-zones {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 [hidden] {
   display: none !important;
 }

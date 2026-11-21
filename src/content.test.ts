@@ -44,6 +44,25 @@ describe("Content file", () => {
     expect(mtu?.title).toBe("MTU Aero Engines");
   });
 
+  it("ends the Route with a Contact Zone linking LinkedIn, GitHub, Instagram and carrels.photography", () => {
+    const contact = content.zones.at(-1)!;
+    expect(contact.id).toBe("contact");
+    const urls = contact.pointsOfInterest.flatMap((poi) => poi.links ?? []).map((link) => link.url);
+    expect(urls).toEqual([
+      "https://de.linkedin.com/in/alexander-carrels-8b98b0182",
+      "https://github.com/acc-aqt",
+      "https://www.instagram.com/carrels.photography/",
+      "https://www.carrels.photography/",
+    ]);
+  });
+
+  it("only lets Fast-travel land at a Point of Interest inside the same Zone", () => {
+    for (const zone of content.zones) {
+      if (zone.fastTravelTo === undefined) continue;
+      expect(zone.pointsOfInterest.map((poi) => poi.id), zone.id).toContain(zone.fastTravelTo);
+    }
+  });
+
   it("orders the Zones it has along the Route as the spec does", () => {
     const routeOrder = ["start", "career-road", "maker-workshop", "photography-trail", "sport", "music-and-games", "contact"];
     const present = content.zones.map((zone) => zone.id).filter((id) => routeOrder.includes(id));
