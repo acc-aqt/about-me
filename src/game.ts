@@ -7,6 +7,7 @@ const GROUND_Y = VIEW_HEIGHT - 24;
 const PLAYER_SPEED = 160;
 const PLAYER_START_X = 40;
 const SHUTTER_RANGE = 28;
+const FILM_ROLL_PICKUP_RANGE = 8;
 
 const ZONE_COLORS: [number, number, number][] = [
   [135, 190, 230],
@@ -22,25 +23,29 @@ export type GameControls = {
 
 type PlacedPointOfInterest = { poi: PointOfInterest; x: number };
 type PlacedZone = { zone: Zone; x: number };
+type PlacedFilmRoll = { zone: Zone; x: number };
 
 export type GameEvents = {
   onNearbyChange(poi: PointOfInterest | null): void;
   onShutter(poi: PointOfInterest): void;
   canFireShutter(): boolean;
+  onFilmRollCollected(zone: Zone): void;
 };
 
 function layOutRoute(content: Content) {
   const zones: PlacedZone[] = [];
   const pointsOfInterest: PlacedPointOfInterest[] = [];
+  const filmRolls: PlacedFilmRoll[] = [];
   let x = 0;
   for (const zone of content.zones) {
     zones.push({ zone, x });
     for (const poi of zone.pointsOfInterest) {
       pointsOfInterest.push({ poi, x: x + poi.placement.x });
     }
+    if (zone.filmRoll) filmRolls.push({ zone, x: x + zone.filmRoll.x });
     x += zone.width;
   }
-  return { zones, pointsOfInterest, routeWidth: x };
+  return { zones, pointsOfInterest, filmRolls, routeWidth: x };
 }
 
 export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents): GameControls {
@@ -76,6 +81,12 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     k.add([k.text(poi.title, { size: 8 }), k.pos(x, GROUND_Y - 30), k.anchor("bot"), k.color(20, 20, 30)]);
   }
 
+  const filmRolls = route.filmRolls.map(({ zone, x }) => ({
+    zone,
+    x,
+    sprite: k.add([k.rect(4, 5), k.pos(x, GROUND_Y), k.anchor("bot"), k.color(30, 30, 30), k.outline(1, k.rgb(230, 180, 60))]),
+  }));
+
   const player = k.add([k.rect(12, 20), k.pos(PLAYER_START_X, GROUND_Y), k.anchor("bot"), k.color(200, 60, 60)]);
   player.add([k.rect(6, 4), k.pos(4, -12), k.anchor("center"), k.color(30, 30, 30)]);
 
@@ -91,10 +102,20 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   k.onUpdate(() => {
     const direction = Number(k.isButtonDown("right")) - Number(k.isButtonDown("left"));
+    const previousX = player.pos.x;
     player.pos.x = Math.min(Math.max(player.pos.x + direction * PLAYER_SPEED * k.dt(), 0), route.routeWidth);
 
     const halfView = VIEW_WIDTH / 2;
     k.setCamPos(Math.min(Math.max(player.pos.x, halfView), route.routeWidth - halfView), VIEW_HEIGHT / 2);
+
+    const sweptFrom = Math.min(previousX, player.pos.x) - FILM_ROLL_PICKUP_RANGE;
+    const sweptTo = Math.max(previousX, player.pos.x) + FILM_ROLL_PICKUP_RANGE;
+    for (const roll of filmRolls) {
+      if (roll.sprite.exists() && roll.x >= sweptFrom && roll.x <= sweptTo) {
+        roll.sprite.destroy();
+        events.onFilmRollCollected(roll.zone);
+      }
+    }
 
     const current = nearestInRange();
     if (current !== nearby) {

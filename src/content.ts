@@ -30,24 +30,40 @@ export type Zone = {
   /** Length of the Zone along the Route, in world pixels. */
   width: number;
   pointsOfInterest: PointOfInterest[];
+  /** Where this Zone's hidden Film roll lies; every Zone should carry one. */
+  filmRoll?: Placement;
+};
+
+/** Shown in the Viewfinder once every Film roll on the Route is collected. */
+export type FilmRollBonus = {
+  title: string;
+  body: string;
 };
 
 export type Content = {
   zones: Zone[];
+  filmRollBonus: FilmRollBonus;
 };
 
 export const content: Content = {
+  filmRollBonus: {
+    title: "All Film rolls collected",
+    body:
+      "You found every Film roll on the Route – thanks for exploring! Film is close to my heart: the Analog gallery in the darkroom on the Photography trail holds my 35mm and medium-format photos.",
+  },
   zones: [
     {
       id: "start",
       title: "Start – Munich",
       width: 320,
+      filmRoll: { x: 200 },
       pointsOfInterest: [],
     },
     {
       id: "career-road",
       title: "Career road",
       width: 480,
+      filmRoll: { x: 400 },
       pointsOfInterest: [
         {
           id: "mtu",
@@ -65,6 +81,7 @@ export const content: Content = {
       id: "maker-workshop",
       title: "Maker workshop",
       width: 640,
+      filmRoll: { x: 320 },
       pointsOfInterest: [
         {
           id: "framewise",
@@ -104,6 +121,7 @@ export const content: Content = {
       id: "sport",
       title: "Sport",
       width: 480,
+      filmRoll: { x: 160 },
       pointsOfInterest: [
         {
           id: "swimming-pool",
@@ -132,6 +150,7 @@ export const content: Content = {
       id: "music-and-games",
       title: "Music & games",
       width: 320,
+      filmRoll: { x: 270 },
       pointsOfInterest: [
         {
           id: "track-back",

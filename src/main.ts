@@ -12,6 +12,14 @@ const SHUTTER_PROMPT = isTouch ? "Tap the Shutter to photograph" : "Press Space 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const hint = document.querySelector<HTMLElement>("#hint")!;
 const dialog = document.querySelector<HTMLDialogElement>("#viewfinder")!;
+const filmRollCounter = document.querySelector<HTMLElement>("#film-rolls")!;
+
+const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
+let collectedFilmRolls = 0;
+
+function showFilmRollCount() {
+  filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls}/${totalFilmRolls}`;
+}
 
 const viewfinder = createViewfinder(dialog, () => canvas.focus());
 
@@ -21,6 +29,11 @@ const controls = startGame(canvas, content, {
   },
   onShutter: (poi) => viewfinder.open(poi),
   canFireShutter: () => !viewfinder.isOpen(),
+  onFilmRollCollected() {
+    collectedFilmRolls++;
+    showFilmRollCount();
+    if (collectedFilmRolls === totalFilmRolls) viewfinder.open(content.filmRollBonus);
+  },
 });
 
 function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
@@ -40,3 +53,4 @@ document
   .forEach((element) => bindTouchButton(element, controls));
 
 hint.textContent = CONTROLS_HINT;
+showFilmRollCount();
