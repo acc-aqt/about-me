@@ -7,6 +7,7 @@ const GROUND_Y = VIEW_HEIGHT - 24;
 const PLAYER_SPEED = 160;
 const PLAYER_START_X = 40;
 const SHUTTER_RANGE = 28;
+const FAST_TRAVEL_OFFSET = 16;
 
 const ZONE_COLORS: [number, number, number][] = [
   [135, 190, 230],
@@ -36,7 +37,17 @@ function layOutRoute(content: Content) {
   return { zones, pointsOfInterest, routeWidth: x };
 }
 
-export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents) {
+export type Game = {
+  travelTo(zoneId: string): void;
+};
+
+function fastTravelX(placed: PlacedZone): number {
+  const target = placed.zone.pointsOfInterest.find((poi) => poi.id === placed.zone.fastTravelTo);
+  if (target) return placed.x + target.placement.x - FAST_TRAVEL_OFFSET;
+  return placed.x + FAST_TRAVEL_OFFSET;
+}
+
+export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents): Game {
   const k = kaplay({
     canvas,
     width: VIEW_WIDTH,
@@ -99,4 +110,11 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   k.onButtonPress("shutter", () => {
     if (nearby && events.canFireShutter()) events.onShutter(nearby);
   });
+
+  return {
+    travelTo(zoneId) {
+      const placed = route.zones.find(({ zone }) => zone.id === zoneId);
+      if (placed) player.pos.x = fastTravelX(placed);
+    },
+  };
 }

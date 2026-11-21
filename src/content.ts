@@ -29,6 +29,8 @@ export type Zone = {
   title: string;
   /** Length of the Zone along the Route, in world pixels. */
   width: number;
+  /** Id of the Point of Interest Fast-travel lands at; otherwise the Zone's left edge. */
+  fastTravelTo?: string;
   pointsOfInterest: PointOfInterest[];
 };
 
@@ -48,6 +50,7 @@ export const content: Content = {
       id: "career-road",
       title: "Career road",
       width: 480,
+      fastTravelTo: "mtu",
       pointsOfInterest: [
         {
           id: "mtu",
@@ -58,6 +61,26 @@ export const content: Content = {
             "I build a platform that coordinates engineering design processes and workflows and stores the engineering data behind them.",
           links: [{ label: "MTU Aero Engines", url: "https://www.mtu.de/" }],
           placement: { x: 240 },
+        },
+      ],
+    },
+    {
+      id: "contact",
+      title: "Contact",
+      width: 320,
+      fastTravelTo: "contact-board",
+      pointsOfInterest: [
+        {
+          id: "contact-board",
+          title: "Say hello",
+          body: "Thanks for walking the Route. Find me here:",
+          links: [
+            { label: "LinkedIn", url: "https://de.linkedin.com/in/alexander-carrels-8b98b0182" },
+            { label: "GitHub", url: "https://github.com/acc-aqt" },
+            { label: "Instagram", url: "https://www.instagram.com/carrels.photography/" },
+            { label: "carrels.photography", url: "https://www.carrels.photography/" },
+          ],
+          placement: { x: 160 },
         },
       ],
     },
