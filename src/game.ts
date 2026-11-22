@@ -104,7 +104,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   const tileset = new Image();
   tileset.src = import.meta.env.BASE_URL + "art/kenney-tiny-town-tiles.png";
   tileset.decode().then(() => {
-    k.loadSprite("overworld", paintOverworld(tileset, pointsOfInterest.map((poi) => poi.placement)));
+    k.loadSprite("overworld", paintOverworld(tileset, pointsOfInterest));
     k.add([k.sprite("overworld"), k.pos(0, 0)]);
     for (const zone of content.zones) if (zone.filmRoll) addFilmRollCover(zone.filmRoll);
   });
