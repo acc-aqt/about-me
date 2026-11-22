@@ -15,21 +15,25 @@
           <p class="bezel-label" aria-hidden="true"><span class="power-led"></span>DOT MATRIX PORTFOLIO</p>
           <div class="screen-window">
             <canvas id="game" tabindex="0" role="application" aria-label="Portfolio game" aria-describedby="hint"></canvas>
+            <nav class="fast-travel" aria-label="Fast-travel">
+              <ul id="fast-travel-zones" class="fast-travel-zones" hidden></ul>
+            </nav>
           </div>
           <div class="status-strip">
             <p id="hint" class="hint" role="status"></p>
             <p id="film-rolls" class="film-rolls" aria-live="polite"></p>
           </div>
-          <nav class="fast-travel" aria-label="Fast-travel">
-            <ul id="fast-travel-zones" class="fast-travel-zones" hidden></ul>
-          </nav>
         </div>
         <p class="handheld-logo" aria-hidden="true">ALEXANDER CARRELS</p>
         <div class="controls">
           <div class="corner-controls">
-            <button type="button" class="fast-travel-toggle" aria-expanded="false" aria-controls="fast-travel-zones">Fast-travel</button>
+            <button type="button" class="fast-travel-toggle" aria-expanded="false" aria-controls="fast-travel-zones">
+              <span class="pill-name">Fast-travel</span>
+              <span class="pill-print" aria-hidden="true"><span>START</span><small>TRAVEL</small></span>
+            </button>
             <button type="button" id="sound-toggle" class="sound-toggle" aria-pressed="false">
-              Sound <span class="sound-toggle-state" aria-hidden="true">off</span>
+              <span class="pill-name">Sound</span> <span class="sound-toggle-state" aria-hidden="true">off</span>
+              <span class="pill-print" aria-hidden="true"><span>SELECT</span><small>SOUND</small></span>
             </button>
           </div>
           <div class="touch-controls">

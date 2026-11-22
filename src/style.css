@@ -616,3 +616,118 @@ body {
   padding: 0.5rem 0.75rem;
   border: 2px solid var(--ink);
 }
+
+.pill-print {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  .controls {
+    flex-direction: column;
+  }
+
+  .corner-controls {
+    position: static;
+    order: 1;
+    justify-content: center;
+    gap: 1.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .corner-controls button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border: none;
+    background: none;
+    color: var(--logo-ink);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .corner-controls button::before {
+    content: "";
+    width: 3rem;
+    height: 0.8rem;
+    border-radius: 999px;
+    background: var(--shell-ink);
+    box-shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+    transform: rotate(-25deg);
+  }
+
+  .corner-controls button:active::before {
+    box-shadow: none;
+    transform: rotate(-25deg) translateY(2px);
+  }
+
+  .sound-toggle[aria-pressed="true"]::before {
+    outline: 2px solid var(--accent);
+  }
+
+  .pill-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sound-toggle-state {
+    display: none;
+  }
+
+  .pill-print {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font: bold 0.65rem/1.2 ui-monospace, monospace;
+    letter-spacing: 0.1em;
+  }
+
+  .pill-print small {
+    color: var(--shell-ink);
+    font-size: 0.55rem;
+  }
+
+  .screen-window {
+    position: relative;
+  }
+
+  .fast-travel {
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    pointer-events: none;
+  }
+
+  .fast-travel-zones {
+    max-height: 100%;
+    overflow-y: auto;
+    gap: 0.15rem;
+    padding: 0.3rem;
+    border: 2px solid var(--fg);
+    border-radius: 4px;
+    background: rgb(0 0 0 / 0.8);
+    pointer-events: auto;
+  }
+
+  .fast-travel button {
+    width: 100%;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.7rem;
+    text-align: left;
+  }
+}
+
+@media (orientation: portrait) and (prefers-reduced-motion: reduce) {
+  .corner-controls button:active::before {
+    transform: rotate(-25deg);
+  }
+}

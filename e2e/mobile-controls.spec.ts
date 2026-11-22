@@ -176,6 +176,75 @@ test.describe("on a phone", () => {
     });
   }
 
+  test("in portrait Fast-travel and Sound sit on the Handheld as START and SELECT, below the d-pad and A/B", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    const handheld = page.getByTestId("handheld");
+    const lowestFaceButton = Math.max(
+      ...(await Promise.all(
+        ["Walk down", "Shutter", "Inventory"].map(async (name) => {
+          const box = (await page.getByRole("button", { name }).boundingBox())!;
+          return box.y + box.height;
+        }),
+      )),
+    );
+    for (const name of ["Fast-travel", "Sound"]) {
+      const button = page.getByRole("button", { name, exact: true });
+      await expectInsideViewport(page, button);
+      await expectInside(handheld, button);
+      expect((await button.boundingBox())!.y).toBeGreaterThanOrEqual(lowestFaceButton);
+    }
+
+    for (const label of ["START", "SELECT", "TRAVEL", "SOUND"]) {
+      await expect(page.getByText(label, { exact: true })).toBeVisible();
+    }
+    const accessibilityTree = await page.locator("body").ariaSnapshot();
+    for (const label of ["START", "SELECT", "TRAVEL", "SOUND"]) {
+      expect(accessibilityTree).not.toContain(label);
+    }
+  });
+
+  test("in portrait START opens the Zone list over the screen, and choosing a Zone lands there", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    await page.getByRole("button", { name: "Fast-travel" }).tap();
+    const zoneList = page.getByRole("navigation", { name: "Fast-travel" }).getByRole("list");
+    await expect(zoneList).toBeVisible();
+    await expectInside(page.getByRole("application", { name: /game/i }), zoneList);
+
+    await zoneList.getByRole("button", { name: "Career road" }).tap();
+    await expect(zoneList).toBeHidden();
+    await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+  });
+
+  test("in portrait SELECT toggles Sound", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    const sound = page.getByRole("button", { name: "Sound", exact: true });
+    await sound.tap();
+    await expect(sound).toHaveAttribute("aria-pressed", "true");
+    await sound.tap();
+    await expect(sound).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("in landscape Fast-travel and Sound stay in the top-left corner", async ({ page }) => {
+    await page.setViewportSize(LANDSCAPE);
+    await openGame(page);
+
+    for (const name of ["Fast-travel", "Sound"]) {
+      const box = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
+      expect(box.x).toBeLessThan(LANDSCAPE.width / 2);
+      expect(box.y).toBeLessThan(LANDSCAPE.height / 4);
+    }
+    await expect(page.getByText("START", { exact: true })).toBeHidden();
+    await page.getByRole("button", { name: "Fast-travel" }).tap();
+    await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: "Career road" }).tap();
+    await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+  });
+
   test("in landscape there is no Handheld and the game fills the screen", async ({ page }) => {
     await page.setViewportSize(LANDSCAPE);
     await openGame(page);
