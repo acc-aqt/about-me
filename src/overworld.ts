@@ -4,7 +4,7 @@ export type Tile = { col: number; row: number };
 
 export type Direction = "up" | "down" | "left" | "right";
 
-export type TileKind = "grass" | "path" | "tree" | "water" | "building" | "bush" | "fence";
+export type TileKind = "grass" | "path" | "tree" | "water" | "building" | "bush" | "fence" | "prop";
 
 export const OVERWORLD_TILE_SIZE = 16;
 
@@ -16,6 +16,7 @@ export const LEGEND: Record<string, { kind: TileKind; walkable: boolean }> = {
   B: { kind: "building", walkable: false },
   "*": { kind: "bush", walkable: false },
   "#": { kind: "fence", walkable: false },
+  o: { kind: "prop", walkable: false },
 };
 
 /** One string per row, one character per tile; see LEGEND. Row 0 is the top (north) edge. */
@@ -40,31 +41,31 @@ export const OVERWORLD_MAP: readonly string[] = [
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTTTTTTTTTTTTTTTTTTT**.....=....**TTTTTTTTTTTTTTTTTTTTTTT",
   "TT****................T*......=.....*TT*...*...*...*...*..TT",
-  "TT****................T.......=......TT...................TT",
+  "TT****........oo......T.......=......TT...................TT",
   "TT....................T.......=......TT...................TT",
   "TT....................T.......=......TT...................TT",
   "TT========================================================TT",
   "TT....................T........=.....TT...................TT",
   "TT....................T........=.....TT...................TT",
-  "TT.BBBBBB...BBBBBB....T........=.....TT...................TT",
+  "TT.BBBBBB...BBBBBB.o..T........=.....TT...................TT",
   "TT.BBBBBB...BBBBBB....T........=.....TT.........BBBBB.....TT",
-  "TT.BBBBBB...BBBBBB....T*.......=....*TT.........BBBBB.....TT",
+  "TT.BBBBBBo..BBBBBB....T*.......=....*TT.........BBBBB.....TT",
   "TT....................TTT.TTTTT=TTTTTTT.........BBBBB.....TT",
   "TT....................#....#***=******T~~~~~~.............TT",
   "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTTTTTTTTTTTTTTTTTT######TTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TT............................T=..........................TT",
+  "TT.................o.o........T=...o.o....................TT",
   "TT========================================================TT",
   "TT............................TT..........................TT",
-  "TT............................TT..........................TT",
+  "TT.o.o........................TT....................ooo...TT",
   "TT............~~~~~~~~~.......TT..........................TT",
   "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
   "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
-  "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
+  "TT............~~~~~~~~~.......TT..........BBBBBBBo........TT",
   "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
   "TTTTTTT.......................TT..........................TT",
-  "TTTTTTT.......................TT..........................TT",
+  "TTTTTTTo......................TT..........................TT",
   "TTTTTTT.......................TT..........................TT",
   "TTTTTTT.......................TT..........................TT",
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
