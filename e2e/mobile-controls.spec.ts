@@ -31,6 +31,10 @@ async function lowestEdge(page: Page, buttonNames: string[]) {
   return Math.max(...boxes.map((box) => box.y + box.height));
 }
 
+function skipTheGame(page: Page) {
+  return page.getByRole("link", { name: /skip the game/i });
+}
+
 function overlaps(a: Box, b: Box) {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
@@ -180,21 +184,20 @@ test.describe("on a phone", () => {
       });
     }
 
-    test("Fast-travel and Sound sit on the Handheld as START and SELECT, below the d-pad and A/B", async ({ page }) => {
+    test("Fast-travel and Skip the game sit on the Handheld as START and SELECT, below the d-pad and A/B", async ({ page }) => {
       const handheld = page.getByTestId("handheld");
       const lowestFaceButton = await lowestEdge(page, ["Walk down", "Shutter", "Inventory"]);
-      for (const name of ["Fast-travel", "Sound"]) {
-        const button = page.getByRole("button", { name, exact: true });
+      for (const button of [page.getByRole("button", { name: "Fast-travel" }), skipTheGame(page)]) {
         await expectInsideViewport(page, button);
         await expectInside(handheld, button);
         expect((await button.boundingBox())!.y).toBeGreaterThanOrEqual(lowestFaceButton);
       }
 
-      for (const label of ["START", "SELECT", "TRAVEL", "SOUND"]) {
+      for (const label of ["START", "SELECT", "TRAVEL", "SKIP"]) {
         await expect(page.getByText(label, { exact: true })).toBeVisible();
       }
       const accessibilityTree = await page.locator("body").ariaSnapshot();
-      for (const label of ["START", "SELECT", "TRAVEL", "SOUND"]) {
+      for (const label of ["START", "SELECT", "TRAVEL", "SKIP"]) {
         expect(accessibilityTree).not.toContain(label);
       }
     });
@@ -231,12 +234,14 @@ test.describe("on a phone", () => {
       await expect(page.getByRole("button", { name: "Fast-travel" })).toHaveAttribute("aria-expanded", "false");
     });
 
-    test("SELECT toggles Sound", async ({ page }) => {
-      const sound = page.getByRole("button", { name: "Sound", exact: true });
-      await sound.tap();
-      await expect(sound).toHaveAttribute("aria-pressed", "true");
-      await sound.tap();
-      await expect(sound).toHaveAttribute("aria-pressed", "false");
+    test("SELECT skips the game to the Plain view", async ({ page }) => {
+      await expect(skipTheGame(page)).toHaveCount(1);
+      await skipTheGame(page).tap();
+      await expect(page).toHaveURL(/\/plain\/$/);
+    });
+
+    test("there is no Sound option", async ({ page }) => {
+      await expect(page.getByRole("button", { name: "Sound" })).toHaveCount(0);
     });
 
     test("the d-pad and A/B sit just below the logo, with START and SELECT just below them", async ({ page }) => {
@@ -246,7 +251,8 @@ test.describe("on a phone", () => {
       const dpadTop = (await page.getByRole("button", { name: "Walk up" }).boundingBox())!.y;
       expect(dpadTop - (logo.y + logo.height)).toBeLessThan(80);
       const pillsTop = Math.min(
-        ...(await Promise.all(["Fast-travel", "Sound"].map(async (name) => (await page.getByRole("button", { name, exact: true }).boundingBox())!.y))),
+        (await page.getByRole("button", { name: "Fast-travel" }).boundingBox())!.y,
+        (await skipTheGame(page).boundingBox())!.y,
       );
       expect(pillsTop - (await lowestEdge(page, ["Shutter", "Inventory"]))).toBeLessThan(48);
     });
@@ -255,7 +261,7 @@ test.describe("on a phone", () => {
       await page.setViewportSize({ width: 360, height: 640 });
 
       const speaker = (await page.getByTestId("speaker").boundingBox())!;
-      const select = (await page.getByRole("button", { name: "Sound", exact: true }).boundingBox())!;
+      const select = (await skipTheGame(page).boundingBox())!;
       expect(overlaps(speaker, select)).toBe(false);
     });
 
@@ -271,16 +277,17 @@ test.describe("on a phone", () => {
     });
   });
 
-  test("in landscape Fast-travel and Sound stay in the top-left corner", async ({ page }) => {
+  test("in landscape Fast-travel stays in the top-left corner and Sound is gone", async ({ page }) => {
     await page.setViewportSize(LANDSCAPE);
     await openGame(page);
 
-    for (const name of ["Fast-travel", "Sound"]) {
-      const box = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
-      expect(box.x).toBeLessThan(LANDSCAPE.width / 2);
-      expect(box.y).toBeLessThan(LANDSCAPE.height / 4);
-    }
+    const box = (await page.getByRole("button", { name: "Fast-travel" }).boundingBox())!;
+    expect(box.x).toBeLessThan(LANDSCAPE.width / 2);
+    expect(box.y).toBeLessThan(LANDSCAPE.height / 4);
+    await expect(page.getByRole("button", { name: "Sound" })).toHaveCount(0);
     await expect(page.getByText("START", { exact: true })).toBeHidden();
+    await expect(page.getByText("SELECT", { exact: true })).toBeHidden();
+    await expect(skipTheGame(page)).toHaveCount(1);
     await page.getByRole("button", { name: "Fast-travel" }).tap();
     await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: "Career road" }).tap();
     await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));

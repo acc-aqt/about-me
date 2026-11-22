@@ -89,7 +89,6 @@ test("the corner controls, skip link and Film roll counter do not overlap and ea
   await openGameWithKeyboard(page);
   const controls = [
     page.getByRole("button", { name: "Fast-travel" }),
-    page.getByRole("button", { name: "Sound" }),
     page.getByRole("link", { name: /skip the game/i }),
     page.getByText(/^Film rolls:/),
   ];

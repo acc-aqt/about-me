@@ -59,7 +59,7 @@ body {
   outline-offset: 2px;
 }
 
-.menu-buttons button:focus-visible,
+.menu-buttons > :is(button, a):focus-visible,
 .fast-travel button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -222,16 +222,8 @@ body {
     cursor: pointer;
   }
 
-  .sound-toggle[aria-pressed="true"] {
-    border-color: var(--accent);
-  }
-
-  .sound-toggle-state {
-    color: var(--muted);
-  }
-
-  .sound-toggle[aria-pressed="true"] .sound-toggle-state {
-    color: var(--accent);
+  .select-skip {
+    display: none;
   }
 
   .fast-travel {
@@ -310,10 +302,7 @@ body {
   }
 
   .skip-link {
-    align-self: flex-end;
-    margin-bottom: 0.75rem;
-    color: var(--shell-ink);
-    font-size: 0.75rem;
+    display: none;
   }
 
   .stage {
@@ -477,7 +466,7 @@ body {
     padding: 0.25rem 0 0.5rem;
   }
 
-  .menu-buttons button {
+  .menu-buttons > :is(button, a) {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -488,12 +477,13 @@ body {
     background: none;
     color: var(--logo-ink);
     font: inherit;
+    text-decoration: none;
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
   }
 
-  .menu-buttons button::before {
+  .menu-buttons > :is(button, a)::before {
     content: "";
     width: 3rem;
     height: 0.8rem;
@@ -503,13 +493,9 @@ body {
     transform: rotate(var(--tilt));
   }
 
-  .menu-buttons button:active::before {
+  .menu-buttons > :is(button, a):active::before {
     box-shadow: none;
     transform: rotate(var(--tilt)) translateY(2px);
-  }
-
-  .sound-toggle[aria-pressed="true"]::before {
-    outline: 2px solid var(--accent);
   }
 
   .pill-name {
@@ -519,10 +505,6 @@ body {
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-
-  .sound-toggle-state {
-    display: none;
   }
 
   .menu-buttons .shell-print {
@@ -586,7 +568,7 @@ body {
     transform: none;
   }
 
-  .menu-buttons button:active::before {
+  .menu-buttons > :is(button, a):active::before {
     transform: rotate(var(--tilt));
   }
 }

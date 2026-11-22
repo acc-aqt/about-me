@@ -42,18 +42,8 @@ function showFilmRollCount() {
 
 const fastTravelToggle = query<HTMLButtonElement>(document, ".fast-travel-toggle");
 const fastTravelZones = query<HTMLUListElement>(document, `#${fastTravelToggle.getAttribute("aria-controls")}`);
-const soundToggle = query<HTMLButtonElement>(document, "#sound-toggle");
-const soundToggleState = query<HTMLElement>(soundToggle, ".sound-toggle-state");
 
 const audio = createAudio();
-
-soundToggle.addEventListener("click", (event) => {
-  audio.setMuted(!audio.isMuted());
-  soundToggle.setAttribute("aria-pressed", String(!audio.isMuted()));
-  soundToggleState.textContent = audio.isMuted() ? "off" : "on";
-  // A mouse or tap click hands focus back to the game so walking keeps working.
-  if (event.detail > 0) canvas.focus();
-});
 
 const inventoryDialog = query<HTMLDialogElement>(document, "#inventory");
 

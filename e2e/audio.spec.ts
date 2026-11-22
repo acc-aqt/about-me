@@ -34,18 +34,17 @@ async function openGame(page: Page) {
   await expect(page.getByRole("status")).toContainText("Face a sign");
 }
 
-test("sound is muted on load with a visible toggle", async ({ page }) => {
-  await openGame(page);
+// The Sound toggle is removed for now; the tests that need it come back with it.
+const needsSoundToggle = test.fixme;
 
-  const toggle = page.getByRole("button", { name: "Sound" });
-  await expect(toggle).toBeVisible();
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+test("the game is silent on load", async ({ page }) => {
+  await openGame(page);
 
   await page.waitForTimeout(500);
   expect(await audioLog(page)).toEqual({ tones: 0, samples: 0 });
 });
 
-test("the toggle turns the music on and off", async ({ page }) => {
+needsSoundToggle("the toggle turns the music on and off", async ({ page }) => {
   await openGame(page);
   const toggle = page.getByRole("button", { name: "Sound" });
 
@@ -69,7 +68,7 @@ async function fireShutterAtMtu(page: Page, isMobile: boolean) {
   await expect(page.getByRole("dialog", { name: "MTU Aero Engines" })).toBeVisible();
 }
 
-test("the Shutter plays its sound when sound is on", async ({ page, isMobile }) => {
+needsSoundToggle("the Shutter plays its sound when sound is on", async ({ page, isMobile }) => {
   await openGame(page);
   await page.getByRole("button", { name: "Sound" }).click();
 
@@ -94,7 +93,7 @@ async function turnSoundOn(page: Page) {
   await page.getByRole("application", { name: /game/i }).focus();
 }
 
-test("each completed step plays a footstep", async ({ page, isMobile }) => {
+needsSoundToggle("each completed step plays a footstep", async ({ page, isMobile }) => {
   await openGame(page);
   await turnSoundOn(page);
 
@@ -103,7 +102,7 @@ test("each completed step plays a footstep", async ({ page, isMobile }) => {
   await expect.poll(async () => (await audioLog(page)).samples).toBe(3);
 });
 
-test("a blocked step plays a bump and leaves the Player in place", async ({ page, isMobile }) => {
+needsSoundToggle("a blocked step plays a bump and leaves the Player in place", async ({ page, isMobile }) => {
   await openGame(page);
   await turnSoundOn(page);
   await fastTravel(page, "career-road");
@@ -114,7 +113,7 @@ test("a blocked step plays a bump and leaves the Player in place", async ({ page
   await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
 });
 
-test("holding against a solid tile does not repeat the bump every frame", async ({ page, isMobile }) => {
+needsSoundToggle("holding against a solid tile does not repeat the bump every frame", async ({ page, isMobile }) => {
   test.skip(isMobile, "Holding a key needs a keyboard");
   await openGame(page);
   await turnSoundOn(page);
