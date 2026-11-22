@@ -758,7 +758,7 @@ const PROPS = {
 type PropName = keyof typeof PROPS;
 
 /** Points of Interest drawn as a themed object; the rest stand as a signpost. */
-const THEMED_PROPS: Record<string, PropName> = {
+export const THEMED_PROPS: Readonly<Record<string, PropName>> = {
   jordan: "camera stand",
   norway: "camera stand",
   "new-york": "camera stand",

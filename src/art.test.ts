@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SCENERY_PROPS, themedProp } from "./art";
+import { SCENERY_PROPS, THEMED_PROPS, themedProp } from "./art";
 import { content, zoneById, type ZoneId } from "./content";
 import { MAP_COLUMNS, MAP_ROWS, tileKindAt, zoneAt } from "./overworld";
 
@@ -27,6 +27,11 @@ describe("Overworld art", () => {
       mtu: "jet engine",
       "contact-board": "mailbox",
     });
+  });
+
+  it("keys every themed object by the id of a real Point of Interest", () => {
+    const ids = content.zones.flatMap((zone) => zone.pointsOfInterest.map((poi) => poi.id));
+    expect(Object.keys(THEMED_PROPS).filter((id) => !ids.includes(id))).toEqual([]);
   });
 
   it("has no themed object for an unknown Point of Interest, which keeps the signpost", () => {
