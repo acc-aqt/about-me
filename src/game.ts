@@ -1,11 +1,11 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import { zoneById, type Content, type PointOfInterest, type Zone, type ZoneId } from "./content";
+import { LABEL_PADDING, NAME_PLATE_WRAP_WIDTH, NAME_PLATES, needsWrap, shownNamePlates, ZONE_TITLE_Y, type NamePlate } from "./namePlates";
 import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
   facedPointOfInterest,
   fastTravelLanding,
   filmRollCover,
-  HUB_SIGNPOSTS,
   isWalkable,
   MAP_COLUMNS,
   MAP_ROWS,
@@ -29,12 +29,7 @@ const HOLD_DELAY = 0.12;
 /** Seconds between bump sounds while the Player keeps walking into a solid tile. */
 const BUMP_INTERVAL = 0.4;
 const BACKGROUND: Rgb = [20, 20, 30];
-const POI_LABEL_WIDTH = 120;
-/** Tiles from the Player within which a Point of Interest's name plate shows. */
-const NAME_PLATE_RANGE = 2;
-const LABEL_PADDING = 2;
 const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
-const ZONE_TITLE_Y = 8;
 const Z_FILM_ROLL = 1;
 /** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
 const Z_FILM_ROLL_COVER = 1.5;
@@ -70,7 +65,7 @@ export type GameEvents = {
   onBump(): void;
 };
 
-type LabelOptions = { wrapWidth?: number; fixed?: boolean };
+type LabelOptions = { wrap?: boolean; fixed?: boolean };
 type Step = { from: Tile; to: Tile; elapsed: number };
 
 const tileKey = ({ col, row }: Tile) => `${col},${row}`;
@@ -137,7 +132,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     k.add([k.sprite("overworld", { quad }), k.pos(col * size, row * size), k.z(Z_FILM_ROLL_COVER)]);
   }
 
-  function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
+  function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrap = false, fixed = false }: LabelOptions = {}) {
     const plate = k.add([
       k.rect(0, 0),
       k.pos(position),
@@ -149,9 +144,9 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     ]);
     const textY = anchor === "top" ? LABEL_PADDING + 1 : -LABEL_PADDING + 1;
     // Kaplay reports the wrap width as the text width, so only wrap titles that need it.
-    const needsWrap = wrapWidth !== undefined && text.length * PIXEL_FONT_CELL_WIDTH > wrapWidth;
+    const width = wrap && needsWrap(text) ? NAME_PLATE_WRAP_WIDTH : undefined;
     const label = plate.add([
-      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width: needsWrap ? wrapWidth : undefined, align: "center" }),
+      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width, align: "center" }),
       k.pos(0, textY),
       k.anchor(anchor),
       k.color(...INK),
@@ -163,23 +158,16 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     return label;
   }
 
-  function addNamePlate(text: string, at: Tile) {
+  function addNamePlate({ text, at }: NamePlate) {
     const [x, y] = tileFoot(at);
-    const label = addLabel(text, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrapWidth: POI_LABEL_WIDTH });
-    return { at, plate: label.parent! };
+    return addLabel(text, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrap: true }).parent!;
   }
 
-  const zoneTitles = (zoneIds: ZoneId[]) => zoneIds.map((id) => zoneById(id).title).join(" / ");
-  const namePlates = [
-    ...pointsOfInterest.map((poi) => addNamePlate(poi.title, poi.placement)),
-    ...HUB_SIGNPOSTS.map((signpost) => addNamePlate(zoneTitles(signpost.leadsTo), signpost.tile)),
-  ];
+  const namePlates = new Map(NAME_PLATES.map((namePlate) => [namePlate, addNamePlate(namePlate)]));
 
-  /** Only nearby name plates show, so the plates of close-set Points of Interest never pile up. */
   function showNearbyNamePlates() {
-    for (const { at, plate } of namePlates) {
-      plate.hidden = Math.max(Math.abs(at.col - tile.col), Math.abs(at.row - tile.row)) > NAME_PLATE_RANGE;
-    }
+    const shown = new Set(shownNamePlates(tile, facing));
+    for (const [namePlate, plate] of namePlates) plate.hidden = !shown.has(namePlate);
   }
 
   const filmRolls = new Map<string, { zone: Zone; sprite: GameObj }>();
@@ -221,6 +209,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   function turn(direction: Direction) {
     facing = direction;
     setFaced(facedPointOfInterest(tile, facing) ?? null);
+    showNearbyNamePlates();
   }
 
   function tryStep(direction: Direction) {
