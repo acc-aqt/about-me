@@ -76,6 +76,11 @@ body {
   cursor: pointer;
 }
 
+.fast-travel button:focus {
+  background: var(--fg);
+  color: var(--bg);
+}
+
 .fast-travel-zones {
   display: flex;
   flex-direction: column;

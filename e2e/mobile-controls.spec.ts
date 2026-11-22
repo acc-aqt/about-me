@@ -210,6 +210,27 @@ test.describe("on a phone", () => {
       await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
     });
 
+    test("after START, the d-pad picks a Zone and A lands there", async ({ page }) => {
+      await page.getByRole("button", { name: "Fast-travel" }).tap();
+      const zoneList = page.getByRole("navigation", { name: "Fast-travel" });
+
+      await tapDpad(page, ["down", "down", "right", "up"]);
+      await expect(zoneList.getByRole("button", { name: "Career road" })).toBeFocused();
+      await page.getByRole("button", { name: "Shutter" }).tap();
+
+      await expect(zoneList.getByRole("list")).toBeHidden();
+      await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+    });
+
+    test("after START, B closes the Zone list without opening the Inventory", async ({ page }) => {
+      await page.getByRole("button", { name: "Fast-travel" }).tap();
+      await page.getByRole("button", { name: "Inventory" }).tap();
+
+      await expect(page.getByRole("navigation", { name: "Fast-travel" }).getByRole("list")).toBeHidden();
+      await expect(page.getByRole("dialog", { name: "Inventory" })).toBeHidden();
+      await expect(page.getByRole("button", { name: "Fast-travel" })).toHaveAttribute("aria-expanded", "false");
+    });
+
     test("SELECT toggles Sound", async ({ page }) => {
       const sound = page.getByRole("button", { name: "Sound", exact: true });
       await sound.tap();

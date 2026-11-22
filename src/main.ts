@@ -86,11 +86,23 @@ const controls = startGame(canvas, content, {
   onBump: () => audio.playBump(),
 });
 
+const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
+  controls.travelTo(zoneId);
+  canvas.focus();
+});
+
+function pressInFastTravel(button: GameButton) {
+  if (button === "up") fastTravel.moveSelection(-1);
+  else if (button === "down") fastTravel.moveSelection(1);
+  else if (button === "shutter") fastTravel.chooseSelection();
+}
+
 function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
   const button = element.dataset.gameButton as GameButton;
   element.addEventListener("pointerdown", (event) => {
     event.preventDefault();
-    controls.press(button);
+    if (fastTravel.isOpen()) pressInFastTravel(button);
+    else controls.press(button);
   });
   for (const type of ["pointerup", "pointercancel", "pointerleave"]) {
     element.addEventListener(type, () => controls.release(button));
@@ -103,12 +115,10 @@ document
   .forEach((element) => bindTouchButton(element, controls));
 
 query<HTMLButtonElement>(document, ".touch-button-inventory").addEventListener("click", () => {
-  if (!viewfinder.isOpen()) inventory.toggle();
-});
-
-createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
-  controls.travelTo(zoneId);
-  canvas.focus();
+  if (fastTravel.isOpen()) {
+    fastTravel.close();
+    canvas.focus();
+  } else if (!viewfinder.isOpen()) inventory.toggle();
 });
 
 showHint();

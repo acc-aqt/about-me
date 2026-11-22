@@ -47,4 +47,27 @@ export function createFastTravel(
   list.addEventListener("keydown", closeOnEscape);
 
   setOpen(false);
+
+  function zoneButtons() {
+    return [...list.querySelectorAll("button")];
+  }
+
+  function focusedIndex() {
+    return zoneButtons().findIndex((button) => button === document.activeElement);
+  }
+
+  return {
+    isOpen: () => !list.hidden,
+    moveSelection(step: 1 | -1) {
+      const buttons = zoneButtons();
+      const index = Math.min(Math.max(focusedIndex() + step, 0), buttons.length - 1);
+      buttons[index].focus();
+    },
+    chooseSelection() {
+      zoneButtons()[focusedIndex()]?.click();
+    },
+    close() {
+      setOpen(false);
+    },
+  };
 }
