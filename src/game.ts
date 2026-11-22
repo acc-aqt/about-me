@@ -1,6 +1,6 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
-import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, type Rgb } from "./art";
+import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
   facedPointOfInterest,
   fastTravelLanding,
@@ -25,6 +25,8 @@ const MAP_HEIGHT = MAP_ROWS * OVERWORLD_TILE_SIZE;
 const STEP_TIME = 0.16;
 /** A direction held at least this long walks; a shorter tap in a new direction only turns. */
 const HOLD_DELAY = 0.12;
+/** Seconds between bump sounds while the Player keeps walking into a solid tile. */
+const BUMP_INTERVAL = 0.4;
 const BACKGROUND: Rgb = [20, 20, 30];
 const POI_LABEL_WIDTH = 120;
 /** Tiles from the Player within which a Point of Interest's name plate shows. */
@@ -63,6 +65,8 @@ export type GameEvents = {
   onShutter(poi: PointOfInterest): void;
   canFireShutter(): boolean;
   onFilmRollCollected(zone: Zone): void;
+  onFootstep(): void;
+  onBump(): void;
 };
 
 type LabelOptions = { wrapWidth?: number; fixed?: boolean };
@@ -176,12 +180,13 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   // The current Zone's title sits top-centre of the view, clear of the DOM corner controls.
   const zoneTitle = addLabel("", k.vec2(VIEW_WIDTH / 2, ZONE_TITLE_Y), "top", { fixed: true });
 
-  const player = k.add([k.sprite("player", { anim: "idle" }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
+  const player = k.add([k.sprite("player", { anim: playerAnim("down", false) }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
 
   let tile: Tile = SPAWN;
   let facing: Direction = "down";
   let step: Step | null = null;
   let faced: PointOfInterest | null = null;
+  let lastBumpAt = -Infinity;
   /** Directions held down, the most recently pressed last. */
   const held: Direction[] = [];
   const heldSince = new Map<Direction, number>();
@@ -203,21 +208,30 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   function turn(direction: Direction) {
     facing = direction;
-    if (direction === "left" || direction === "right") player.flipX = direction === "left";
     setFaced(facedPointOfInterest(tile, facing) ?? null);
   }
 
   function tryStep(direction: Direction) {
     turn(direction);
     const next = tileAhead(tile, direction);
-    if (!isWalkable(next)) return;
+    if (!isWalkable(next)) {
+      bump();
+      return;
+    }
     step = { from: tile, to: next, elapsed: 0 };
     setFaced(null);
+  }
+
+  function bump() {
+    if (k.time() - lastBumpAt < BUMP_INTERVAL) return;
+    lastBumpAt = k.time();
+    events.onBump();
   }
 
   function arrive() {
     tile = step!.to;
     step = null;
+    events.onFootstep();
     player.pos = k.vec2(...tileFoot(tile));
     const roll = filmRolls.get(tileKey(tile));
     if (roll) {
@@ -256,7 +270,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       }
     }
     if (!step) nextMove();
-    const anim = step ? "walk" : "idle";
+    const anim = playerAnim(facing, step !== null);
     if (player.getCurAnim()?.name !== anim) player.play(anim);
     updateCamera();
   });
