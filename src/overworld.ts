@@ -1,4 +1,4 @@
-import { content, type PointOfInterest, type ZoneId } from "./content";
+import { content, zoneById, type PointOfInterest, type ZoneId } from "./content";
 
 export type Tile = { col: number; row: number };
 
@@ -24,10 +24,10 @@ export const LEGEND: Record<string, { kind: TileKind; walkable: boolean }> = {
 /** One string per row, one character per tile; see LEGEND. Row 0 is the top (north) edge. */
 export const OVERWORLD_MAP: readonly string[] = [
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT===============.BBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT=T............TTBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTBBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT===============BBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=T............=BBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=TTTTTTTTTTTTT===TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTT================================================TTTTTT",
   "TTTTTTTT...........................................TT=...TTT",
@@ -52,11 +52,11 @@ export const OVERWORLD_MAP: readonly string[] = [
   "TT.BBBBBB...BBBBBB.p..T........=.....TT...................TT",
   "TT.BBBBBB...BBBBBB....T........=.....TT.........BBBBB.....TT",
   "TT.BBBBBBp..BBBBBB....T*.......=....*TT.........BBBBB.....TT",
-  "TT....................TTT.TTTTT=TTTTTTT.........BBBBB.....TT",
-  "TT....................#....#***=******T~~~~~~.............TT",
-  "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTT######TTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT....................TTTTTTTTT=TTTTTTT.........BBBBB.....TT",
+  "TT....................TTTTTT***=******T~~~~~~.............TT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
   "TT.................p.p........T=...p.p....................TT",
   "TT========================================================TT",
   "TT............................TT..........................TT",
@@ -83,32 +83,50 @@ export const SPAWN: Tile = { col: 29, row: 24 };
 /** Inclusive tile bounds. */
 export type TileRect = { left: number; top: number; right: number; bottom: number };
 
-/** Tiles in no rectangle, such as the southern path before its fork, belong to no Zone. */
+/**
+ * Tiles in no rectangle, such as the southern path before its fork, belong to no Zone. Contact's corner lies inside
+ * the Hub's rectangle and wins there; no other rectangles overlap.
+ */
 export const ZONE_RECTS: Record<ZoneId, TileRect> = {
   start: { left: 22, top: 17, right: 37, bottom: 29 },
   "photography-trail": { left: 1, top: 1, right: 58, bottom: 16 },
   "career-road": { left: 38, top: 17, right: 58, bottom: 33 },
   "maker-workshop": { left: 1, top: 17, right: 21, bottom: 33 },
-  contact: { left: 22, top: 30, right: 27, bottom: 33 },
+  contact: { left: 23, top: 26, right: 28, bottom: 28 },
   sport: { left: 1, top: 34, right: 30, bottom: 48 },
   "music-and-games": { left: 31, top: 34, right: 58, bottom: 48 },
 };
 
+function area({ left, top, right, bottom }: TileRect) {
+  return (right - left + 1) * (bottom - top + 1);
+}
+
+/** The Zone whose rectangle contains the tile, the smallest one where rectangles nest. */
 export function zoneAt({ col, row }: Tile): ZoneId | undefined {
   const zones = Object.keys(ZONE_RECTS) as ZoneId[];
-  return zones.find((zone) => {
+  const containing = zones.filter((zone) => {
     const rect = ZONE_RECTS[zone];
     return col >= rect.left && col <= rect.right && row >= rect.top && row <= rect.bottom;
   });
+  return containing.sort((a, b) => area(ZONE_RECTS[a]) - area(ZONE_RECTS[b]))[0];
 }
 
-export function tileKindAt({ col, row }: Tile): TileKind | undefined {
-  const char = OVERWORLD_MAP[row]?.[col];
+export function mapCharAt({ col, row }: Tile): string | undefined {
+  return OVERWORLD_MAP[row]?.[col];
+}
+
+export function tileKindAt(tile: Tile): TileKind | undefined {
+  const char = mapCharAt(tile);
   return char === undefined ? undefined : LEGEND[char].kind;
 }
 
-function tileKey({ col, row }: Tile) {
+export function tileKey({ col, row }: Tile) {
   return `${col},${row}`;
+}
+
+/** The map pixel at a tile's top-left corner. */
+export function tileToPixels({ col, row }: Tile): [number, number] {
+  return [col * OVERWORLD_TILE_SIZE, row * OVERWORLD_TILE_SIZE];
 }
 
 const pointsOfInterestByTile = new Map(
@@ -121,20 +139,19 @@ function pointOfInterestAt(tile: Tile): PointOfInterest | undefined {
 
 export type Signpost = { tile: Tile; leadsTo: ZoneId[] };
 
-/** One signpost beside each path out of the Hub, naming the Zones down that path. */
+/** One signpost beside each path out of the Hub, naming the Zones down that path; Contact is in the Hub itself. */
 export const HUB_SIGNPOSTS: Signpost[] = [
   { tile: { col: 31, row: 18 }, leadsTo: ["photography-trail"] },
   { tile: { col: 23, row: 22 }, leadsTo: ["maker-workshop"] },
   { tile: { col: 36, row: 22 }, leadsTo: ["career-road"] },
   { tile: { col: 32, row: 28 }, leadsTo: ["sport", "music-and-games"] },
-  { tile: { col: 26, row: 28 }, leadsTo: ["contact"] },
 ];
 
 const signpostTiles = new Set(HUB_SIGNPOSTS.map(({ tile }) => tileKey(tile)));
 
 /** Points of Interest and signposts are solid; Film roll tiles keep the ground's walkability. */
 export function isWalkable(tile: Tile): boolean {
-  const char = OVERWORLD_MAP[tile.row]?.[tile.col];
+  const char = mapCharAt(tile);
   return char !== undefined && LEGEND[char].walkable && !pointOfInterestAt(tile) && !signpostTiles.has(tileKey(tile));
 }
 
@@ -205,8 +222,8 @@ const APPROACHES: { from: Direction; facing: Direction }[] = [
  * Zone on the shortest walk from the spawn (where its path leaves the Hub), facing onward.
  */
 export function fastTravelLanding(zoneId: ZoneId): Landing {
-  const zone = content.zones.find((candidate) => candidate.id === zoneId);
-  const featured = zone?.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
+  const zone = zoneById(zoneId);
+  const featured = zone.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
   if (featured) {
     for (const { from, facing } of APPROACHES) {
       const tile = tileAhead(featured.placement, from);

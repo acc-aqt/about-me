@@ -70,7 +70,7 @@ export const content: Content = {
   filmRollBonus: {
     title: "All Film rolls collected",
     body:
-      "You found every Film roll on the Route – thanks for exploring! Film is close to my heart: the Analog gallery in the darkroom on the Photography trail holds my 35mm and medium-format photos.",
+      "You found every Film roll – thanks for exploring! Film is close to my heart: the Analog gallery in the darkroom on the Photography trail holds my 35mm and medium-format photos.",
   },
   zones: [
     {
@@ -465,7 +465,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/analog/" }],
-          placement: { col: 21, row: 2 },
+          placement: { col: 22, row: 3 },
         },
       ],
     },
@@ -500,6 +500,7 @@ export const content: Content = {
     {
       id: "music-and-games",
       title: "Music & games",
+      fastTravelTo: "track-back",
       filmRoll: { col: 49, row: 40 },
       pointsOfInterest: [
         {
@@ -520,19 +521,19 @@ export const content: Content = {
       id: "contact",
       title: "Contact",
       fastTravelTo: "contact-board",
-      filmRoll: { col: 26, row: 32 },
+      filmRoll: { col: 25, row: 28 },
       pointsOfInterest: [
         {
           id: "contact-board",
           title: "Say hello",
-          body: "Thanks for walking the Route. Find me here:",
+          body: "Thanks for exploring. Find me here:",
           links: [
             { label: "LinkedIn", url: "https://de.linkedin.com/in/alexander-carrels-8b98b0182" },
             { label: "GitHub", url: "https://github.com/acc-aqt" },
             { label: "Instagram", url: "https://www.instagram.com/carrels.photography/" },
             { label: "carrels.photography", url: "https://www.carrels.photography/" },
           ],
-          placement: { col: 24, row: 31 },
+          placement: { col: 27, row: 27 },
         },
       ],
     },
@@ -553,3 +554,9 @@ export const content: Content = {
     { id: "3d-printing", name: "3D printing", description: "Printing parts such as my slip-over lens caps." },
   ],
 };
+
+export function zoneById(id: ZoneId): Zone {
+  const zone = content.zones.find((candidate) => candidate.id === id);
+  if (!zone) throw new Error(`No Zone with id ${id}`);
+  return zone;
+}

@@ -1,17 +1,19 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
-import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
+import { zoneById, type Content, type PointOfInterest, type Zone, type ZoneId } from "./content";
+import { LABEL_PADDING, NAME_PLATE_WRAP_WIDTH, NAME_PLATES, needsWrap, shownNamePlates, ZONE_TITLE_Y, type NamePlate } from "./namePlates";
 import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
   facedPointOfInterest,
   fastTravelLanding,
   filmRollCover,
-  HUB_SIGNPOSTS,
   isWalkable,
   MAP_COLUMNS,
   MAP_ROWS,
   OVERWORLD_TILE_SIZE,
   SPAWN,
   tileAhead,
+  tileKey,
+  tileToPixels,
   zoneAt,
   type Direction,
   type Tile,
@@ -22,19 +24,13 @@ const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 180;
 const MAP_WIDTH = MAP_COLUMNS * OVERWORLD_TILE_SIZE;
 const MAP_HEIGHT = MAP_ROWS * OVERWORLD_TILE_SIZE;
-/** Seconds to walk from one tile to the next. */
 const STEP_TIME = 0.16;
 /** A direction held at least this long walks; a shorter tap in a new direction only turns. */
 const HOLD_DELAY = 0.12;
 /** Seconds between bump sounds while the Player keeps walking into a solid tile. */
 const BUMP_INTERVAL = 0.4;
 const BACKGROUND: Rgb = [20, 20, 30];
-const POI_LABEL_WIDTH = 120;
-/** Tiles from the Player within which a Point of Interest's name plate shows. */
-const NAME_PLATE_RANGE = 2;
-const LABEL_PADDING = 2;
 const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
-const ZONE_TITLE_Y = 8;
 const Z_FILM_ROLL = 1;
 /** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
 const Z_FILM_ROLL_COVER = 1.5;
@@ -70,14 +66,13 @@ export type GameEvents = {
   onBump(): void;
 };
 
-type LabelOptions = { wrapWidth?: number; fixed?: boolean };
+type LabelOptions = { wrap?: boolean; fixed?: boolean };
 type Step = { from: Tile; to: Tile; elapsed: number };
 
-const tileKey = ({ col, row }: Tile) => `${col},${row}`;
-
 /** Where a sprite standing on a tile is anchored: the bottom centre of the tile. */
-function tileFoot({ col, row }: Tile): [number, number] {
-  return [(col + 0.5) * OVERWORLD_TILE_SIZE, (row + 1) * OVERWORLD_TILE_SIZE];
+function tileFoot(tile: Tile): [number, number] {
+  const [x, y] = tileToPixels(tile);
+  return [x + OVERWORLD_TILE_SIZE / 2, y + OVERWORLD_TILE_SIZE];
 }
 
 function loadImage(path: string) {
@@ -121,7 +116,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   /** Half a tile from the tile's centre towards its cover, so the cover hides half the roll. */
   function filmRollCentre(roll: Tile): Vec2 {
-    const centre = k.vec2((roll.col + 0.5) * OVERWORLD_TILE_SIZE, (roll.row + 0.5) * OVERWORLD_TILE_SIZE);
+    const centre = k.vec2(...tileToPixels(roll)).add(OVERWORLD_TILE_SIZE / 2, OVERWORLD_TILE_SIZE / 2);
     const cover = filmRollCover(roll);
     if (!cover) return centre;
     const towards = tileAhead(roll, cover);
@@ -131,13 +126,13 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   function addFilmRollCover(roll: Tile) {
     const cover = filmRollCover(roll);
     if (!cover) return;
-    const { col, row } = tileAhead(roll, cover);
+    const [x, y] = tileToPixels(tileAhead(roll, cover));
     const size = OVERWORLD_TILE_SIZE;
-    const quad = k.quad((col * size) / MAP_WIDTH, (row * size) / MAP_HEIGHT, size / MAP_WIDTH, size / MAP_HEIGHT);
-    k.add([k.sprite("overworld", { quad }), k.pos(col * size, row * size), k.z(Z_FILM_ROLL_COVER)]);
+    const quad = k.quad(x / MAP_WIDTH, y / MAP_HEIGHT, size / MAP_WIDTH, size / MAP_HEIGHT);
+    k.add([k.sprite("overworld", { quad }), k.pos(x, y), k.z(Z_FILM_ROLL_COVER)]);
   }
 
-  function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
+  function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrap = false, fixed = false }: LabelOptions = {}) {
     const plate = k.add([
       k.rect(0, 0),
       k.pos(position),
@@ -149,9 +144,9 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     ]);
     const textY = anchor === "top" ? LABEL_PADDING + 1 : -LABEL_PADDING + 1;
     // Kaplay reports the wrap width as the text width, so only wrap titles that need it.
-    const needsWrap = wrapWidth !== undefined && text.length * PIXEL_FONT_CELL_WIDTH > wrapWidth;
+    const width = wrap && needsWrap(text) ? NAME_PLATE_WRAP_WIDTH : undefined;
     const label = plate.add([
-      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width: needsWrap ? wrapWidth : undefined, align: "center" }),
+      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width, align: "center" }),
       k.pos(0, textY),
       k.anchor(anchor),
       k.color(...INK),
@@ -163,23 +158,16 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     return label;
   }
 
-  function addNamePlate(text: string, at: Tile) {
+  function addNamePlate({ text, at }: NamePlate) {
     const [x, y] = tileFoot(at);
-    const label = addLabel(text, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrapWidth: POI_LABEL_WIDTH });
-    return { at, plate: label.parent! };
+    return addLabel(text, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrap: true }).parent!;
   }
 
-  const zoneTitles = (zoneIds: ZoneId[]) => zoneIds.map((id) => content.zones.find((zone) => zone.id === id)!.title).join(" / ");
-  const namePlates = [
-    ...pointsOfInterest.map((poi) => addNamePlate(poi.title, poi.placement)),
-    ...HUB_SIGNPOSTS.map((signpost) => addNamePlate(zoneTitles(signpost.leadsTo), signpost.tile)),
-  ];
+  const namePlates = new Map(NAME_PLATES.map((namePlate) => [namePlate, addNamePlate(namePlate)]));
 
-  /** Only nearby name plates show, so the plates of close-set Points of Interest never pile up. */
   function showNearbyNamePlates() {
-    for (const { at, plate } of namePlates) {
-      plate.hidden = Math.max(Math.abs(at.col - tile.col), Math.abs(at.row - tile.row)) > NAME_PLATE_RANGE;
-    }
+    const shown = new Set(shownNamePlates(tile, facing));
+    for (const [namePlate, plate] of namePlates) plate.hidden = !shown.has(namePlate);
   }
 
   const filmRolls = new Map<string, { zone: Zone; sprite: GameObj }>();
@@ -197,7 +185,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   let tile: Tile = SPAWN;
   let facing: Direction = "down";
   let step: Step | null = null;
-  let faced: PointOfInterest | null = null;
+  let facedPoi: PointOfInterest | null = null;
   let lastBumpAt = -Infinity;
   /** Directions held down, the most recently pressed last. */
   const held: Direction[] = [];
@@ -205,22 +193,23 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   /** Each press of a direction, in order, so quick taps are never lost between frames. */
   const taps: Direction[] = [];
 
-  function setFaced(poi: PointOfInterest | null) {
-    if (poi === faced) return;
-    faced = poi;
+  function setFacedPoi(poi: PointOfInterest | null) {
+    if (poi === facedPoi) return;
+    facedPoi = poi;
     events.onFacingChange(poi);
   }
 
   function showSurroundings() {
     const zoneId = zoneAt(tile);
     // Tiles between Zones keep the last Zone's title.
-    if (zoneId) zoneTitle.text = content.zones.find((zone) => zone.id === zoneId)!.title;
+    if (zoneId) zoneTitle.text = zoneById(zoneId).title;
     showNearbyNamePlates();
   }
 
   function turn(direction: Direction) {
     facing = direction;
-    setFaced(facedPointOfInterest(tile, facing) ?? null);
+    setFacedPoi(facedPointOfInterest(tile, facing) ?? null);
+    showNearbyNamePlates();
   }
 
   function tryStep(direction: Direction) {
@@ -231,7 +220,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       return;
     }
     step = { from: tile, to: next, elapsed: 0 };
-    setFaced(null);
+    setFacedPoi(null);
   }
 
   function bump() {
@@ -252,7 +241,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       events.onFilmRollCollected(roll.zone);
     }
     showSurroundings();
-    setFaced(facedPointOfInterest(tile, facing) ?? null);
+    setFacedPoi(facedPointOfInterest(tile, facing) ?? null);
   }
 
   function nextMove() {
@@ -289,7 +278,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   function press(button: GameButton) {
     if (button === "shutter") {
-      if (faced && events.canFireShutter()) events.onShutter(faced);
+      if (facedPoi && events.canFireShutter()) events.onShutter(facedPoi);
       return;
     }
     if (held.includes(button)) return;
@@ -299,7 +288,8 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   }
 
   function release(button: GameButton) {
-    const index = held.indexOf(button as Direction);
+    if (button === "shutter") return;
+    const index = held.indexOf(button);
     if (index >= 0) held.splice(index, 1);
   }
 

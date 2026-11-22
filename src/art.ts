@@ -3,7 +3,18 @@
 // (see CREDITS.md); the water, the Player, the Film roll, the Hub's maypole and the themed objects Kenney lacks are
 // painted here.
 
-import { HUB_SIGNPOSTS, MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Direction, type Tile, type TileKind } from "./overworld";
+import {
+  HUB_SIGNPOSTS,
+  MAP_COLUMNS,
+  MAP_ROWS,
+  mapCharAt,
+  OVERWORLD_TILE_SIZE,
+  tileKindAt,
+  tileToPixels,
+  type Direction,
+  type Tile,
+  type TileKind,
+} from "./overworld";
 
 export type Rgb = [number, number, number];
 
@@ -262,7 +273,7 @@ export function paintFilmRoll(): HTMLCanvasElement {
   return pixels.canvas;
 }
 
-/** Frames of Kenney's Tiny Town packed tilemap, which is 12 tiles wide. */
+/** Frames of Kenney's Tiny Town packed tilemap. */
 const TINY_TOWN_COLUMNS = 12;
 const TINY_TOWN = {
   grass: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2],
@@ -275,6 +286,7 @@ const TINY_TOWN = {
   roofTop: [52, 53, 54],
   roof: [64, 65, 66],
   wall: 84,
+  plainWall: 73,
   door: 85,
   sign: 83,
   well: 104,
@@ -288,29 +300,25 @@ const WATER_DEEP: Rgb = hex("#2f67a8");
 const WATER_GLINT: Rgb = hex("#9fd3f2");
 const SHORE: Rgb = hex("#d9c48c");
 
-function charAt({ col, row }: Tile): string | undefined {
-  return OVERWORLD_MAP[row]?.[col];
-}
-
 function tileSeed({ col, row }: Tile): number {
   return hash(row * MAP_COLUMNS + col);
 }
 
-function pick<T>(choices: readonly T[], tile: Tile): T {
+function variantForTile<T>(choices: readonly T[], tile: Tile): T {
   return choices[Math.floor(tileSeed(tile) * choices.length)];
 }
 
 /** Left, middle or right piece of a row of joined tiles, such as a roof. */
-function piece(tile: Tile, char: string, pieces: readonly [number, number, number]): number {
-  if (charAt({ ...tile, col: tile.col - 1 }) !== char) return pieces[0];
-  if (charAt({ ...tile, col: tile.col + 1 }) !== char) return pieces[2];
+function rowPieceFrame(tile: Tile, char: string, pieces: readonly [number, number, number]): number {
+  if (mapCharAt({ ...tile, col: tile.col - 1 }) !== char) return pieces[0];
+  if (mapCharAt({ ...tile, col: tile.col + 1 }) !== char) return pieces[2];
   return pieces[1];
 }
 
 function paintWater(pixels: Pixels, tile: Tile, x: number, y: number) {
   const size = OVERWORLD_TILE_SIZE;
   pixels.rect(x, y, size, size, WATER);
-  if (charAt({ ...tile, row: tile.row - 1 }) !== "~") {
+  if (mapCharAt({ ...tile, row: tile.row - 1 }) !== "~") {
     pixels.rect(x, y, size, 2, SHORE);
     pixels.rect(x, y + 2, size, 2, WATER_DEEP);
   }
@@ -319,25 +327,25 @@ function paintWater(pixels: Pixels, tile: Tile, x: number, y: number) {
 }
 
 function buildingFrame(tile: Tile): number {
-  if (charAt({ ...tile, row: tile.row + 1 }) === "B") {
-    return piece(tile, "B", charAt({ ...tile, row: tile.row - 1 }) === "B" ? TINY_TOWN.roof : TINY_TOWN.roofTop);
+  if (mapCharAt({ ...tile, row: tile.row + 1 }) === "B") {
+    return rowPieceFrame(tile, "B", mapCharAt({ ...tile, row: tile.row - 1 }) === "B" ? TINY_TOWN.roof : TINY_TOWN.roofTop);
   }
   let left = tile.col;
-  while (charAt({ ...tile, col: left - 1 }) === "B") left--;
+  while (mapCharAt({ ...tile, col: left - 1 }) === "B") left--;
   let right = tile.col;
-  while (charAt({ ...tile, col: right + 1 }) === "B") right++;
+  while (mapCharAt({ ...tile, col: right + 1 }) === "B") right++;
   return tile.col === Math.floor((left + right) / 2) ? TINY_TOWN.door : TINY_TOWN.wall;
 }
 
 function treeFrame(tile: Tile): number {
   const surrounded = [-1, 1].every(
-    (offset) => charAt({ ...tile, col: tile.col + offset }) === "T" && charAt({ ...tile, row: tile.row + offset }) === "T",
+    (offset) => mapCharAt({ ...tile, col: tile.col + offset }) === "T" && mapCharAt({ ...tile, row: tile.row + offset }) === "T",
   );
-  return surrounded ? TINY_TOWN.forest : pick(TINY_TOWN.trees, tile);
+  return surrounded ? TINY_TOWN.forest : variantForTile(TINY_TOWN.trees, tile);
 }
 
 function fenceFrame(tile: Tile): number {
-  const across = [-1, 1].some((offset) => charAt({ ...tile, col: tile.col + offset }) === "#");
+  const across = [-1, 1].some((offset) => mapCharAt({ ...tile, col: tile.col + offset }) === "#");
   return across ? TINY_TOWN.fenceAcross : TINY_TOWN.fenceDown;
 }
 
@@ -365,7 +373,8 @@ type Prop = { rows: readonly string[]; colors: Record<string, Rgb>; bottom?: num
 /** One layer of a themed object: painted pixel rows, or a Tiny Town or Tiny Dungeon frame. */
 type PropLayer = Prop | { town: number } | { dungeon: number };
 
-/** Frames of Kenney's Tiny Dungeon packed tilemap, laid out like Tiny Town. */
+/** Frames of Kenney's Tiny Dungeon packed tilemap. */
+const TINY_DUNGEON_COLUMNS = 12;
 const TINY_DUNGEON = { table: 72, anvil: 74, chest: 89 } as const;
 
 const SCENERY_COLORS: Record<string, Rgb> = {
@@ -385,7 +394,7 @@ const SCENERY_COLORS: Record<string, Rgb> = {
   G: hex("#4ab05a"),
 };
 
-function painted(bottom: number, rows: string[]): Prop {
+function paintedRows(bottom: number, rows: string[]): Prop {
   return { rows, colors: SCENERY_COLORS, bottom };
 }
 
@@ -601,7 +610,7 @@ const MAILBOX: Prop = {
 
 const PROPS = {
   "camera stand": CAMERA_STAND,
-  "darkroom door": DARKROOM_DOOR,
+  "darkroom door": [{ town: TINY_TOWN.plainWall }, DARKROOM_DOOR],
   "welcome board": WELCOME_BOARD,
   university: UNIVERSITY,
   "office tower": OFFICE_TOWER,
@@ -613,7 +622,7 @@ const PROPS = {
   workbench: [{ dungeon: TINY_DUNGEON.table }],
   computer: [
     { dungeon: TINY_DUNGEON.table },
-    painted(8, ["kkkkkkkkkk", "kbbbbbbbbk", "kbcbbbbbbk", "kbbbbGGbbk", "kbbbGGGGbk", "kkkkkkkkkk", "....kk....", "..kkkkkk.."]),
+    paintedRows(8, ["kkkkkkkkkk", "kbbbbbbbbk", "kbcbbbbbbk", "kbbbbGGbbk", "kbbbGGGGbk", "kkkkkkkkkk", "....kk....", "..kkkkkk.."]),
   ],
   anvil: [{ dungeon: TINY_DUNGEON.anvil }],
   "kit chest": [{ dungeon: TINY_DUNGEON.chest }],
@@ -621,7 +630,7 @@ const PROPS = {
   wheelbarrow: [{ town: TINY_TOWN.wheelbarrow }],
   "archery target": [{ town: TINY_TOWN.archeryTarget }],
   "3D printer": [
-    painted(15, [
+    paintedRows(15, [
       "kkkkkkkkkkkk",
       "ksggggggggsk",
       "ksdddkkdddsk",
@@ -639,7 +648,7 @@ const PROPS = {
     ]),
   ],
   "tennis net": [
-    painted(15, [
+    paintedRows(15, [
       "kk............kk",
       "kkwwwwwwwwwwwwkk",
       "kkdsdsdsdsdsdskk",
@@ -651,7 +660,7 @@ const PROPS = {
     ]),
   ],
   "life ring": [
-    painted(16, [
+    paintedRows(16, [
       "..kkkkkk..",
       ".krrwwrrk.",
       "krrkkkkrrk",
@@ -669,7 +678,7 @@ const PROPS = {
     ]),
   ],
   skis: [
-    painted(16, [
+    paintedRows(16, [
       ".kk...kk.",
       "kyyk.kyyk",
       "kyyk.kyyk",
@@ -689,7 +698,7 @@ const PROPS = {
     ]),
   ],
   jukebox: [
-    painted(16, [
+    paintedRows(16, [
       "...kkkkkk...",
       "..kyyyyyyk..",
       ".kyrrrrrryk.",
@@ -709,7 +718,7 @@ const PROPS = {
     ]),
   ],
   speaker: [
-    painted(16, [
+    paintedRows(16, [
       "kkkkkkkkkk",
       "kddddddddk",
       "kdddssdddk",
@@ -726,7 +735,7 @@ const PROPS = {
     ]),
   ],
   "arcade cabinet": [
-    painted(16, [
+    paintedRows(16, [
       ".kkkkkkkkkk.",
       ".kmmmmmmmmk.",
       ".kkkkkkkkkk.",
@@ -750,7 +759,7 @@ const PROPS = {
 type PropName = keyof typeof PROPS;
 
 /** Points of Interest drawn as a themed object; the rest stand as a signpost. */
-const THEMED_PROPS: Record<string, PropName> = {
+export const THEMED_PROPS: Readonly<Record<string, PropName>> = {
   jordan: "camera stand",
   norway: "camera stand",
   "new-york": "camera stand",
@@ -801,9 +810,10 @@ export function themedProp(poiId: string): PropName | undefined {
 }
 
 /** Draws a prop standing on a tile: bottom-aligned, so a prop taller than a tile rises into the tile above. */
-function paintProp(pixels: Pixels, { rows, colors, bottom = OVERWORLD_TILE_SIZE }: Prop, { col, row }: Tile) {
-  const x = col * OVERWORLD_TILE_SIZE + Math.floor((OVERWORLD_TILE_SIZE - rows[0].length) / 2);
-  const y = row * OVERWORLD_TILE_SIZE + bottom - rows.length;
+function paintProp(pixels: Pixels, { rows, colors, bottom = OVERWORLD_TILE_SIZE }: Prop, tile: Tile) {
+  const [tileX, tileY] = tileToPixels(tile);
+  const x = tileX + Math.floor((OVERWORLD_TILE_SIZE - rows[0].length) / 2);
+  const y = tileY + bottom - rows.length;
   rows.forEach((row, dy) => [...row].forEach((char, dx) => colors[char] && pixels.dot(x + dx, y + dy, colors[char])));
 }
 
@@ -812,10 +822,10 @@ export type TileSheets = { town: CanvasImageSource; dungeon: CanvasImageSource }
 function paintThemedObject(pixels: Pixels, sheets: TileSheets, prop: PropName, tile: Tile) {
   const art: Prop | readonly PropLayer[] = PROPS[prop];
   const layers: readonly PropLayer[] = Array.isArray(art) ? art : [art];
-  const [x, y] = [tile.col * OVERWORLD_TILE_SIZE, tile.row * OVERWORLD_TILE_SIZE];
+  const [x, y] = tileToPixels(tile);
   for (const layer of layers) {
     if ("town" in layer) pixels.tile(sheets.town, TINY_TOWN_COLUMNS, layer.town, x, y);
-    else if ("dungeon" in layer) pixels.tile(sheets.dungeon, TINY_TOWN_COLUMNS, layer.dungeon, x, y);
+    else if ("dungeon" in layer) pixels.tile(sheets.dungeon, TINY_DUNGEON_COLUMNS, layer.dungeon, x, y);
     else paintProp(pixels, layer, tile);
   }
 }
@@ -859,25 +869,25 @@ export function paintOverworld(sheets: TileSheets, pointsOfInterest: { id: strin
   for (let row = 0; row < MAP_ROWS; row++) {
     for (let col = 0; col < MAP_COLUMNS; col++) {
       const tile = { col, row };
-      const [x, y] = [col * size, row * size];
+      const [x, y] = tileToPixels(tile);
       const kind = tileKindAt(tile)!;
       if (kind === "water") {
         paintWater(pixels, tile, x, y);
         continue;
       }
-      pixels.tile(sheet, TINY_TOWN_COLUMNS, kind === "path" ? TINY_TOWN.path : pick(TINY_TOWN.grass, tile), x, y);
+      pixels.tile(sheet, TINY_TOWN_COLUMNS, kind === "path" ? TINY_TOWN.path : variantForTile(TINY_TOWN.grass, tile), x, y);
       const object = objectFrame(tile, kind);
       if (object !== undefined) pixels.tile(sheet, TINY_TOWN_COLUMNS, object, x, y);
       // A maypole is drawn whole from its bottom tile.
       if (kind === "maypole" && tileKindAt({ col, row: row + 1 }) !== "maypole") paintProp(pixels, MAYPOLE, tile);
     }
   }
-  for (const { tile } of HUB_SIGNPOSTS) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, tile.col * size, tile.row * size);
+  for (const { tile } of HUB_SIGNPOSTS) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, ...tileToPixels(tile));
   for (const { at, prop } of SCENERY_PROPS) paintThemedObject(pixels, sheets, prop, at);
   for (const { id, placement } of pointsOfInterest) {
     const prop = themedProp(id);
     if (prop) paintThemedObject(pixels, sheets, prop, placement);
-    else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, placement.col * size, placement.row * size);
+    else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, ...tileToPixels(placement));
   }
   return pixels.canvas;
 }

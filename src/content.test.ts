@@ -1,15 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { content, type ZoneId } from "./content";
+import { content, zoneById } from "./content";
 import { neverShowItemsIn } from "./never-show";
 import { PIXEL_FONT_CHARS } from "./pixel-font";
 
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
-
-function zoneById(id: ZoneId) {
-  const zone = content.zones.find((candidate) => candidate.id === id);
-  if (!zone) throw new Error(`No Zone with id ${id}`);
-  return zone;
-}
 
 function linkUrls(poiId: string) {
   const poi = pointsOfInterest.find((candidate) => candidate.id === poiId);
@@ -188,8 +182,7 @@ describe("Content file", () => {
   });
 
   it("puts Norway ski touring on the Photography trail with several photos", () => {
-    const trail = content.zones.find((zone) => zone.id === "photography-trail");
-    const norway = trail?.pointsOfInterest.find((poi) => poi.id === "norway");
+    const norway = zoneById("photography-trail").pointsOfInterest.find((poi) => poi.id === "norway");
     expect(norway?.title).toMatch(/Norway/);
     expect(norway?.photos?.length).toBeGreaterThanOrEqual(2);
   });

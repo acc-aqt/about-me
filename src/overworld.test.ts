@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { content } from "./content";
-import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, HUB_SIGNPOSTS, isReachableFromSpawn, isWalkable, tileAhead, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, type TileKind, ZONE_RECTS, zoneAt } from "./overworld";
+import { content, zoneById } from "./content";
+import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, HUB_SIGNPOSTS, isReachableFromSpawn, isWalkable, tileAhead, tileKey as key, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, type TileKind, ZONE_RECTS, zoneAt } from "./overworld";
 
 const zoneIds = content.zones.map((zone) => zone.id);
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
@@ -14,7 +14,6 @@ function neighbours(tile: Tile) {
 
 /** Fewest steps from any walkable Hub tile to stand next to the target. */
 function stepsFromHubTo(target: Tile) {
-  const key = ({ col, row }: Tile) => `${col},${row}`;
   const goals = new Set(neighbours(target).map(key));
   const seen = new Set<string>();
   let frontier: Tile[] = [];
@@ -72,7 +71,7 @@ describe("Overworld", () => {
 
   it("puts a signpost at each Hub exit, naming the Zones its path leads to", () => {
     const named = HUB_SIGNPOSTS.flatMap((signpost) => signpost.leadsTo).sort();
-    expect(named).toEqual(zoneIds.filter((id) => id !== "start").sort());
+    expect(named).toEqual(zoneIds.filter((id) => id !== "start" && id !== "contact").sort());
     for (const { tile, leadsTo } of HUB_SIGNPOSTS) {
       expect(zoneAt(tile), leadsTo.join()).toBe("start");
       expect(isWalkable(tile), leadsTo.join()).toBe(false);
@@ -91,15 +90,27 @@ describe("Overworld", () => {
     expect(zoneAt({ col: 31, row: 31 })).toBeUndefined();
   });
 
-  it("keeps Zone rectangles from overlapping", () => {
+  it("keeps Zone rectangles from overlapping, apart from Contact's corner inside the Hub", () => {
     for (const [index, a] of zoneIds.entries()) {
       for (const b of zoneIds.slice(index + 1)) {
+        if ([a, b].includes("start") && [a, b].includes("contact")) continue;
         const ra = ZONE_RECTS[a];
         const rb = ZONE_RECTS[b];
         const overlaps = ra.left <= rb.right && rb.left <= ra.right && ra.top <= rb.bottom && rb.top <= ra.bottom;
         expect(overlaps, `${a} and ${b}`).toBe(false);
       }
     }
+  });
+
+  it("puts the Contact mailbox inside the Hub's clearing, a few steps from the spawn", () => {
+    const hub = ZONE_RECTS.start;
+    const contact = ZONE_RECTS.contact;
+    expect(contact.left >= hub.left && contact.right <= hub.right && contact.top >= hub.top && contact.bottom <= hub.bottom).toBe(true);
+    const [mailbox] = zoneById("contact").pointsOfInterest;
+    expect(zoneAt(mailbox.placement)).toBe("contact");
+    expect(zoneAt({ col: mailbox.placement.col, row: hub.top })).toBe("start");
+    const landing = fastTravelLanding("contact").tile;
+    expect(Math.abs(landing.col - SPAWN.col) + Math.abs(landing.row - SPAWN.row)).toBeLessThanOrEqual(8);
   });
 
   it("places every Point of Interest and Film roll inside its own Zone's rectangle", () => {
@@ -159,7 +170,7 @@ describe("Overworld", () => {
   });
 
   it("winds the Photography trail north from the Hub, each trip farther along it, ending at the Darkroom", () => {
-    const trail = content.zones.find((zone) => zone.id === "photography-trail")!.pointsOfInterest;
+    const trail = zoneById("photography-trail").pointsOfInterest;
     const distances = trail.map((poi) => stepsFromHubTo(poi.placement));
     expect(distances).toEqual([...distances].sort((a, b) => a - b));
     expect(new Set(distances).size).toBe(trail.length);
@@ -168,21 +179,31 @@ describe("Overworld", () => {
     expect(trail.every((poi) => poi.placement.row < ZONE_RECTS.start.top)).toBe(true);
   });
 
+  it("puts the Darkroom on the door of its building, faced from the end of the trail below it", () => {
+    const darkroom = zoneById("photography-trail").pointsOfInterest.at(-1)!.placement;
+    expect(tileKindAt(darkroom)).toBe("building");
+    expect(tileKindAt(tileAhead(darkroom, "up"))).toBe("building");
+    expect(tileKindAt(tileAhead(darkroom, "down"))).toBe("path");
+    expect(isReachableFromSpawn(tileAhead(darkroom, "down"))).toBe(true);
+    for (const side of ["left", "right"] as const) expect(tileKindAt(tileAhead(darkroom, side)), side).toBe("building");
+  });
+
   it("lays the Career road out west to east in time order", () => {
-    const cols = content.zones.find((zone) => zone.id === "career-road")!.pointsOfInterest.map((poi) => poi.placement.col);
+    const cols = zoneById("career-road").pointsOfInterest.map((poi) => poi.placement.col);
     expect(cols).toEqual([40, 43, 46, 49, 52, 55]);
   });
 
   it("names the Point of Interest directly ahead of the Player, and none otherwise", () => {
     expect(facedPointOfInterest({ col: 40, row: 23 }, "up")?.id).toBe("tum");
     expect(facedPointOfInterest({ col: 43, row: 23 }, "down")?.id).toBe("bmw-group");
-    expect(facedPointOfInterest({ col: 20, row: 2 }, "right")?.id).toBe("darkroom");
+    expect(facedPointOfInterest({ col: 22, row: 4 }, "up")?.id).toBe("darkroom");
     expect(facedPointOfInterest({ col: 40, row: 23 }, "down")).toBeUndefined();
     expect(facedPointOfInterest({ col: 40, row: 24 }, "up")).toBeUndefined();
   });
 
   it("lands Fast-travel in front of a Zone's featured Point of Interest, facing it", () => {
     expect(fastTravelLanding("career-road")).toEqual({ tile: { col: 55, row: 23 }, facing: "up" });
+    expect(fastTravelLanding("music-and-games")).toEqual({ tile: { col: 36, row: 35 }, facing: "up" });
     for (const zone of content.zones) {
       if (zone.fastTravelTo === undefined) continue;
       const landing = fastTravelLanding(zone.id);
@@ -195,6 +216,5 @@ describe("Overworld", () => {
     expect(fastTravelLanding("photography-trail")).toEqual({ tile: { col: 30, row: 16 }, facing: "up" });
     expect(fastTravelLanding("maker-workshop")).toEqual({ tile: { col: 21, row: 23 }, facing: "left" });
     expect(fastTravelLanding("sport")).toEqual({ tile: { col: 30, row: 35 }, facing: "left" });
-    expect(fastTravelLanding("music-and-games")).toEqual({ tile: { col: 31, row: 34 }, facing: "down" });
   });
 });
