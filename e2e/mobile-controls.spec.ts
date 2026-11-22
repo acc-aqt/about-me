@@ -104,6 +104,78 @@ test.describe("on a phone", () => {
     }
   });
 
+  test("in portrait the d-pad is drawn as one cross", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    const [up, down, left, right] = await Promise.all(
+      (["up", "down", "left", "right"] as const).map(async (direction) => (await page.getByRole("button", { name: DPAD_BUTTONS[direction] }).boundingBox())!),
+    );
+    expect(up.x).toBeCloseTo(down.x, 0);
+    expect(left.y).toBeCloseTo(right.y, 0);
+    expect(up.y + up.height).toBeCloseTo(left.y, 0);
+    expect(left.y + left.height).toBeCloseTo(down.y, 0);
+    expect(left.x + left.width).toBeCloseTo(up.x, 0);
+    expect(up.x + up.width).toBeCloseTo(right.x, 0);
+  });
+
+  test("in portrait the Shutter is printed A and the Inventory B, for sighted visitors only", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    const shutter = page.getByRole("button", { name: "Shutter" });
+    const inventory = page.getByRole("button", { name: "Inventory" });
+    await expectInside(page.getByTestId("handheld"), page.getByText("A", { exact: true }));
+    await expect(page.getByText("A", { exact: true })).toBeVisible();
+    await expect(page.getByText("B", { exact: true })).toBeVisible();
+    await expect(shutter).toMatchAriaSnapshot('- button "Shutter"');
+    await expect(inventory).toMatchAriaSnapshot('- button "Inventory"');
+    const shutterBox = (await shutter.boundingBox())!;
+    const inventoryBox = (await inventory.boundingBox())!;
+    expect(shutterBox.x).toBeGreaterThan(inventoryBox.x);
+    expect(shutterBox.y).toBeLessThan(inventoryBox.y);
+
+    await inventory.tap();
+    await expect(page.getByRole("dialog", { name: "Inventory" })).toBeVisible();
+  });
+
+  test("in portrait the Handheld has speaker slots in its bottom-right corner, hidden from assistive technology", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    const handheld = page.getByTestId("handheld");
+    const speaker = page.getByTestId("speaker");
+    await expect(speaker).toBeVisible();
+    await expectInside(handheld, speaker);
+    const handheldBox = (await handheld.boundingBox())!;
+    const speakerBox = (await speaker.boundingBox())!;
+    expect(speakerBox.x).toBeGreaterThan(handheldBox.x + handheldBox.width / 2);
+    expect(speakerBox.y).toBeGreaterThan((await page.getByRole("button", { name: "Inventory" }).boundingBox())!.y);
+    expect(await speaker.ariaSnapshot()).toBe("");
+  });
+
+  for (const reducedMotion of ["no-preference", "reduce"] as const) {
+    test(`in portrait a held button visibly presses in (reduced motion: ${reducedMotion})`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setViewportSize(PORTRAIT);
+      await openGame(page);
+
+      for (const name of ["Walk up", "Inventory"]) {
+        const button = page.getByRole("button", { name });
+        const released = (await button.boundingBox())!;
+        const releasedLook = await page.screenshot({ clip: released });
+        await page.mouse.move(released.x + released.width / 2, released.y + released.height / 2);
+        await page.mouse.down();
+        const held = (await button.boundingBox())!;
+        expect(await page.screenshot({ clip: released })).not.toEqual(releasedLook);
+        if (reducedMotion === "reduce") expect(held).toEqual(released);
+        else expect(held.y).toBeGreaterThan(released.y);
+        await page.mouse.up();
+        await page.keyboard.press("Escape");
+      }
+    });
+  }
+
   test("in landscape there is no Handheld and the game fills the screen", async ({ page }) => {
     await page.setViewportSize(LANDSCAPE);
     await openGame(page);

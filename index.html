@@ -40,12 +40,17 @@
               <button type="button" class="touch-button dpad-down" data-game-button="down" aria-label="Walk down">▼</button>
             </div>
             <div class="touch-controls-actions">
-              <button type="button" class="touch-button touch-button-inventory" aria-label="Inventory">▤</button>
-              <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">◉</button>
+              <button type="button" class="touch-button touch-button-inventory" aria-label="Inventory">
+                <span class="touch-glyph" aria-hidden="true">▤</span><span class="printed-label" aria-hidden="true">B</span>
+              </button>
+              <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">
+                <span class="touch-glyph" aria-hidden="true">◉</span><span class="printed-label" aria-hidden="true">A</span>
+              </button>
             </div>
           </div>
         </div>
       </main>
+      <div class="speaker" data-testid="speaker" aria-hidden="true"></div>
     </div>
 
     <dialog id="viewfinder" class="overlay viewfinder" aria-labelledby="viewfinder-title" tabindex="-1">

@@ -10,6 +10,10 @@
   --bezel: #5d5e6e;
   --bezel-ink: #d8d4e2;
   --logo-ink: #2a2f86;
+  --dpad: #34343c;
+  --dpad-ink: #6e6e7a;
+  --face-button: #8e2350;
+  --face-button-dark: #5e1434;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--fg);
   background: var(--bg);
@@ -186,7 +190,9 @@ body {
 }
 
 .bezel-label,
-.handheld-logo {
+.handheld-logo,
+.printed-label,
+.speaker {
   display: none;
 }
 
@@ -303,6 +309,114 @@ body {
     flex: 1;
     align-items: center;
     padding: 0.5rem;
+  }
+
+  .touch-controls-dpad {
+    grid-template-areas:
+      ". up ."
+      "left centre right"
+      ". down .";
+    gap: 0;
+    filter: drop-shadow(0 0.2rem 0 rgb(0 0 0 / 0.3));
+  }
+
+  .touch-controls-dpad::before {
+    content: "";
+    grid-area: centre;
+    background: radial-gradient(circle, #2a2a31 0 35%, var(--dpad) 37%);
+  }
+
+  .touch-controls-dpad .touch-button {
+    border: none;
+    background: var(--dpad);
+    color: var(--dpad-ink);
+    font-size: 0.9rem;
+  }
+
+  .dpad-up {
+    border-radius: 0.4rem 0.4rem 0 0;
+  }
+
+  .dpad-down {
+    border-radius: 0 0 0.4rem 0.4rem;
+  }
+
+  .dpad-left {
+    border-radius: 0.4rem 0 0 0.4rem;
+  }
+
+  .dpad-right {
+    border-radius: 0 0.4rem 0.4rem 0;
+  }
+
+  .touch-controls-actions {
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    transform: rotate(-25deg);
+  }
+
+  .touch-controls-actions .touch-button {
+    position: relative;
+    width: 3.5rem;
+    height: 3.5rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--face-button);
+    box-shadow: 0 0.2rem 0 var(--face-button-dark);
+  }
+
+  .touch-controls-actions .touch-glyph {
+    display: none;
+  }
+
+  .printed-label {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    display: block;
+    color: var(--logo-ink);
+    font: bold 0.85rem/1 ui-monospace, monospace;
+  }
+
+  .touch-controls-dpad .touch-button:active {
+    background: #26262c;
+    transform: translateY(0.15rem);
+  }
+
+  .touch-controls-actions .touch-button:active {
+    background: var(--face-button-dark);
+    box-shadow: none;
+    transform: translateY(0.2rem);
+  }
+
+  .touch-button:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .speaker {
+    position: absolute;
+    right: max(2.5rem, env(safe-area-inset-right));
+    bottom: max(2.5rem, env(safe-area-inset-bottom));
+    display: block;
+    width: 4.5rem;
+    height: 3.5rem;
+    background: repeating-linear-gradient(90deg, var(--shell-ink) 0 0.35rem, transparent 0.35rem 0.8rem);
+    border-radius: 0.2rem;
+    opacity: 0.45;
+    transform: rotate(-25deg);
+    pointer-events: none;
+  }
+}
+
+@media (orientation: portrait) and (prefers-reduced-motion: reduce) {
+  .touch-controls-dpad .touch-button:active,
+  .touch-controls-actions .touch-button:active {
+    transform: none;
   }
 }
 
