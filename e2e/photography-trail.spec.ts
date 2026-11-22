@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { zoneById, type PointOfInterest } from "../src/content.ts";
-import { facingStatus, fastTravel, openGame, tapKeys, tapsTo } from "./walk";
+import { facingStatus, fastTravel, openGameWithKeyboard, tapKeys, tapsTo } from "./walk";
 
 const trail = zoneById("photography-trail");
 const norway = trail.pointsOfInterest.find((poi) => poi.id === "norway")!;
@@ -15,7 +15,7 @@ async function fastTravelAndFace(page: Page, poi: PointOfInterest) {
 }
 
 async function openNorwayViewfinder(page: Page) {
-  await openGame(page);
+  await openGameWithKeyboard(page);
   await fastTravelAndFace(page, norway);
   await page.keyboard.press("Space");
   const viewfinder = page.getByRole("dialog", { name: norway.title });
@@ -24,7 +24,7 @@ async function openNorwayViewfinder(page: Page) {
 }
 
 test("Fast-travel to the Photography trail lands where its path leaves the Hub, a short walk from Jordan", async ({ page }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
   const landing = await fastTravel(page, "photography-trail");
   const taps = tapsTo(landing, jordan.placement, { face: true });
   expect(taps.length).toBeLessThanOrEqual(20);
@@ -77,7 +77,7 @@ test("the darkroom Viewfinder at the end of the trail shows the Analog gallery w
   page,
 }) => {
   test.setTimeout(90_000);
-  await openGame(page);
+  await openGameWithKeyboard(page);
   await fastTravelAndFace(page, darkroom);
   await page.keyboard.press("Space");
 
