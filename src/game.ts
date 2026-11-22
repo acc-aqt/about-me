@@ -289,7 +289,8 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   }
 
   function release(button: GameButton) {
-    const index = held.indexOf(button as Direction);
+    if (button === "shutter") return;
+    const index = held.indexOf(button);
     if (index >= 0) held.splice(index, 1);
   }
 

@@ -113,6 +113,11 @@ export function createAudio(): Audio {
     scheduler = window.setInterval(scheduleMusic, SCHEDULER_INTERVAL_MS);
   }
 
+  function playBurst(burst: NoiseBurst) {
+    if (muted || !engine) return;
+    playNoise(engine.context, engine.master, engine.noise, engine.context.currentTime, burst);
+  }
+
   function stopMusic() {
     window.clearInterval(scheduler);
     scheduler = undefined;
@@ -134,13 +139,7 @@ export function createAudio(): Audio {
       playNoise(context, master, noise, now, { ...SHUTTER_CLICK, volume: 0.9 });
       playNoise(context, master, noise, now + 0.07, { ...SHUTTER_CLICK, volume: 0.6 });
     },
-    playFootstep() {
-      if (muted || !engine) return;
-      playNoise(engine.context, engine.master, engine.noise, engine.context.currentTime, FOOTSTEP);
-    },
-    playBump() {
-      if (muted || !engine) return;
-      playNoise(engine.context, engine.master, engine.noise, engine.context.currentTime, BUMP);
-    },
+    playFootstep: () => playBurst(FOOTSTEP),
+    playBump: () => playBurst(BUMP),
   };
 }
