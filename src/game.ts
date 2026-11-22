@@ -1,4 +1,4 @@
-import kaplay, { type Vec2 } from "kaplay";
+import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
 import {
   GROUND_Y,
@@ -26,6 +26,8 @@ const PLAYER_SPEED = 160;
 const PLAYER_START_X = 40;
 const SHUTTER_RANGE = 28;
 const FILM_ROLL_PICKUP_RANGE = 8;
+/** How far right of its Film roll a Zone's cover prop stands, so only an edge of the roll peeks out. */
+const FILM_ROLL_COVER_OFFSET = 6;
 const FAST_TRAVEL_OFFSET = 16;
 const POI_LABEL_WIDTH = 120;
 const PRINTS_PER_POI = 3;
@@ -54,7 +56,7 @@ export type GameControls = {
 
 type PlacedPointOfInterest = { poi: PointOfInterest; x: number };
 type PlacedZone = { zone: Zone; x: number };
-type PlacedFilmRoll = { zone: Zone; x: number };
+type PlacedFilmRoll = { zone: Zone; x: number; sprite: GameObj };
 type LabelOptions = { wrapWidth?: number; fixed?: boolean };
 
 export type GameEvents = {
@@ -67,17 +69,15 @@ export type GameEvents = {
 function layOutRoute(content: Content) {
   const zones: PlacedZone[] = [];
   const pointsOfInterest: PlacedPointOfInterest[] = [];
-  const filmRolls: PlacedFilmRoll[] = [];
   let x = 0;
   for (const zone of content.zones) {
     zones.push({ zone, x });
     for (const poi of zone.pointsOfInterest) {
       pointsOfInterest.push({ poi, x: x + poi.placement.x });
     }
-    if (zone.filmRoll) filmRolls.push({ zone, x: x + zone.filmRoll.x });
     x += zone.width;
   }
-  return { zones, pointsOfInterest, filmRolls, routeWidth: x };
+  return { zones, pointsOfInterest, routeWidth: x };
 }
 
 function fastTravelX(placed: PlacedZone): number {
@@ -119,9 +119,10 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     chars: PIXEL_FONT_CHARS,
   });
 
-  const parallaxLayers = route.zones.flatMap((placed) => addZoneBackdrop(placed, ZONE_ART[placed.zone.id]));
+  const filmRolls: PlacedFilmRoll[] = [];
+  const parallaxLayers = route.zones.flatMap((placed) => addZoneScenery(placed, ZONE_ART[placed.zone.id]));
 
-  function addZoneBackdrop({ zone, x }: PlacedZone, art: ZoneArt) {
+  function addZoneScenery({ zone, x }: PlacedZone, art: ZoneArt) {
     const skyName = `sky-${zone.id}`;
     k.loadSprite(skyName, paintSky(art.sky, GROUND_Y));
     const frame = k.add([k.rect(zone.width, GROUND_Y), k.pos(x, 0), k.mask("intersect")]);
@@ -139,15 +140,22 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       return { object, depth, restX: -margin, cameraAtCentre };
     });
 
-    addTiles(art.ground, x, GROUND_Y, zone.width, art.groundTint);
+    art.ground.forEach(({ frame, from }, index) => {
+      const until = art.ground[index + 1]?.from ?? zone.width;
+      addTiles(frame, x + from, GROUND_Y, until - from, art.groundTint);
+    });
     addTiles(TILES.dirt, x, GROUND_Y + TILE_SIZE, zone.width, art.groundTint);
-    for (const prop of art.props) {
+    if (zone.filmRoll) {
+      const rollX = x + zone.filmRoll.x;
+      filmRolls.push({ zone, x: rollX, sprite: k.add([k.sprite("film-roll"), k.pos(rollX, GROUND_Y), k.anchor("bot")]) });
+    }
+    const cover = zone.filmRoll && { frame: art.filmRollCover, x: zone.filmRoll.x + FILM_ROLL_COVER_OFFSET };
+    for (const prop of cover ? [...art.props, cover] : art.props) {
       k.add([k.sprite("tiles", { frame: prop.frame }), k.pos(x + prop.x, GROUND_Y), k.anchor("bot"), k.color(...art.groundTint)]);
     }
     return layers;
   }
 
-  // Zone titles sit top-centre of the Zone's first screen, clear of the DOM corner controls.
   function addTiles(frame: number, x: number, y: number, width: number, tint: Rgb) {
     k.add([k.sprite("tiles", { frame, tiled: true, width, height: TILE_SIZE }), k.pos(x, y), k.color(...tint)]);
   }
@@ -162,8 +170,10 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       ...(fixed ? [k.fixed()] : []),
     ]);
     const textY = anchor === "top" ? LABEL_PADDING + 1 : -LABEL_PADDING + 1;
+    // Kaplay reports the wrap width as the text width, so only wrap titles that need it.
+    const needsWrap = wrapWidth !== undefined && text.length * PIXEL_FONT_CELL_WIDTH > wrapWidth;
     const label = plate.add([
-      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width: wrapWidth, align: "center" }),
+      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width: needsWrap ? wrapWidth : undefined, align: "center" }),
       k.pos(0, textY),
       k.anchor(anchor),
       k.color(...INK),
@@ -197,12 +207,6 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       k.add([k.sprite(sprite), k.pos(printX, PRINT_Y), k.anchor("center")]);
     });
   }
-
-  const filmRolls = route.filmRolls.map(({ zone, x }) => ({
-    zone,
-    x,
-    sprite: k.add([k.sprite("film-roll"), k.pos(x, GROUND_Y), k.anchor("bot")]),
-  }));
 
   const proximityCue = k.add([
     k.text("!", { size: 16 }),

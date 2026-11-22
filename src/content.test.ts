@@ -183,6 +183,10 @@ describe("Content file", () => {
     }
   });
 
+  it("keeps the first Film roll off the opening screen, which shows the first 320 pixels of the Route", () => {
+    expect(zoneById("start").filmRoll!.x).toBeGreaterThan(320);
+  });
+
   it("has a Film roll bonus that teases the Analog gallery", () => {
     expect(content.filmRollBonus.title.trim()).not.toBe("");
     expect(content.filmRollBonus.body).toMatch(/Analog gallery/);

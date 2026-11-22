@@ -12,6 +12,6 @@ Attribution is not required; it is given here with thanks.
 
 ## Original art
 
-The Player (photographer) sprite, the Film roll, the skies and all backdrops — the city skyline at the start,
-the hangar with the jet engine, the mountains and the other Zone scenery — are original pixel art painted in code
+The Player (photographer) sprite, the Film roll, the skies and all backdrops — the Munich old town with its twin-towered church,
+the hangar with the jet engine, the mountains, the swimming pool, tennis court, ski-touring slope, the jukebox and the other Zone scenery — are original pixel art painted in code
 in `src/art.ts`. The pixel font used for in-world labels is an original 5×9 font drawn in `src/pixel-font.ts`.

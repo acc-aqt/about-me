@@ -35,10 +35,13 @@ export type BackdropLayer = { depth: number; paint: Painter };
 
 export type ZoneArt = {
   sky: [Rgb, Rgb];
-  ground: number;
+  /** Ground tiles from each `from` (Zone-local x) to the next span. */
+  ground: { frame: number; from: number }[];
   groundTint: Rgb;
   layers: BackdropLayer[];
   props: { frame: number; x: number }[];
+  /** Tile the Zone's Film roll is tucked behind. */
+  filmRollCover: number;
 };
 
 export class Pixels {
@@ -419,6 +422,199 @@ function jetEngineHangar(cx: number): Painter {
   };
 }
 
+type TownStyle = { wall: Rgb; shade: Rgb; roof: Rgb; window?: Rgb; minHeight: number; maxHeight: number; seed: number };
+
+function oldTown(style: TownStyle): Painter {
+  return (pixels, from, to) => {
+    let slot = Math.floor(from / 20) - 1;
+    let x = slot * 20;
+    while (x < to) {
+      const width = 14 + Math.round(hash(slot * 17 + style.seed) * 12);
+      const height = style.minHeight + Math.round(hash(slot * 31 + style.seed) * (style.maxHeight - style.minHeight));
+      const top = GROUND_Y - height;
+      pixels.rect(x, top, width, height, style.wall);
+      pixels.rect(x + width - 2, top, 2, height, style.shade);
+      const pitch = Math.ceil(width / 2);
+      for (let step = 0; step < pitch; step++) {
+        pixels.rect(x + step, top - 1 - step, width - step * 2, 1, style.roof);
+      }
+      if (hash(slot * 7 + style.seed) > 0.5) pixels.rect(x + width - 6, top - pitch + 1, 2, pitch - 2, style.shade);
+      if (style.window) {
+        for (let wy = top + 3; wy < GROUND_Y - 4; wy += 6) {
+          for (let wx = x + 3; wx < x + width - 4; wx += 5) {
+            if (hash(wx * 3 + wy * 7 + style.seed) > 0.4) pixels.rect(wx, wy, 2, 3, style.window);
+          }
+        }
+      }
+      x += width + Math.round(hash(slot * 11 + style.seed) * 3);
+      slot++;
+    }
+  };
+}
+
+/** An original twin-towered old-town church: square brick towers capped with green onion domes. */
+function twinTowerChurch(cx: number, body: Rgb, shade: Rgb, dome: Rgb, domeShade: Rgb): Painter {
+  const towerWidth = 12;
+  const towerHeight = 70;
+  const gap = 8;
+  const towers = [cx - gap / 2 - towerWidth, cx + gap / 2];
+  const naveWidth = 56;
+  const naveHeight = 30;
+  return (pixels, from, to) => {
+    if (cx + naveWidth < from || cx - naveWidth > to) return;
+    const naveLeft = cx - naveWidth / 2;
+    const naveTop = GROUND_Y - naveHeight;
+    pixels.rect(naveLeft, naveTop, naveWidth, naveHeight, body);
+    for (let step = 0; step < 16; step++) pixels.rect(naveLeft + step, naveTop - 1 - step, naveWidth - step * 2, 1, shade);
+    for (const left of towers) {
+      const top = GROUND_Y - towerHeight;
+      pixels.rect(left, top, towerWidth, towerHeight, body);
+      pixels.rect(left + towerWidth - 2, top, 2, towerHeight, shade);
+      for (let wy = top + 8; wy < GROUND_Y - 30; wy += 12) pixels.rect(left + 5, wy, 2, 5, shade);
+      const domeRows = [14, 16, 16, 14, 12, 10, 8, 6, 4, 2];
+      domeRows.forEach((width, row) => {
+        const y = top - 1 - row;
+        const domeLeft = left + (towerWidth - width) / 2;
+        pixels.rect(domeLeft, y, width, 1, dome);
+        pixels.rect(domeLeft + width - Math.ceil(width / 4), y, Math.ceil(width / 4), 1, domeShade);
+      });
+      pixels.rect(left + towerWidth / 2 - 1, top - 1 - domeRows.length - 4, 1, 4, domeShade);
+    }
+  };
+}
+
+function swimmingPool(cx: number): Painter {
+  const width = 104;
+  const wallHeight = 14;
+  const left = cx - width / 2;
+  const waterTop = GROUND_Y - wallHeight - 3;
+  const tile = hex("#e8eef2");
+  const grout = hex("#b8c6d0");
+  const water = hex("#3fa9d8");
+  const crest = hex("#bfe9f7");
+  const ropeA = hex("#d8463a");
+  const ropeB = hex("#f4f4f4");
+  const block = hex("#5d6878");
+  const rail = hex("#c4c8d0");
+  return (pixels, from, to) => {
+    if (left + width < from || left > to) return;
+    pixels.rect(left, waterTop, width, 3, water);
+    for (let x = left; x < left + width; x += 6) pixels.rect(x + ((x / 6) % 2), waterTop, 3, 1, crest);
+    for (let x = left + 2; x < left + width - 2; x += 4) pixels.rect(x, waterTop + 1, 2, 1, (x / 4) % 2 < 1 ? ropeA : ropeB);
+    pixels.rect(left, GROUND_Y - wallHeight, width, wallHeight, tile);
+    for (let y = GROUND_Y - wallHeight + 4; y < GROUND_Y; y += 5) pixels.rect(left, y, width, 1, grout);
+    for (let x = left + 7; x < left + width; x += 8) pixels.rect(x, GROUND_Y - wallHeight, 1, wallHeight, grout);
+    pixels.rect(left + 4, waterTop - 8, 8, 8, block);
+    pixels.rect(left + 4, waterTop - 9, 9, 2, ropeB);
+    pixels.rect(left + width - 10, waterTop - 10, 1, 13, rail);
+    pixels.rect(left + width - 5, waterTop - 10, 1, 13, rail);
+    pixels.rect(left + width - 10, waterTop - 10, 6, 1, rail);
+  };
+}
+
+function tennisCourt(cx: number): Painter {
+  const fenceWidth = 130;
+  const fenceHeight = 42;
+  const left = cx - fenceWidth / 2;
+  const post = hex("#2c4a3c");
+  const mesh = hex("#3f6c56");
+  const court = hex("#c8643a");
+  const line = hex("#f4f4f4");
+  const net = hex("#1d2a24");
+  const ball = hex("#d7e84a");
+  return (pixels, from, to) => {
+    if (left + fenceWidth < from || left > to) return;
+    const top = GROUND_Y - fenceHeight;
+    for (let y = top; y < GROUND_Y - 4; y++) {
+      for (let x = left; x < left + fenceWidth; x++) {
+        if ((x + y) % 6 === 0 || (x - y + 600) % 6 === 0) pixels.dot(x, y, mesh);
+      }
+    }
+    for (let x = left; x <= left + fenceWidth; x += 26) pixels.rect(x, top - 2, 2, fenceHeight + 2, post);
+    pixels.rect(left, top - 2, fenceWidth + 2, 2, post);
+    pixels.rect(left, GROUND_Y - 4, fenceWidth + 2, 4, court);
+    pixels.rect(left + 4, GROUND_Y - 3, fenceWidth - 6, 1, line);
+    const netLeft = cx + 14;
+    pixels.rect(netLeft, GROUND_Y - 13, 2, 13, post);
+    pixels.rect(netLeft + 34, GROUND_Y - 13, 2, 13, post);
+    for (let y = GROUND_Y - 11; y < GROUND_Y - 3; y += 2) pixels.rect(netLeft + 2, y, 32, 1, net);
+    for (let x = netLeft + 3; x < netLeft + 34; x += 3) pixels.rect(x, GROUND_Y - 11, 1, 8, net);
+    pixels.rect(netLeft + 2, GROUND_Y - 12, 32, 1, line);
+    disc(cx - 30, GROUND_Y - 26, 2, ball)(pixels, from, to);
+  };
+}
+
+function skiTouringSlope(left: number, right: number, peak: number): Painter {
+  const snow = hex("#f4f8fb");
+  const snowShade = hex("#c9d6e6");
+  const track = hex("#8ea6c9");
+  const ski = hex("#d8463a");
+  const pole = hex("#5d6878");
+  return (pixels, from, to) => {
+    if (right < from || left > to) return;
+    const heightAt = (x: number) => {
+      const t = Math.min(1, Math.max(0, (x - left) / (right - left)));
+      return Math.round(peak * t * t * (3 - 2 * t));
+    };
+    for (let x = Math.max(left, Math.floor(from)); x < Math.min(to, right + 400); x++) {
+      const height = heightAt(x);
+      pixels.rect(x, GROUND_Y - height, 1, height, snow);
+      pixels.rect(x, GROUND_Y - Math.min(height, 3), 1, Math.min(height, 3), snowShade);
+    }
+    for (let x = left + 10; x < right; x += 2) {
+      const zig = Math.abs(((x - left) % 40) - 20) / 20;
+      const height = heightAt(x);
+      const y = GROUND_Y - Math.round(height * (0.35 + zig * 0.4));
+      if (height > 6) pixels.dot(x, y, track);
+    }
+    const skisX = left + Math.round((right - left) * 0.2);
+    const skisTop = GROUND_Y - heightAt(skisX) - 16;
+    pixels.rect(skisX, skisTop, 2, 18, ski);
+    pixels.rect(skisX + 3, skisTop + 1, 2, 17, ski);
+    pixels.rect(skisX + 7, skisTop - 2, 1, 20, pole);
+    pixels.rect(skisX + 6, skisTop - 2, 3, 1, pole);
+  };
+}
+
+function jukebox(cx: number): Painter {
+  const width = 28;
+  const height = 46;
+  const left = cx - width / 2;
+  const top = GROUND_Y - height;
+  const radius = width / 2;
+  const wood = hex("#7a3e2a");
+  const woodShade = hex("#5a2a1c");
+  const neon = [hex("#ff6fb5"), hex("#ffd166"), hex("#5fe3e8")];
+  const glass = hex("#2b1f45");
+  const record = INK;
+  const label = hex("#ffd166");
+  const grille = hex("#c9a46a");
+  return (pixels, from, to) => {
+    if (left + width < from || left > to) return;
+    for (let dy = 0; dy < radius; dy++) {
+      const half = Math.round(Math.sqrt(radius * radius - (radius - dy) * (radius - dy)));
+      pixels.rect(cx - half, top + dy, half * 2, 1, wood);
+    }
+    pixels.rect(left, top + radius, width, height - radius, wood);
+    pixels.rect(left + width - 3, top + radius, 3, height - radius, woodShade);
+    neon.forEach((color, band) => {
+      const r = radius - 3 - band * 2;
+      for (let dy = 0; dy < r; dy++) {
+        const half = Math.round(Math.sqrt(r * r - (r - dy) * (r - dy)));
+        pixels.dot(cx - half, top + radius - r + dy, color);
+        pixels.dot(cx + half - 1, top + radius - r + dy, color);
+      }
+      pixels.rect(cx - r, top + radius, 1, 20, color);
+      pixels.rect(cx + r - 1, top + radius, 1, 20, color);
+    });
+    pixels.rect(cx - 6, top + 8, 12, 12, glass);
+    disc(cx, top + 14, 4, record)(pixels, from, to);
+    pixels.rect(cx - 1, top + 13, 2, 2, label);
+    for (let y = top + 26; y < GROUND_Y - 6; y += 2) pixels.rect(cx - 6, y, 12, 1, grille);
+    pixels.rect(left + 2, GROUND_Y - 3, width - 4, 3, woodShade);
+  };
+}
+
 const MOUNTAIN_FAR: MountainStyle = {
   lit: hex("#8ea6c9"),
   shade: hex("#6f86ab"),
@@ -444,13 +640,42 @@ const MOUNTAIN_NEAR: MountainStyle = {
 export const ZONE_ART: Record<ZoneId, ZoneArt> = {
   start: {
     sky: [hex("#7fa9d8"), hex("#f7d3aa")],
-    ground: TILES.grass,
+    ground: [{ frame: TILES.grass, from: 0 }],
     groundTint: [255, 255, 255],
     layers: [
       { depth: 0.6, paint: clouds(hex("#fbeee0"), 120, 1) },
-      { depth: 0.45, paint: skyline(hex("#a89cc4"), hex("#9488b4"), hex("#c7bddc"), 5, 60) },
-      { depth: 0.2, paint: skyline(hex("#4f4d7c"), hex("#3f3d68"), hex("#f3d27a"), 9, 42) },
+      {
+        depth: 0.5,
+        paint: mountains({
+          lit: hex("#bcc5de"),
+          shade: hex("#aab4d0"),
+          snow: hex("#f1f4f9"),
+          snowShade: hex("#d9e0ee"),
+          height: 52,
+          spacing: 60,
+          seed: 31,
+          snowDepth: 10,
+        }),
+      },
+      { depth: 0.35, paint: twinTowerChurch(300, hex("#8f7fae"), hex("#7c6c9c"), hex("#6fa48e"), hex("#558a75")) },
+      {
+        depth: 0.35,
+        paint: oldTown({ wall: hex("#a89cc4"), shade: hex("#9488b4"), roof: hex("#9a7fa8"), minHeight: 14, maxHeight: 24, seed: 5 }),
+      },
+      {
+        depth: 0.2,
+        paint: oldTown({
+          wall: hex("#4f4d7c"),
+          shade: hex("#3f3d68"),
+          roof: hex("#8a4a52"),
+          window: hex("#f3d27a"),
+          minHeight: 16,
+          maxHeight: 28,
+          seed: 9,
+        }),
+      },
     ],
+    filmRollCover: TILES.fenceB,
     props: [
       { frame: TILES.sproutA, x: 120 },
       { frame: TILES.fenceA, x: 250 },
@@ -459,7 +684,7 @@ export const ZONE_ART: Record<ZoneId, ZoneArt> = {
   },
   "career-road": {
     sky: [hex("#4f9ee0"), hex("#cdeaf7")],
-    ground: TILES.grass,
+    ground: [{ frame: TILES.grass, from: 0 }],
     groundTint: [255, 255, 255],
     layers: [
       { depth: 0.6, paint: clouds(hex("#ffffff"), 150, 4) },
@@ -467,24 +692,25 @@ export const ZONE_ART: Record<ZoneId, ZoneArt> = {
       { depth: 0.2, paint: hills(hex("#5f9d7d"), 20, 8, 30, 4) },
       { depth: 0, paint: jetEngineHangar(900) },
     ],
+    filmRollCover: TILES.flag,
     props: [
       { frame: TILES.sproutB, x: 160 },
       { frame: TILES.sproutA, x: 330 },
       { frame: TILES.fenceA, x: 470 },
       { frame: TILES.fenceB, x: 488 },
       { frame: TILES.mushroom, x: 640 },
-      { frame: TILES.flag, x: 830 },
     ],
   },
   "maker-workshop": {
     sky: [hex("#d4734f"), hex("#f6d58e")],
-    ground: TILES.sand,
+    ground: [{ frame: TILES.sand, from: 0 }],
     groundTint: [255, 240, 225],
     layers: [
       { depth: 0.5, paint: hills(hex("#c27c5a"), 34, 10, 40, 2) },
       { depth: 0.2, paint: workshop(130, 180, hex("#6a3a32"), hex("#f4c46a")) },
       { depth: 0.2, paint: workshop(430, 150, hex("#6a3a32"), hex("#f4c46a")) },
     ],
+    filmRollCover: TILES.fenceA,
     props: [
       { frame: TILES.fenceA, x: 160 },
       { frame: TILES.sproutB, x: 480 },
@@ -492,7 +718,7 @@ export const ZONE_ART: Record<ZoneId, ZoneArt> = {
   },
   "photography-trail": {
     sky: [hex("#3d8f9a"), hex("#f4d79a")],
-    ground: TILES.grass,
+    ground: [{ frame: TILES.grass, from: 0 }],
     groundTint: [235, 255, 235],
     layers: [
       { depth: 0.6, paint: clouds(hex("#fdf1d6"), 170, 8) },
@@ -502,6 +728,7 @@ export const ZONE_ART: Record<ZoneId, ZoneArt> = {
       { depth: 0.2, paint: hills(hex("#3f7f6e"), 14, 6, 26, 7) },
       { depth: 0.2, paint: pines(hex("#2f5a4a"), 26, 5, [230, 430]) },
     ],
+    filmRollCover: TILES.sproutA,
     props: [
       { frame: TILES.sproutA, x: 110 },
       { frame: TILES.mushroom, x: 560 },
@@ -513,39 +740,49 @@ export const ZONE_ART: Record<ZoneId, ZoneArt> = {
   },
   sport: {
     sky: [hex("#2f6cc0"), hex("#c4e3f5")],
-    ground: TILES.snow,
+    ground: [
+      { frame: TILES.grass, from: 0 },
+      { frame: TILES.snow, from: 310 },
+    ],
     groundTint: [255, 255, 255],
     layers: [
       { depth: 0.55, paint: mountains(MOUNTAIN_FAR) },
-      { depth: 0.3, paint: mountains(MOUNTAIN_NEAR) },
-      { depth: 0.15, paint: pines(hex("#2c5446"), 22, 9) },
+      { depth: 0.3, paint: mountains(MOUNTAIN_NEAR, [260, 640]) },
+      { depth: 0.15, paint: pines(hex("#2c5446"), 22, 9, [300, 560]) },
+      { depth: 0, paint: swimmingPool(80) },
+      { depth: 0, paint: tennisCourt(240) },
+      { depth: 0, paint: skiTouringSlope(310, 470, 72) },
     ],
+    filmRollCover: TILES.fenceA,
     props: [
-      { frame: TILES.snowman, x: 320 },
-      { frame: TILES.fenceA, x: 30 },
+      { frame: TILES.snowman, x: 340 },
+      { frame: TILES.sproutA, x: 18 },
     ],
   },
   "music-and-games": {
     sky: [hex("#171436"), hex("#4b2c6c")],
-    ground: TILES.grass,
+    ground: [{ frame: TILES.grass, from: 0 }],
     groundTint: [140, 130, 200],
     layers: [
       { depth: 0.7, paint: stars(hex("#fff2b0"), 2) },
       { depth: 0.65, paint: disc(240, 34, 10, hex("#f3ecd0")) },
       { depth: 0.4, paint: hills(hex("#2c2458"), 34, 10, 40, 3) },
       { depth: 0.2, paint: skyline(hex("#1f1a40"), hex("#17132f"), hex("#e86fb0"), 17, 50) },
+      { depth: 0, paint: jukebox(212) },
     ],
+    filmRollCover: TILES.mushroom,
     props: [{ frame: TILES.mushroom, x: 60 }],
   },
   contact: {
     sky: [hex("#e0706a"), hex("#fcd8a0")],
-    ground: TILES.grass,
+    ground: [{ frame: TILES.grass, from: 0 }],
     groundTint: [255, 225, 205],
     layers: [
       { depth: 0.7, paint: disc(200, 110, 26, hex("#ffe07a"), hex("#f6a35e")) },
       { depth: 0.4, paint: hills(hex("#9a5a7a"), 34, 10, 40, 5) },
       { depth: 0.2, paint: hills(hex("#6c3e66"), 16, 6, 24, 8) },
     ],
+    filmRollCover: TILES.sproutB,
     props: [
       { frame: TILES.flag, x: 290 },
       { frame: TILES.sproutB, x: 40 },

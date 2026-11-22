@@ -75,8 +75,8 @@ export const content: Content = {
     {
       id: "start",
       title: "Start – Munich",
-      width: 320,
-      filmRoll: { x: 200 },
+      width: 480,
+      filmRoll: { x: 440 },
       pointsOfInterest: [
         {
           id: "intro",
