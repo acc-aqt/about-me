@@ -10,10 +10,18 @@
   --bezel: #5d5e6e;
   --bezel-ink: #d8d4e2;
   --logo-ink: #2a2f86;
+  --screen: #000;
+  --led: #e8343c;
   --dpad: #34343c;
+  --dpad-pressed: #26262c;
+  --dpad-centre: #2a2a31;
   --dpad-ink: #6e6e7a;
   --face-button: #8e2350;
   --face-button-dark: #5e1434;
+  --mono: ui-monospace, monospace;
+  --tilt: -25deg;
+  --menu-inset: 0.75rem;
+  --menu-button-height: 2.125rem;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--fg);
   background: var(--bg);
@@ -29,22 +37,6 @@ body {
   background: var(--bg);
 }
 
-.stage {
-  position: relative;
-  width: 100vw;
-  height: 100dvh;
-}
-
-.screen {
-  position: absolute;
-  inset: 0;
-}
-
-.screen-window {
-  width: 100%;
-  height: 100%;
-}
-
 #game {
   display: block;
   width: 100%;
@@ -57,29 +49,45 @@ body {
   outline-offset: -2px;
 }
 
-.hint {
-  position: absolute;
-  left: 50%;
-  bottom: 1rem;
-  transform: translateX(-50%);
+.hint,
+.film-rolls {
   margin: 0;
-  padding: 0.4rem 0.8rem;
-  max-width: calc(100% - 2rem);
-  background: rgb(0 0 0 / 0.6);
-  border-radius: 4px;
-  font-size: 0.9rem;
-  text-align: center;
 }
 
-.film-rolls {
-  position: absolute;
-  top: 3rem;
-  right: 0.75rem;
-  margin: 0;
+.skip-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.menu-buttons button:focus-visible,
+.fast-travel button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fast-travel button {
   padding: 0.4rem 0.8rem;
-  background: rgb(0 0 0 / 0.6);
+  border: 2px solid var(--fg);
   border-radius: 4px;
+  background: rgb(0 0 0 / 0.6);
+  color: var(--fg);
+  font: inherit;
   font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.fast-travel-zones {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .touch-controls {
@@ -87,34 +95,17 @@ body {
 }
 
 @media (pointer: coarse), (orientation: portrait) {
-  .hint {
-    top: 5.75rem;
-    bottom: auto;
-  }
-
   .touch-controls {
-    position: absolute;
-    inset: auto 0 0;
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
-    padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
-      max(1rem, env(safe-area-inset-left));
-    pointer-events: none;
   }
 
   .touch-controls-dpad {
     display: grid;
     grid-template-areas:
       ". up ."
-      "left . right"
+      "left centre right"
       ". down .";
-    gap: 0.25rem;
-  }
-
-  .touch-controls-dpad .touch-button {
-    width: 3.25rem;
-    height: 3.25rem;
   }
 
   .dpad-up {
@@ -135,14 +126,140 @@ body {
 
   .touch-controls-actions {
     display: flex;
-    align-items: flex-end;
-    gap: 0.75rem;
   }
 
-  .touch-button-inventory {
-    width: 3rem;
-    height: 3rem;
-    font-size: 1.25rem;
+  .touch-button {
+    line-height: 1;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+@media (orientation: landscape) {
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+  }
+
+  .screen-window {
+    height: 100%;
+  }
+
+  .hint {
+    position: absolute;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    padding: 0.4rem 0.8rem;
+    max-width: calc(100% - 2rem);
+    background: rgb(0 0 0 / 0.6);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .film-rolls {
+    position: absolute;
+    top: 3rem;
+    right: max(0.75rem, env(safe-area-inset-right));
+    padding: 0.4rem 0.8rem;
+    background: rgb(0 0 0 / 0.6);
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  .skip-link {
+    position: fixed;
+    top: 0.75rem;
+    right: max(0.75rem, env(safe-area-inset-right));
+    z-index: 10;
+    padding: 0.4rem 0.8rem;
+    background: rgb(0 0 0 / 0.6);
+    border-radius: 4px;
+    color: var(--fg);
+    font-size: 0.9rem;
+  }
+
+  .bezel-label,
+  .handheld-logo,
+  .shell-print,
+  .speaker {
+    display: none;
+  }
+
+  .menu-buttons {
+    position: absolute;
+    top: var(--menu-inset);
+    left: max(var(--menu-inset), env(safe-area-inset-left));
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .menu-buttons button {
+    height: var(--menu-button-height);
+    padding: 0 0.8rem;
+    border: 2px solid var(--fg);
+    border-radius: 4px;
+    background: rgb(0 0 0 / 0.6);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .sound-toggle[aria-pressed="true"] {
+    border-color: var(--accent);
+  }
+
+  .sound-toggle-state {
+    color: var(--muted);
+  }
+
+  .sound-toggle[aria-pressed="true"] .sound-toggle-state {
+    color: var(--accent);
+  }
+
+  .fast-travel {
+    position: absolute;
+    top: calc(var(--menu-inset) + var(--menu-button-height) + 0.25rem);
+    left: max(var(--menu-inset), env(safe-area-inset-left));
+    z-index: 1;
+    font-size: 0.9rem;
+  }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  .hint {
+    top: 5.75rem;
+    bottom: auto;
+  }
+
+  .touch-controls {
+    position: absolute;
+    inset: auto 0 0;
+    align-items: flex-end;
+    padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
+      max(1rem, env(safe-area-inset-left));
+    pointer-events: none;
+  }
+
+  .touch-controls-dpad {
+    gap: 0.25rem;
+  }
+
+  .touch-controls-actions {
+    align-items: flex-end;
+    gap: 0.75rem;
   }
 
   .touch-button {
@@ -153,12 +270,12 @@ body {
     background: rgb(0 0 0 / 0.45);
     color: var(--fg);
     font-size: 1.5rem;
-    line-height: 1;
     pointer-events: auto;
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
+  }
+
+  .touch-controls-dpad .touch-button {
+    width: 3.25rem;
+    height: 3.25rem;
   }
 
   .touch-button:active {
@@ -170,30 +287,6 @@ body {
     border-radius: 50%;
     color: var(--accent);
   }
-}
-
-.skip-link {
-  position: fixed;
-  top: 0.75rem;
-  right: 0.75rem;
-  z-index: 10;
-  padding: 0.4rem 0.8rem;
-  background: rgb(0 0 0 / 0.6);
-  border-radius: 4px;
-  color: var(--fg);
-  font-size: 0.9rem;
-}
-
-.skip-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.bezel-label,
-.handheld-logo,
-.printed-label,
-.speaker {
-  display: none;
 }
 
 @media (orientation: portrait) {
@@ -212,26 +305,20 @@ body {
   }
 
   .skip-link {
-    position: static;
     align-self: flex-end;
     margin-bottom: 0.75rem;
-    background: none;
     color: var(--shell-ink);
     font-size: 0.75rem;
   }
 
   .stage {
-    position: static;
     display: flex;
     flex: 1;
     flex-direction: column;
-    width: auto;
-    height: auto;
     min-height: 0;
   }
 
   .screen {
-    position: static;
     padding: 0.5rem 1.25rem 0.75rem;
     border-radius: 0.5rem 0.5rem 2rem 0.5rem;
     background: var(--bezel);
@@ -243,7 +330,7 @@ body {
     gap: 0.5rem;
     margin: 0 0 0.4rem;
     color: var(--bezel-ink);
-    font: bold 0.6rem/1 ui-monospace, monospace;
+    font: bold 0.6rem/1 var(--mono);
     letter-spacing: 0.15em;
   }
 
@@ -251,15 +338,15 @@ body {
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 50%;
-    background: #e8343c;
-    box-shadow: 0 0 0.35rem #e8343c;
+    background: var(--led);
+    box-shadow: 0 0 0.35rem var(--led);
   }
 
   .screen-window {
-    height: auto;
+    position: relative;
     aspect-ratio: 16 / 9;
     overflow: hidden;
-    background: #000;
+    background: var(--screen);
   }
 
   .status-strip {
@@ -273,55 +360,35 @@ body {
     line-height: 1.3;
   }
 
-  .hint,
-  .film-rolls {
-    position: static;
-    max-width: none;
-    padding: 0;
-    transform: none;
-    background: none;
-    font-size: inherit;
-  }
-
-  .hint {
-    text-align: left;
-  }
-
   .film-rolls {
     flex-shrink: 0;
   }
 
   .handheld-logo {
-    display: block;
     margin: 0.6rem 0 0;
     color: var(--logo-ink);
-    font: italic bold 0.95rem/1 ui-monospace, monospace;
+    font: italic bold 0.95rem/1 var(--mono);
     letter-spacing: 0.1em;
   }
 
   .controls {
     display: flex;
+    flex-direction: column;
   }
 
   .touch-controls {
-    position: static;
     align-items: center;
     padding: 1.25rem 0.5rem 0.5rem;
   }
 
   .touch-controls-dpad {
-    grid-template-areas:
-      ". up ."
-      "left centre right"
-      ". down .";
-    gap: 0;
     filter: drop-shadow(0 0.2rem 0 rgb(0 0 0 / 0.3));
   }
 
   .touch-controls-dpad::before {
     content: "";
     grid-area: centre;
-    background: radial-gradient(circle, #2a2a31 0 35%, var(--dpad) 37%);
+    background: radial-gradient(circle, var(--dpad-centre) 0 35%, var(--dpad) 37%);
   }
 
   .touch-controls-dpad .touch-button {
@@ -353,7 +420,7 @@ body {
     align-items: center;
     gap: 1.25rem;
     margin-bottom: 1rem;
-    transform: rotate(-25deg);
+    transform: rotate(var(--tilt));
   }
 
   .touch-controls-actions .touch-button {
@@ -366,22 +433,21 @@ body {
     box-shadow: 0 0.2rem 0 var(--face-button-dark);
   }
 
-  .touch-controls-actions .touch-glyph {
+  .touch-glyph {
     display: none;
   }
 
-  .printed-label {
+  .touch-controls-actions .shell-print {
     position: absolute;
     top: calc(100% + 0.5rem);
     left: 0;
     right: 0;
-    display: block;
     color: var(--logo-ink);
-    font: bold 0.85rem/1 ui-monospace, monospace;
+    font: bold 0.85rem/1 var(--mono);
   }
 
   .touch-controls-dpad .touch-button:active {
-    background: #26262c;
+    background: var(--dpad-pressed);
     transform: translateY(0.15rem);
   }
 
@@ -398,17 +464,113 @@ body {
     outline-offset: 2px;
   }
 
+  .menu-buttons {
+    display: flex;
+    order: 1;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0.25rem 0 0.5rem;
+  }
+
+  .menu-buttons button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border: none;
+    background: none;
+    color: var(--logo-ink);
+    font: inherit;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .menu-buttons button::before {
+    content: "";
+    width: 3rem;
+    height: 0.8rem;
+    border-radius: 999px;
+    background: var(--shell-ink);
+    box-shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+    transform: rotate(var(--tilt));
+  }
+
+  .menu-buttons button:active::before {
+    box-shadow: none;
+    transform: rotate(var(--tilt)) translateY(2px);
+  }
+
+  .sound-toggle[aria-pressed="true"]::before {
+    outline: 2px solid var(--accent);
+  }
+
+  .pill-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sound-toggle-state {
+    display: none;
+  }
+
+  .menu-buttons .shell-print {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font: bold 0.65rem/1.2 var(--mono);
+    letter-spacing: 0.1em;
+  }
+
+  .shell-print small {
+    color: var(--shell-ink);
+    font-size: 0.55rem;
+  }
+
+  .fast-travel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    pointer-events: none;
+  }
+
+  .fast-travel-zones {
+    max-height: 100%;
+    overflow-y: auto;
+    gap: 0.15rem;
+    padding: 0.3rem;
+    border: 2px solid var(--fg);
+    border-radius: 4px;
+    background: rgb(0 0 0 / 0.8);
+    pointer-events: auto;
+  }
+
+  .fast-travel button {
+    width: 100%;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.7rem;
+    text-align: left;
+  }
+
   .speaker {
     position: absolute;
     right: max(1.5rem, env(safe-area-inset-right));
     bottom: max(1.5rem, env(safe-area-inset-bottom));
-    display: block;
     width: 3.75rem;
     height: 2.75rem;
     background: repeating-linear-gradient(90deg, var(--shell-ink) 0 0.35rem, transparent 0.35rem 0.8rem);
     border-radius: 0.2rem;
     opacity: 0.45;
-    transform: rotate(-25deg);
+    transform: rotate(var(--tilt));
     pointer-events: none;
   }
 }
@@ -417,6 +579,10 @@ body {
   .touch-controls-dpad .touch-button:active,
   .touch-controls-actions .touch-button:active {
     transform: none;
+  }
+
+  .menu-buttons button:active::before {
+    transform: rotate(var(--tilt));
   }
 }
 
@@ -524,84 +690,6 @@ body {
   color: #1f4fa8;
 }
 
-.corner-controls {
-  position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
-  z-index: 1;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.fast-travel {
-  position: absolute;
-  top: calc(0.75rem + 0.8rem + 4px + 1lh + 0.25rem);
-  left: 0.75rem;
-  z-index: 1;
-  font-size: 0.9rem;
-}
-
-.fast-travel-toggle,
-.fast-travel button {
-  padding: 0.4rem 0.8rem;
-  border: 2px solid var(--fg);
-  border-radius: 4px;
-  background: rgb(0 0 0 / 0.6);
-  color: var(--fg);
-  font: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.fast-travel-toggle:focus-visible,
-.fast-travel button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.fast-travel-zones {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-[hidden] {
-  display: none !important;
-}
-
-.sound-toggle {
-  padding: 0.4rem 0.8rem;
-  border: 2px solid var(--fg);
-  border-radius: 4px;
-  background: rgb(0 0 0 / 0.6);
-  color: var(--fg);
-  font: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.sound-toggle[aria-pressed="true"] {
-  border-color: var(--accent);
-}
-
-.sound-toggle-state {
-  color: var(--muted);
-}
-
-.sound-toggle[aria-pressed="true"] .sound-toggle-state {
-  color: var(--accent);
-}
-
-.sound-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .inventory-items {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
@@ -615,119 +703,4 @@ body {
   flex-direction: column;
   padding: 0.5rem 0.75rem;
   border: 2px solid var(--ink);
-}
-
-.pill-print {
-  display: none;
-}
-
-@media (orientation: portrait) {
-  .controls {
-    flex-direction: column;
-  }
-
-  .corner-controls {
-    position: static;
-    order: 1;
-    justify-content: center;
-    gap: 1.5rem;
-    padding: 0.25rem 0 0.5rem;
-  }
-
-  .corner-controls button {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem;
-    border: none;
-    background: none;
-    color: var(--logo-ink);
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-
-  .corner-controls button::before {
-    content: "";
-    width: 3rem;
-    height: 0.8rem;
-    border-radius: 999px;
-    background: var(--shell-ink);
-    box-shadow: 0 2px 0 rgb(0 0 0 / 0.35);
-    transform: rotate(-25deg);
-  }
-
-  .corner-controls button:active::before {
-    box-shadow: none;
-    transform: rotate(-25deg) translateY(2px);
-  }
-
-  .sound-toggle[aria-pressed="true"]::before {
-    outline: 2px solid var(--accent);
-  }
-
-  .pill-name {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .sound-toggle-state {
-    display: none;
-  }
-
-  .pill-print {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font: bold 0.65rem/1.2 ui-monospace, monospace;
-    letter-spacing: 0.1em;
-  }
-
-  .pill-print small {
-    color: var(--shell-ink);
-    font-size: 0.55rem;
-  }
-
-  .screen-window {
-    position: relative;
-  }
-
-  .fast-travel {
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    pointer-events: none;
-  }
-
-  .fast-travel-zones {
-    max-height: 100%;
-    overflow-y: auto;
-    gap: 0.15rem;
-    padding: 0.3rem;
-    border: 2px solid var(--fg);
-    border-radius: 4px;
-    background: rgb(0 0 0 / 0.8);
-    pointer-events: auto;
-  }
-
-  .fast-travel button {
-    width: 100%;
-    padding: 0.15rem 0.5rem;
-    font-size: 0.7rem;
-    text-align: left;
-  }
-}
-
-@media (orientation: portrait) and (prefers-reduced-motion: reduce) {
-  .corner-controls button:active::before {
-    transform: rotate(-25deg);
-  }
 }
