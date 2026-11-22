@@ -592,7 +592,7 @@ const THEMED_PROPS: Record<string, PropName> = {
   "track-back": "jukebox",
 };
 
-/** Props that are scenery rather than Points of Interest, one on each prop tile (`o`) of the map. */
+/** Props that are scenery rather than Points of Interest, one on each prop tile (`p`) of the map. */
 export const SCENERY_PROPS: readonly { at: Tile; prop: PropName }[] = [
   { at: { col: 14, row: 20 }, prop: "workbench" },
   { at: { col: 15, row: 20 }, prop: "anvil" },
