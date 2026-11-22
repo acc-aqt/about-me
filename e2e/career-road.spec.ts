@@ -13,7 +13,7 @@ test("the status names a Career road stop while the Player faces it and clears o
   const status = page.getByRole("status");
 
   await walkUpToFace(page, "tum");
-  await expect(status).toHaveText(`Facing Technical University of Munich — ${isMobile ? "tap the Shutter" : "press Space"}`);
+  await expect(status).toHaveText(`Facing Technical University of Munich — ${isMobile ? "press A" : "press Space"}`);
 
   await tapKeys(page, ["down", "down"]);
   await expect(status).toContainText("Face a sign");

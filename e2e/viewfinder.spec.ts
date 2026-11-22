@@ -16,7 +16,7 @@ test("walking from the spawn to face the intro sign and firing the Shutter opens
 
   await tapKeys(page, tapsTo(SPAWN_LANDING, intro.placement, { face: true }));
   await expect(page.getByRole("status")).toHaveText(facingStatus(intro.title));
-  await expect(page.getByRole("status")).toContainText(isMobile ? "tap the Shutter" : "press Space");
+  await expect(page.getByRole("status")).toContainText(isMobile ? "press A" : "press Space");
   await page.keyboard.press("Space");
 
   const viewfinder = page.getByRole("dialog", { name: intro.title });

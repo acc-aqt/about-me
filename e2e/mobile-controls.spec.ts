@@ -50,7 +50,7 @@ test.describe("on a phone", () => {
     await expect(page.getByRole("status")).toContainText("Face a sign");
     await tapDpad(page, LOOP_BACK_TO_MTU.slice(1));
     await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
-    await expect(page.getByRole("status")).toContainText("tap the Shutter");
+    await expect(page.getByRole("status")).toContainText("press A");
 
     await page.getByRole("button", { name: "Shutter" }).tap();
     const viewfinder = page.getByRole("dialog", { name: "MTU Aero Engines" });
@@ -72,6 +72,24 @@ test.describe("on a phone", () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize(PORTRAIT);
       await openGame(page);
+    });
+
+    test("the hint names the Handheld's A and B buttons", async ({ page }) => {
+      await expect(page.getByRole("status")).toHaveText("Face a sign and press A to take a photo. Press B for the Inventory.");
+
+      await fastTravelToMtuByTouch(page);
+      await expect(page.getByRole("status")).toHaveText(`Facing MTU Aero Engines — press A`);
+    });
+
+    test("the hint follows the phone as it turns sideways and back", async ({ page }) => {
+      const status = page.getByRole("status");
+      await page.setViewportSize(LANDSCAPE);
+      await expect(status).toContainText("tap the Shutter to take a photo. Tap ▤ for the Inventory.");
+
+      await fastTravelToMtuByTouch(page);
+      await expect(status).toHaveText("Facing MTU Aero Engines — tap the Shutter");
+      await page.setViewportSize(PORTRAIT);
+      await expect(status).toHaveText("Facing MTU Aero Engines — press A");
     });
 
     test("the game runs inside the Handheld", async ({ page }) => {
