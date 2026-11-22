@@ -145,6 +145,13 @@ describe("Overworld", () => {
     for (const zone of content.zones) expect(filmRollCover(zone.filmRoll!), zone.id).toBeDefined();
   });
 
+  it("hides the Maker workshop, Sport and Music & games Film rolls behind the props in front of them", () => {
+    for (const zone of content.zones.filter(({ id }) => ["maker-workshop", "sport", "music-and-games"].includes(id))) {
+      expect(filmRollCover(zone.filmRoll!), zone.id).toBe("down");
+      expect(tileKindAt(tileAhead(zone.filmRoll!, "down")), zone.id).toBe("prop");
+    }
+  });
+
   it("puts each Zone's first Point of Interest within about 15 path tiles of the Hub", () => {
     for (const zone of content.zones) {
       expect(stepsFromHubTo(zone.pointsOfInterest[0].placement), zone.id).toBeLessThanOrEqual(15);

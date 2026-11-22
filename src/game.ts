@@ -80,6 +80,12 @@ function tileFoot({ col, row }: Tile): [number, number] {
   return [(col + 0.5) * OVERWORLD_TILE_SIZE, (row + 1) * OVERWORLD_TILE_SIZE];
 }
 
+function loadImage(path: string) {
+  const image = new Image();
+  image.src = import.meta.env.BASE_URL + path;
+  return image;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -106,10 +112,9 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     chars: PIXEL_FONT_CHARS,
   });
 
-  const tileset = new Image();
-  tileset.src = import.meta.env.BASE_URL + "art/kenney-tiny-town-tiles.png";
-  tileset.decode().then(() => {
-    k.loadSprite("overworld", paintOverworld(tileset, pointsOfInterest));
+  const sheets = { town: loadImage("art/kenney-tiny-town-tiles.png"), dungeon: loadImage("art/kenney-tiny-dungeon-tiles.png") };
+  Promise.all([sheets.town.decode(), sheets.dungeon.decode()]).then(() => {
+    k.loadSprite("overworld", paintOverworld(sheets, pointsOfInterest));
     k.add([k.sprite("overworld"), k.pos(0, 0)]);
     for (const zone of content.zones) if (zone.filmRoll) addFilmRollCover(zone.filmRoll);
   });

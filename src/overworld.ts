@@ -4,7 +4,7 @@ export type Tile = { col: number; row: number };
 
 export type Direction = "up" | "down" | "left" | "right";
 
-export type TileKind = "grass" | "path" | "tree" | "water" | "building" | "bush" | "fence" | "maypole" | "well";
+export type TileKind = "grass" | "path" | "tree" | "water" | "building" | "bush" | "fence" | "maypole" | "well" | "prop";
 
 export const OVERWORLD_TILE_SIZE = 16;
 
@@ -18,6 +18,7 @@ export const LEGEND: Record<string, { kind: TileKind; walkable: boolean }> = {
   "#": { kind: "fence", walkable: false },
   Y: { kind: "maypole", walkable: false },
   o: { kind: "well", walkable: false },
+  p: { kind: "prop", walkable: false },
 };
 
 /** One string per row, one character per tile; see LEGEND. Row 0 is the top (north) edge. */
@@ -42,31 +43,31 @@ export const OVERWORLD_MAP: readonly string[] = [
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTTTTTTTTTTTTTTTTTTT**.....=....**TTTTTTTTTTTTTTTTTTTTTTT",
   "TT****................T*......=.....*TT*...*...*...*...*..TT",
-  "TT****................T.......=...Y..TT...................TT",
+  "TT****........pp......T.......=...Y..TT...................TT",
   "TT....................T.......=...Y..TT...................TT",
   "TT....................T.......=......TT...................TT",
   "TT========================================================TT",
   "TT....................T........=.....TT...................TT",
   "TT....................T...o....=.....TT...................TT",
-  "TT.BBBBBB...BBBBBB....T........=.....TT...................TT",
+  "TT.BBBBBB...BBBBBB.p..T........=.....TT...................TT",
   "TT.BBBBBB...BBBBBB....T........=.....TT.........BBBBB.....TT",
-  "TT.BBBBBB...BBBBBB....T*.......=....*TT.........BBBBB.....TT",
+  "TT.BBBBBBp..BBBBBB....T*.......=....*TT.........BBBBB.....TT",
   "TT....................TTT.TTTTT=TTTTTTT.........BBBBB.....TT",
   "TT....................#....#***=******T~~~~~~.............TT",
   "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTTTTTTTTTTTTTTTTTT######TTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TT............................T=..........................TT",
+  "TT.................p.p........T=...p.p....................TT",
   "TT========================================================TT",
   "TT............................TT..........................TT",
-  "TT............................TT..........................TT",
+  "TT.p.p........................TT....................ppp...TT",
   "TT............~~~~~~~~~.......TT..........................TT",
   "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
   "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
-  "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
+  "TT............~~~~~~~~~.......TT..........BBBBBBBp........TT",
   "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
   "TTTTTTT.......................TT..........................TT",
-  "TTTTTTT.......................TT..........................TT",
+  "TTTTTTTp......................TT..........................TT",
   "TTTTTTT.......................TT..........................TT",
   "TTTTTTT.......................TT..........................TT",
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
@@ -155,7 +156,7 @@ export function facedPointOfInterest(tile: Tile, facing: Direction): PointOfInte
   return pointOfInterestAt(tileAhead(tile, facing));
 }
 
-const COVER_KINDS: readonly TileKind[] = ["tree", "bush", "building", "fence"];
+const COVER_KINDS: readonly TileKind[] = ["tree", "bush", "building", "fence", "prop"];
 
 /** Cover to the south stands in front of a Film roll, so it is tried first; cover to the north is the last resort. */
 const COVER_DIRECTIONS: Direction[] = ["down", "left", "right", "up"];

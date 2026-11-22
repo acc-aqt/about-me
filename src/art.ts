@@ -1,6 +1,7 @@
 // Original pixel art, painted in code at start-up so no large image files ship.
-// The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town tiles (see CREDITS.md);
-// the water, the Player, the Film roll, the Hub's maypole and the Points of Interest's themed objects are painted here.
+// The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town and Tiny Dungeon tiles
+// (see CREDITS.md); the water, the Player, the Film roll, the Hub's maypole and the themed objects Kenney lacks are
+// painted here.
 
 import { HUB_SIGNPOSTS, MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Direction, type Tile, type TileKind } from "./overworld";
 
@@ -277,6 +278,9 @@ const TINY_TOWN = {
   door: 85,
   sign: 83,
   well: 104,
+  wheelbarrow: 57,
+  archeryTarget: 95,
+  barrel: 130,
 } as const;
 
 const WATER: Rgb = hex("#3d7fc4");
@@ -355,7 +359,35 @@ function objectFrame(tile: Tile, kind: TileKind): number | undefined {
   }
 }
 
-type Prop = { rows: readonly string[]; colors: Record<string, Rgb> };
+/** Pixel rows centred across a tile, the last row `bottom` pixels below its top edge (by default its bottom edge). */
+type Prop = { rows: readonly string[]; colors: Record<string, Rgb>; bottom?: number };
+
+/** One layer of a themed object: painted pixel rows, or a Tiny Town or Tiny Dungeon frame. */
+type PropLayer = Prop | { town: number } | { dungeon: number };
+
+/** Frames of Kenney's Tiny Dungeon packed tilemap, laid out like Tiny Town. */
+const TINY_DUNGEON = { table: 72, anvil: 74, chest: 89 } as const;
+
+const SCENERY_COLORS: Record<string, Rgb> = {
+  k: INK,
+  g: hex("#c4c8d0"),
+  s: hex("#8a8f9c"),
+  d: hex("#3a3a48"),
+  o: hex("#e6873c"),
+  r: hex("#d04a3a"),
+  y: hex("#e6c84a"),
+  w: hex("#f4f4f0"),
+  b: hex("#3f6fc4"),
+  c: hex("#7fd8e6"),
+  N: hex("#5a3825"),
+  p: hex("#7a4ab0"),
+  m: hex("#d05ab0"),
+  G: hex("#4ab05a"),
+};
+
+function painted(bottom: number, rows: string[]): Prop {
+  return { rows, colors: SCENERY_COLORS, bottom };
+}
 
 const CAMERA_STAND: Prop = {
   rows: [
@@ -578,7 +610,142 @@ const PROPS = {
   "office block": OFFICE_BLOCK,
   "jet engine": JET_ENGINE,
   mailbox: MAILBOX,
-} as const;
+  workbench: [{ dungeon: TINY_DUNGEON.table }],
+  computer: [
+    { dungeon: TINY_DUNGEON.table },
+    painted(8, ["kkkkkkkkkk", "kbbbbbbbbk", "kbcbbbbbbk", "kbbbbGGbbk", "kbbbGGGGbk", "kkkkkkkkkk", "....kk....", "..kkkkkk.."]),
+  ],
+  anvil: [{ dungeon: TINY_DUNGEON.anvil }],
+  "kit chest": [{ dungeon: TINY_DUNGEON.chest }],
+  barrel: [{ town: TINY_TOWN.barrel }],
+  wheelbarrow: [{ town: TINY_TOWN.wheelbarrow }],
+  "archery target": [{ town: TINY_TOWN.archeryTarget }],
+  "3D printer": [
+    painted(15, [
+      "kkkkkkkkkkkk",
+      "ksggggggggsk",
+      "ksdddkkdddsk",
+      "ksdddkkdddsk",
+      "ksdddoodddsk",
+      "ksddddddddsk",
+      "ksddooooddsk",
+      "ksddooooddsk",
+      "kssssssssssk",
+      "kkkkkkkkkkkk",
+      "kggggggggggk",
+      "kgcggggggggk",
+      "kkkkkkkkkkkk",
+      ".k........k.",
+    ]),
+  ],
+  "tennis net": [
+    painted(15, [
+      "kk............kk",
+      "kkwwwwwwwwwwwwkk",
+      "kkdsdsdsdsdsdskk",
+      "kksdsdsdsdsdsdkk",
+      "kkdsdsdsdsdsdskk",
+      "kksdsdsdsdsdsdkk",
+      "kk............kk",
+      "kk............kk",
+    ]),
+  ],
+  "life ring": [
+    painted(16, [
+      "..kkkkkk..",
+      ".krrwwrrk.",
+      "krrkkkkrrk",
+      "kwk....kwk",
+      "kwk....kwk",
+      "kwk....kwk",
+      "kwk....kwk",
+      "krrkkkkrrk",
+      ".krrwwrrk.",
+      "..kkkkkk..",
+      "....kk....",
+      "....kk....",
+      "....kk....",
+      "...kkkk...",
+    ]),
+  ],
+  skis: [
+    painted(16, [
+      ".kk...kk.",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kryk.kryk",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kssk.kssk",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kyyk.kyyk",
+      "kwwwwwwwk",
+      ".kkkkkkk.",
+    ]),
+  ],
+  jukebox: [
+    painted(16, [
+      "...kkkkkk...",
+      "..kyyyyyyk..",
+      ".kyrrrrrryk.",
+      "kyrkkkkkkryk",
+      "kyrkwwwwkryk",
+      "kyrkwkkwkryk",
+      "kyrkwwwwkryk",
+      "kyrkkkkkkryk",
+      "kyrrrrrrrryk",
+      "kyrpmpmpmryk",
+      "kyrrrrrrrryk",
+      "kyrNNNNNNryk",
+      "kyrNkNkNkryk",
+      "kyrNNNNNNryk",
+      "kyyyyyyyyyyk",
+      "kkkkkkkkkkkk",
+    ]),
+  ],
+  speaker: [
+    painted(16, [
+      "kkkkkkkkkk",
+      "kddddddddk",
+      "kdddssdddk",
+      "kddsddsddk",
+      "kdddssdddk",
+      "kddddddddk",
+      "kddssssddk",
+      "kdssddssdk",
+      "kdsdkkdsdk",
+      "kdssddssdk",
+      "kddssssddk",
+      "kddddddddk",
+      "kkkkkkkkkk",
+    ]),
+  ],
+  "arcade cabinet": [
+    painted(16, [
+      ".kkkkkkkkkk.",
+      ".kmmmmmmmmk.",
+      ".kkkkkkkkkk.",
+      ".kbbbbbbbbk.",
+      ".kbccbbbbbk.",
+      ".kbbbbGbbbk.",
+      ".kbbbGGGbbk.",
+      ".kkkkkkkkkk.",
+      "kppppppppppk",
+      "kpkppppyprpk",
+      "kkkkkkkkkkkk",
+      ".kppppppppk.",
+      ".kpppyypppk.",
+      ".kppppppppk.",
+      ".kppppppppk.",
+      ".kkkkkkkkkk.",
+    ]),
+  ],
+} satisfies Record<string, Prop | readonly PropLayer[]>;
 
 type PropName = keyof typeof PROPS;
 
@@ -600,16 +767,57 @@ const THEMED_PROPS: Record<string, PropName> = {
   "arrk-engineering": "office block",
   mtu: "jet engine",
   "contact-board": "mailbox",
+  framewise: "computer",
+  "lens-caps": "3D printer",
+  reelmaker: "workbench",
+  "preset-fitting": "computer",
+  "swimming-pool": "life ring",
+  "tennis-court": "tennis net",
+  "ski-touring-slope": "skis",
+  "track-back": "jukebox",
 };
+
+/** Props that are scenery rather than Points of Interest, one on each prop tile (`p`) of the map. */
+export const SCENERY_PROPS: readonly { at: Tile; prop: PropName }[] = [
+  { at: { col: 14, row: 20 }, prop: "workbench" },
+  { at: { col: 15, row: 20 }, prop: "anvil" },
+  { at: { col: 19, row: 26 }, prop: "wheelbarrow" },
+  { at: { col: 9, row: 28 }, prop: "barrel" },
+  { at: { col: 19, row: 34 }, prop: "tennis net" },
+  { at: { col: 21, row: 34 }, prop: "tennis net" },
+  { at: { col: 3, row: 37 }, prop: "archery target" },
+  { at: { col: 5, row: 37 }, prop: "archery target" },
+  { at: { col: 7, row: 44 }, prop: "kit chest" },
+  { at: { col: 35, row: 34 }, prop: "speaker" },
+  { at: { col: 37, row: 34 }, prop: "speaker" },
+  { at: { col: 52, row: 37 }, prop: "arcade cabinet" },
+  { at: { col: 53, row: 37 }, prop: "arcade cabinet" },
+  { at: { col: 54, row: 37 }, prop: "arcade cabinet" },
+  { at: { col: 49, row: 41 }, prop: "speaker" },
+];
 
 export function themedProp(poiId: string): PropName | undefined {
   return THEMED_PROPS[poiId];
 }
 
 /** Draws a prop standing on a tile: bottom-aligned, so a prop taller than a tile rises into the tile above. */
-function paintProp(pixels: Pixels, { rows, colors }: Prop, { col, row }: Tile) {
-  const [x, y] = [col * OVERWORLD_TILE_SIZE, (row + 1) * OVERWORLD_TILE_SIZE - rows.length];
+function paintProp(pixels: Pixels, { rows, colors, bottom = OVERWORLD_TILE_SIZE }: Prop, { col, row }: Tile) {
+  const x = col * OVERWORLD_TILE_SIZE + Math.floor((OVERWORLD_TILE_SIZE - rows[0].length) / 2);
+  const y = row * OVERWORLD_TILE_SIZE + bottom - rows.length;
   rows.forEach((row, dy) => [...row].forEach((char, dx) => colors[char] && pixels.dot(x + dx, y + dy, colors[char])));
+}
+
+export type TileSheets = { town: CanvasImageSource; dungeon: CanvasImageSource };
+
+function paintThemedObject(pixels: Pixels, sheets: TileSheets, prop: PropName, tile: Tile) {
+  const art: Prop | readonly PropLayer[] = PROPS[prop];
+  const layers: readonly PropLayer[] = Array.isArray(art) ? art : [art];
+  const [x, y] = [tile.col * OVERWORLD_TILE_SIZE, tile.row * OVERWORLD_TILE_SIZE];
+  for (const layer of layers) {
+    if ("town" in layer) pixels.tile(sheets.town, TINY_TOWN_COLUMNS, layer.town, x, y);
+    else if ("dungeon" in layer) pixels.tile(sheets.dungeon, TINY_TOWN_COLUMNS, layer.dungeon, x, y);
+    else paintProp(pixels, layer, tile);
+  }
 }
 
 const MAYPOLE_HEIGHT = 32;
@@ -643,8 +851,9 @@ function maypole(): Prop {
 
 const MAYPOLE = maypole();
 
-/** Paints the whole Overworld from the text tilemap, with a themed object or a sign on each Point of Interest tile. */
-export function paintOverworld(sheet: CanvasImageSource, pointsOfInterest: { id: string; placement: Tile }[]): HTMLCanvasElement {
+/** Paints the whole Overworld from the text tilemap, with its scenery props and a themed object or a sign on each Point of Interest tile. */
+export function paintOverworld(sheets: TileSheets, pointsOfInterest: { id: string; placement: Tile }[]): HTMLCanvasElement {
+  const sheet = sheets.town;
   const size = OVERWORLD_TILE_SIZE;
   const pixels = new Pixels(MAP_COLUMNS * size, MAP_ROWS * size);
   for (let row = 0; row < MAP_ROWS; row++) {
@@ -664,9 +873,10 @@ export function paintOverworld(sheet: CanvasImageSource, pointsOfInterest: { id:
     }
   }
   for (const { tile } of HUB_SIGNPOSTS) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, tile.col * size, tile.row * size);
+  for (const { at, prop } of SCENERY_PROPS) paintThemedObject(pixels, sheets, prop, at);
   for (const { id, placement } of pointsOfInterest) {
     const prop = themedProp(id);
-    if (prop) paintProp(pixels, PROPS[prop], placement);
+    if (prop) paintThemedObject(pixels, sheets, prop, placement);
     else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, placement.col * size, placement.row * size);
   }
   return pixels.canvas;
