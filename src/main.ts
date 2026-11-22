@@ -25,7 +25,8 @@ function showFilmRollCount() {
   filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls}/${totalFilmRolls}`;
 }
 
-const fastTravelNav = query<HTMLElement>(document, ".fast-travel");
+const fastTravelToggle = query<HTMLButtonElement>(document, ".fast-travel-toggle");
+const fastTravelZones = query<HTMLUListElement>(document, "#fast-travel-zones");
 const soundToggle = query<HTMLButtonElement>(document, "#sound-toggle");
 const soundToggleState = query<HTMLElement>(soundToggle, ".sound-toggle-state");
 
@@ -89,7 +90,7 @@ query<HTMLButtonElement>(document, ".touch-button-inventory").addEventListener("
   if (!viewfinder.isOpen()) inventory.toggle();
 });
 
-createFastTravel(fastTravelNav, content.zones, (zoneId) => {
+createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   controls.travelTo(zoneId);
   canvas.focus();
 });
