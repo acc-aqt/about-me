@@ -10,28 +10,32 @@
   <body>
     <a class="skip-link" href="plain/">Skip the game</a>
     <main class="stage">
-      <canvas id="game" tabindex="0" role="application" aria-label="Portfolio game" aria-describedby="hint"></canvas>
-      <p id="hint" class="hint" role="status"></p>
-      <p id="film-rolls" class="film-rolls" aria-live="polite"></p>
-      <div class="corner-controls">
+      <div class="screen">
+        <canvas id="game" tabindex="0" role="application" aria-label="Portfolio game" aria-describedby="hint"></canvas>
+        <p id="hint" class="hint" role="status"></p>
+        <p id="film-rolls" class="film-rolls" aria-live="polite"></p>
         <nav class="fast-travel" aria-label="Fast-travel">
-          <button type="button" class="fast-travel-toggle" aria-expanded="false" aria-controls="fast-travel-zones">Fast-travel</button>
           <ul id="fast-travel-zones" class="fast-travel-zones" hidden></ul>
         </nav>
-        <button type="button" id="sound-toggle" class="sound-toggle" aria-pressed="false">
-          Sound <span class="sound-toggle-state" aria-hidden="true">off</span>
-        </button>
       </div>
-      <div class="touch-controls">
-        <div class="touch-controls-dpad">
-          <button type="button" class="touch-button dpad-up" data-game-button="up" aria-label="Walk up">▲</button>
-          <button type="button" class="touch-button dpad-left" data-game-button="left" aria-label="Walk left">◀</button>
-          <button type="button" class="touch-button dpad-right" data-game-button="right" aria-label="Walk right">▶</button>
-          <button type="button" class="touch-button dpad-down" data-game-button="down" aria-label="Walk down">▼</button>
+      <div class="controls">
+        <div class="corner-controls">
+          <button type="button" class="fast-travel-toggle" aria-expanded="false" aria-controls="fast-travel-zones">Fast-travel</button>
+          <button type="button" id="sound-toggle" class="sound-toggle" aria-pressed="false">
+            Sound <span class="sound-toggle-state" aria-hidden="true">off</span>
+          </button>
         </div>
-        <div class="touch-controls-actions">
-          <button type="button" class="touch-button touch-button-inventory" aria-label="Inventory">▤</button>
-          <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">◉</button>
+        <div class="touch-controls">
+          <div class="touch-controls-dpad">
+            <button type="button" class="touch-button dpad-up" data-game-button="up" aria-label="Walk up">▲</button>
+            <button type="button" class="touch-button dpad-left" data-game-button="left" aria-label="Walk left">◀</button>
+            <button type="button" class="touch-button dpad-right" data-game-button="right" aria-label="Walk right">▶</button>
+            <button type="button" class="touch-button dpad-down" data-game-button="down" aria-label="Walk down">▼</button>
+          </div>
+          <div class="touch-controls-actions">
+            <button type="button" class="touch-button touch-button-inventory" aria-label="Inventory">▤</button>
+            <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">◉</button>
+          </div>
         </div>
       </div>
     </main>

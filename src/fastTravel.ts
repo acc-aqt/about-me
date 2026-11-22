@@ -1,15 +1,16 @@
 import type { Zone, ZoneId } from "./content";
-import { query } from "./dom";
 
 function fastTravelLabel(zone: Zone): string {
   const landing = zone.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
   return landing ? `${zone.title} · ${landing.title}` : zone.title;
 }
 
-export function createFastTravel(nav: HTMLElement, zones: Zone[], onTravel: (zoneId: ZoneId) => void) {
-  const toggle = query<HTMLButtonElement>(nav, ".fast-travel-toggle");
-  const list = query<HTMLUListElement>(nav, ".fast-travel-zones");
-
+export function createFastTravel(
+  toggle: HTMLButtonElement,
+  list: HTMLUListElement,
+  zones: Zone[],
+  onTravel: (zoneId: ZoneId) => void,
+) {
   function setOpen(open: boolean) {
     toggle.setAttribute("aria-expanded", String(open));
     list.hidden = !open;
@@ -36,12 +37,14 @@ export function createFastTravel(nav: HTMLElement, zones: Zone[], onTravel: (zon
     if (open) list.querySelector("button")?.focus();
   });
 
-  nav.addEventListener("keydown", (event) => {
+  function closeOnEscape(event: KeyboardEvent) {
     if (event.key === "Escape" && !list.hidden) {
       setOpen(false);
       toggle.focus();
     }
-  });
+  }
+  toggle.addEventListener("keydown", closeOnEscape);
+  list.addEventListener("keydown", closeOnEscape);
 
   setOpen(false);
 }
