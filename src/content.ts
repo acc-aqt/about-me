@@ -70,7 +70,7 @@ export const content: Content = {
   filmRollBonus: {
     title: "All Film rolls collected",
     body:
-      "You found every Film roll on the Route – thanks for exploring! Film is close to my heart: the Analog gallery in the darkroom on the Photography trail holds my 35mm and medium-format photos.",
+      "You found every Film roll – thanks for exploring! Film is close to my heart: the Analog gallery in the darkroom on the Photography trail holds my 35mm and medium-format photos.",
   },
   zones: [
     {
@@ -525,7 +525,7 @@ export const content: Content = {
         {
           id: "contact-board",
           title: "Say hello",
-          body: "Thanks for walking the Route. Find me here:",
+          body: "Thanks for exploring. Find me here:",
           links: [
             { label: "LinkedIn", url: "https://de.linkedin.com/in/alexander-carrels-8b98b0182" },
             { label: "GitHub", url: "https://github.com/acc-aqt" },
