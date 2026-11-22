@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { content } from "../src/content";
-import { facingStatus, openGame } from "./walk";
+import { facingStatus, openGameWithKeyboard } from "./walk";
 
 async function fastTravelByClick(page: Page, zoneTitle: string | RegExp) {
   await page.getByRole("button", { name: "Fast-travel" }).click();
@@ -8,7 +8,7 @@ async function fastTravelByClick(page: Page, zoneTitle: string | RegExp) {
 }
 
 test("Fast-travel to the Career road lands at MTU, and the Shutter opens its Viewfinder", async ({ page }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
 
   await fastTravelByClick(page, "Career road");
   await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
@@ -24,7 +24,7 @@ test("on a phone, Fast-travel to the Career road and the on-screen Shutter open 
   isMobile,
 }) => {
   test.skip(!isMobile, "On-screen Shutter is for touch devices");
-  await openGame(page);
+  await openGameWithKeyboard(page);
 
   await page.getByRole("button", { name: "Fast-travel" }).tap();
   await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: "Career road" }).tap();
@@ -37,7 +37,7 @@ test("on a phone, Fast-travel to the Career road and the on-screen Shutter open 
 test("Fast-travel to Contact shows LinkedIn, GitHub, Instagram and carrels.photography, opening in a new tab", async ({
   page,
 }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
 
   await fastTravelByClick(page, "Contact");
   await expect(page.getByRole("status")).toHaveText(facingStatus("Say hello"));
@@ -51,7 +51,7 @@ test("Fast-travel to Contact shows LinkedIn, GitHub, Instagram and carrels.photo
 });
 
 test("Fast-travel lists every Zone from the Content file, naming where it lands", async ({ page }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
 
   await page.getByRole("button", { name: "Fast-travel" }).click();
 
@@ -65,7 +65,7 @@ test("Fast-travel lists every Zone from the Content file, naming where it lands"
 });
 
 test("Fast-travel works with the keyboard alone", async ({ page }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
   const toggle = page.getByRole("button", { name: "Fast-travel" });
 
   await toggle.focus();
@@ -86,7 +86,7 @@ test("Fast-travel works with the keyboard alone", async ({ page }) => {
 });
 
 test("the corner controls, skip link and Film roll counter do not overlap and each takes its own clicks", async ({ page }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
   const controls = [
     page.getByRole("button", { name: "Fast-travel" }),
     page.getByRole("button", { name: "Sound" }),

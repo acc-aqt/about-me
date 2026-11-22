@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { facingStatus, fastTravel, openGame, pointOfInterest, SPAWN_LANDING, tapKeys, tapsTo } from "./walk";
+import { facingStatus, fastTravel, openGameWithKeyboard, pointOfInterest, SPAWN_LANDING, tapKeys, tapsTo } from "./walk";
 
 async function fastTravelToMtuAndFireShutter(page: Page) {
-  await openGame(page);
+  await openGameWithKeyboard(page);
   await fastTravel(page, "career-road");
   await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
 
@@ -12,11 +12,11 @@ async function fastTravelToMtuAndFireShutter(page: Page) {
 
 test("walking from the spawn to face the intro sign and firing the Shutter opens its Viewfinder", async ({ page, isMobile }) => {
   const intro = pointOfInterest("intro");
-  await openGame(page);
+  await openGameWithKeyboard(page);
 
   await tapKeys(page, tapsTo(SPAWN_LANDING, intro.placement, { face: true }));
   await expect(page.getByRole("status")).toHaveText(facingStatus(intro.title));
-  await expect(page.getByRole("status")).toContainText(isMobile ? "tap the Shutter" : "press Space");
+  await expect(page.getByRole("status")).toContainText(isMobile ? "press A" : "press Space");
   await page.keyboard.press("Space");
 
   const viewfinder = page.getByRole("dialog", { name: intro.title });
@@ -60,14 +60,14 @@ test("the close button closes the Viewfinder and the Shutter reopens it", async 
 });
 
 test("the Shutter does nothing away from a Point of Interest", async ({ page }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
 
   await page.keyboard.press("Space");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("the Shutter does nothing next to a Point of Interest the Player is not facing", async ({ page }) => {
-  await openGame(page);
+  await openGameWithKeyboard(page);
   await fastTravel(page, "career-road");
   await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
 

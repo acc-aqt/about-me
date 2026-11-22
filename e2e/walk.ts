@@ -18,8 +18,12 @@ export function pointOfInterest(id: string) {
 
 export async function openGame(page: Page) {
   await page.goto("./");
-  await page.getByRole("application", { name: /game/i }).focus();
   await expect(page.getByRole("status")).toContainText("Face a sign");
+}
+
+export async function openGameWithKeyboard(page: Page) {
+  await openGame(page);
+  await page.getByRole("application", { name: /game/i }).focus();
 }
 
 export async function fastTravel(page: Page, zoneId: ZoneId) {

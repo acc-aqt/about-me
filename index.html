@@ -2,39 +2,60 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Alexander Carrels</title>
     <meta name="description" content="Alexander Carrels – software developer, engineer and photographer. An interactive 16-bit portfolio." />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <a class="skip-link" href="plain/">Skip the game</a>
-    <main class="stage">
-      <canvas id="game" tabindex="0" role="application" aria-label="Portfolio game" aria-describedby="hint"></canvas>
-      <p id="hint" class="hint" role="status"></p>
-      <p id="film-rolls" class="film-rolls" aria-live="polite"></p>
-      <div class="corner-controls">
-        <nav class="fast-travel" aria-label="Fast-travel">
-          <button type="button" class="fast-travel-toggle" aria-expanded="false" aria-controls="fast-travel-zones">Fast-travel</button>
-          <ul id="fast-travel-zones" class="fast-travel-zones" hidden></ul>
-        </nav>
-        <button type="button" id="sound-toggle" class="sound-toggle" aria-pressed="false">
-          Sound <span class="sound-toggle-state" aria-hidden="true">off</span>
-        </button>
-      </div>
-      <div class="touch-controls">
-        <div class="touch-controls-dpad">
-          <button type="button" class="touch-button dpad-up" data-game-button="up" aria-label="Walk up">▲</button>
-          <button type="button" class="touch-button dpad-left" data-game-button="left" aria-label="Walk left">◀</button>
-          <button type="button" class="touch-button dpad-right" data-game-button="right" aria-label="Walk right">▶</button>
-          <button type="button" class="touch-button dpad-down" data-game-button="down" aria-label="Walk down">▼</button>
+    <div class="handheld" data-testid="handheld">
+      <a class="skip-link" href="plain/">Skip the game</a>
+      <main class="stage">
+        <div class="screen">
+          <p class="bezel-label" aria-hidden="true"><span class="power-led"></span>DOT MATRIX PORTFOLIO</p>
+          <div class="screen-window">
+            <canvas id="game" tabindex="0" role="application" aria-label="Portfolio game" aria-describedby="hint"></canvas>
+            <nav class="fast-travel" aria-label="Fast-travel">
+              <ul id="fast-travel-zones" class="fast-travel-zones" hidden></ul>
+            </nav>
+          </div>
+          <div class="status-strip">
+            <p id="hint" class="hint" role="status"></p>
+            <p id="film-rolls" class="film-rolls" aria-live="polite"></p>
+          </div>
         </div>
-        <div class="touch-controls-actions">
-          <button type="button" class="touch-button touch-button-inventory" aria-label="Inventory">▤</button>
-          <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">◉</button>
+        <p class="handheld-logo" aria-hidden="true">ALEXANDER CARRELS</p>
+        <div class="controls">
+          <div class="menu-buttons">
+            <button type="button" class="fast-travel-toggle" aria-expanded="false" aria-controls="fast-travel-zones">
+              <span class="pill-name">Fast-travel</span>
+              <span class="shell-print" aria-hidden="true"><span>START</span><small>TRAVEL</small></span>
+            </button>
+            <button type="button" id="sound-toggle" class="sound-toggle" aria-pressed="false">
+              <span class="pill-name">Sound</span> <span class="sound-toggle-state" aria-hidden="true">off</span>
+              <span class="shell-print" aria-hidden="true"><span>SELECT</span><small>SOUND</small></span>
+            </button>
+          </div>
+          <div class="touch-controls">
+            <div class="touch-controls-dpad">
+              <button type="button" class="touch-button dpad-up" data-game-button="up" aria-label="Walk up">▲</button>
+              <button type="button" class="touch-button dpad-left" data-game-button="left" aria-label="Walk left">◀</button>
+              <button type="button" class="touch-button dpad-right" data-game-button="right" aria-label="Walk right">▶</button>
+              <button type="button" class="touch-button dpad-down" data-game-button="down" aria-label="Walk down">▼</button>
+            </div>
+            <div class="touch-controls-actions">
+              <button type="button" class="touch-button touch-button-inventory" aria-label="Inventory">
+                <span class="touch-glyph" aria-hidden="true">▤</span><span class="shell-print" aria-hidden="true">B</span>
+              </button>
+              <button type="button" class="touch-button touch-button-shutter" data-game-button="shutter" aria-label="Shutter">
+                <span class="touch-glyph" aria-hidden="true">◉</span><span class="shell-print" aria-hidden="true">A</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+      <div class="speaker" data-testid="speaker" aria-hidden="true"></div>
+    </div>
 
     <dialog id="viewfinder" class="overlay viewfinder" aria-labelledby="viewfinder-title" tabindex="-1">
       <article>
