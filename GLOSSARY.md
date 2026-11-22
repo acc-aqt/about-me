@@ -14,3 +14,4 @@
 - **Content file**: the single typed source of all Zone/POI content, read by both the game and the Plain view.
 - **Inventory**: the skills screen (key `I`).
 - **Film roll**: a hidden collectible, one per Zone.
+- **Handheld**: the Game Boy-inspired device shell that frames the game in portrait, holding the screen, d-pad and A/B/START/SELECT buttons. Avoid: "Game Boy", "frame", "skin".
