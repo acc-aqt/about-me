@@ -186,7 +186,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   let tile: Tile = SPAWN;
   let facing: Direction = "down";
   let step: Step | null = null;
-  let faced: PointOfInterest | null = null;
+  let facedPoi: PointOfInterest | null = null;
   let lastBumpAt = -Infinity;
   /** Directions held down, the most recently pressed last. */
   const held: Direction[] = [];
@@ -194,9 +194,9 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   /** Each press of a direction, in order, so quick taps are never lost between frames. */
   const taps: Direction[] = [];
 
-  function setFaced(poi: PointOfInterest | null) {
-    if (poi === faced) return;
-    faced = poi;
+  function setFacedPoi(poi: PointOfInterest | null) {
+    if (poi === facedPoi) return;
+    facedPoi = poi;
     events.onFacingChange(poi);
   }
 
@@ -209,7 +209,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   function turn(direction: Direction) {
     facing = direction;
-    setFaced(facedPointOfInterest(tile, facing) ?? null);
+    setFacedPoi(facedPointOfInterest(tile, facing) ?? null);
     showNearbyNamePlates();
   }
 
@@ -221,7 +221,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       return;
     }
     step = { from: tile, to: next, elapsed: 0 };
-    setFaced(null);
+    setFacedPoi(null);
   }
 
   function bump() {
@@ -242,7 +242,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       events.onFilmRollCollected(roll.zone);
     }
     showSurroundings();
-    setFaced(facedPointOfInterest(tile, facing) ?? null);
+    setFacedPoi(facedPointOfInterest(tile, facing) ?? null);
   }
 
   function nextMove() {
@@ -279,7 +279,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   function press(button: GameButton) {
     if (button === "shutter") {
-      if (faced && events.canFireShutter()) events.onShutter(faced);
+      if (facedPoi && events.canFireShutter()) events.onShutter(facedPoi);
       return;
     }
     if (held.includes(button)) return;

@@ -304,12 +304,12 @@ function tileSeed({ col, row }: Tile): number {
   return hash(row * MAP_COLUMNS + col);
 }
 
-function pick<T>(choices: readonly T[], tile: Tile): T {
+function variantForTile<T>(choices: readonly T[], tile: Tile): T {
   return choices[Math.floor(tileSeed(tile) * choices.length)];
 }
 
 /** Left, middle or right piece of a row of joined tiles, such as a roof. */
-function piece(tile: Tile, char: string, pieces: readonly [number, number, number]): number {
+function rowPieceFrame(tile: Tile, char: string, pieces: readonly [number, number, number]): number {
   if (mapCharAt({ ...tile, col: tile.col - 1 }) !== char) return pieces[0];
   if (mapCharAt({ ...tile, col: tile.col + 1 }) !== char) return pieces[2];
   return pieces[1];
@@ -328,7 +328,7 @@ function paintWater(pixels: Pixels, tile: Tile, x: number, y: number) {
 
 function buildingFrame(tile: Tile): number {
   if (mapCharAt({ ...tile, row: tile.row + 1 }) === "B") {
-    return piece(tile, "B", mapCharAt({ ...tile, row: tile.row - 1 }) === "B" ? TINY_TOWN.roof : TINY_TOWN.roofTop);
+    return rowPieceFrame(tile, "B", mapCharAt({ ...tile, row: tile.row - 1 }) === "B" ? TINY_TOWN.roof : TINY_TOWN.roofTop);
   }
   let left = tile.col;
   while (mapCharAt({ ...tile, col: left - 1 }) === "B") left--;
@@ -341,7 +341,7 @@ function treeFrame(tile: Tile): number {
   const surrounded = [-1, 1].every(
     (offset) => mapCharAt({ ...tile, col: tile.col + offset }) === "T" && mapCharAt({ ...tile, row: tile.row + offset }) === "T",
   );
-  return surrounded ? TINY_TOWN.forest : pick(TINY_TOWN.trees, tile);
+  return surrounded ? TINY_TOWN.forest : variantForTile(TINY_TOWN.trees, tile);
 }
 
 function fenceFrame(tile: Tile): number {
@@ -373,7 +373,8 @@ type Prop = { rows: readonly string[]; colors: Record<string, Rgb>; bottom?: num
 /** One layer of a themed object: painted pixel rows, or a Tiny Town or Tiny Dungeon frame. */
 type PropLayer = Prop | { town: number } | { dungeon: number };
 
-/** Frames of Kenney's Tiny Dungeon packed tilemap, laid out like Tiny Town. */
+/** Frames of Kenney's Tiny Dungeon packed tilemap, which is 12 tiles wide. */
+const TINY_DUNGEON_COLUMNS = 12;
 const TINY_DUNGEON = { table: 72, anvil: 74, chest: 89 } as const;
 
 const SCENERY_COLORS: Record<string, Rgb> = {
@@ -393,7 +394,7 @@ const SCENERY_COLORS: Record<string, Rgb> = {
   G: hex("#4ab05a"),
 };
 
-function painted(bottom: number, rows: string[]): Prop {
+function paintedRows(bottom: number, rows: string[]): Prop {
   return { rows, colors: SCENERY_COLORS, bottom };
 }
 
@@ -621,7 +622,7 @@ const PROPS = {
   workbench: [{ dungeon: TINY_DUNGEON.table }],
   computer: [
     { dungeon: TINY_DUNGEON.table },
-    painted(8, ["kkkkkkkkkk", "kbbbbbbbbk", "kbcbbbbbbk", "kbbbbGGbbk", "kbbbGGGGbk", "kkkkkkkkkk", "....kk....", "..kkkkkk.."]),
+    paintedRows(8, ["kkkkkkkkkk", "kbbbbbbbbk", "kbcbbbbbbk", "kbbbbGGbbk", "kbbbGGGGbk", "kkkkkkkkkk", "....kk....", "..kkkkkk.."]),
   ],
   anvil: [{ dungeon: TINY_DUNGEON.anvil }],
   "kit chest": [{ dungeon: TINY_DUNGEON.chest }],
@@ -629,7 +630,7 @@ const PROPS = {
   wheelbarrow: [{ town: TINY_TOWN.wheelbarrow }],
   "archery target": [{ town: TINY_TOWN.archeryTarget }],
   "3D printer": [
-    painted(15, [
+    paintedRows(15, [
       "kkkkkkkkkkkk",
       "ksggggggggsk",
       "ksdddkkdddsk",
@@ -647,7 +648,7 @@ const PROPS = {
     ]),
   ],
   "tennis net": [
-    painted(15, [
+    paintedRows(15, [
       "kk............kk",
       "kkwwwwwwwwwwwwkk",
       "kkdsdsdsdsdsdskk",
@@ -659,7 +660,7 @@ const PROPS = {
     ]),
   ],
   "life ring": [
-    painted(16, [
+    paintedRows(16, [
       "..kkkkkk..",
       ".krrwwrrk.",
       "krrkkkkrrk",
@@ -677,7 +678,7 @@ const PROPS = {
     ]),
   ],
   skis: [
-    painted(16, [
+    paintedRows(16, [
       ".kk...kk.",
       "kyyk.kyyk",
       "kyyk.kyyk",
@@ -697,7 +698,7 @@ const PROPS = {
     ]),
   ],
   jukebox: [
-    painted(16, [
+    paintedRows(16, [
       "...kkkkkk...",
       "..kyyyyyyk..",
       ".kyrrrrrryk.",
@@ -717,7 +718,7 @@ const PROPS = {
     ]),
   ],
   speaker: [
-    painted(16, [
+    paintedRows(16, [
       "kkkkkkkkkk",
       "kddddddddk",
       "kdddssdddk",
@@ -734,7 +735,7 @@ const PROPS = {
     ]),
   ],
   "arcade cabinet": [
-    painted(16, [
+    paintedRows(16, [
       ".kkkkkkkkkk.",
       ".kmmmmmmmmk.",
       ".kkkkkkkkkk.",
@@ -824,7 +825,7 @@ function paintThemedObject(pixels: Pixels, sheets: TileSheets, prop: PropName, t
   const [x, y] = tileToPixels(tile);
   for (const layer of layers) {
     if ("town" in layer) pixels.tile(sheets.town, TINY_TOWN_COLUMNS, layer.town, x, y);
-    else if ("dungeon" in layer) pixels.tile(sheets.dungeon, TINY_TOWN_COLUMNS, layer.dungeon, x, y);
+    else if ("dungeon" in layer) pixels.tile(sheets.dungeon, TINY_DUNGEON_COLUMNS, layer.dungeon, x, y);
     else paintProp(pixels, layer, tile);
   }
 }
@@ -874,7 +875,7 @@ export function paintOverworld(sheets: TileSheets, pointsOfInterest: { id: strin
         paintWater(pixels, tile, x, y);
         continue;
       }
-      pixels.tile(sheet, TINY_TOWN_COLUMNS, kind === "path" ? TINY_TOWN.path : pick(TINY_TOWN.grass, tile), x, y);
+      pixels.tile(sheet, TINY_TOWN_COLUMNS, kind === "path" ? TINY_TOWN.path : variantForTile(TINY_TOWN.grass, tile), x, y);
       const object = objectFrame(tile, kind);
       if (object !== undefined) pixels.tile(sheet, TINY_TOWN_COLUMNS, object, x, y);
       // A maypole is drawn whole from its bottom tile.
