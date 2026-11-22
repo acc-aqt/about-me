@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { content } from "./content";
-import { DIRECTIONS, facedPointOfInterest, fastTravelLanding, isReachableFromSpawn, isWalkable, tileAhead, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, ZONE_RECTS, zoneAt } from "./overworld";
+import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, isReachableFromSpawn, isWalkable, tileAhead, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, ZONE_RECTS, zoneAt } from "./overworld";
 
 const zoneIds = content.zones.map((zone) => zone.id);
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
@@ -25,8 +25,11 @@ function stepsFromHubTo(target: Tile) {
   }
   for (let steps = 0; frontier.length > 0; steps++) {
     if (frontier.some((tile) => goals.has(key(tile)))) return steps;
-    frontier = frontier.flatMap(neighbours).filter((tile) => isWalkable(tile) && !seen.has(key(tile)));
-    frontier.forEach((tile) => seen.add(key(tile)));
+    frontier = frontier.flatMap(neighbours).filter((tile) => {
+      if (!isWalkable(tile) || seen.has(key(tile))) return false;
+      seen.add(key(tile));
+      return true;
+    });
   }
   return Infinity;
 }
@@ -109,17 +112,28 @@ describe("Overworld", () => {
     }
   });
 
-  it("tucks every Film roll beside a tree, bush, building or fence so only a few pixels show", () => {
-    for (const zone of content.zones) {
-      const kinds = neighbours(zone.filmRoll!).map(tileKindAt);
-      expect(kinds.some((kind) => kind && ["tree", "bush", "building", "fence"].includes(kind)), zone.id).toBe(true);
-    }
+  it("hides each Film roll behind the cover beside it, preferring cover to the south, in front of it", () => {
+    expect(filmRollCover({ col: 56, row: 9 })).toBe("down");
+    expect(filmRollCover({ col: 55, row: 7 })).toBe("up");
+    expect(filmRollCover({ col: 30, row: 16 })).toBe("left");
+    expect(filmRollCover(SPAWN)).toBeUndefined();
+    for (const zone of content.zones) expect(filmRollCover(zone.filmRoll!), zone.id).toBeDefined();
   });
 
   it("puts each Zone's first Point of Interest within about 15 path tiles of the Hub", () => {
     for (const zone of content.zones) {
       expect(stepsFromHubTo(zone.pointsOfInterest[0].placement), zone.id).toBeLessThanOrEqual(15);
     }
+  });
+
+  it("winds the Photography trail north from the Hub, each trip farther along it, ending at the Darkroom", () => {
+    const trail = content.zones.find((zone) => zone.id === "photography-trail")!.pointsOfInterest;
+    const distances = trail.map((poi) => stepsFromHubTo(poi.placement));
+    expect(distances).toEqual([...distances].sort((a, b) => a - b));
+    expect(new Set(distances).size).toBe(trail.length);
+    expect(trail.at(-1)!.id).toBe("darkroom");
+    expect(Math.min(...trail.map((poi) => poi.placement.row))).toBe(trail.at(-1)!.placement.row);
+    expect(trail.every((poi) => poi.placement.row < ZONE_RECTS.start.top)).toBe(true);
   });
 
   it("lays the Career road out west to east in time order", () => {
