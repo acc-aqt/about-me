@@ -180,6 +180,15 @@ describe("Overworld", () => {
     expect(trail.every((poi) => poi.placement.row < ZONE_RECTS.start.top)).toBe(true);
   });
 
+  it("puts the Darkroom on the door of its building, faced from the end of the trail below it", () => {
+    const darkroom = zoneById("photography-trail").pointsOfInterest.at(-1)!.placement;
+    expect(tileKindAt(darkroom)).toBe("building");
+    expect(tileKindAt(tileAhead(darkroom, "up"))).toBe("building");
+    expect(tileKindAt(tileAhead(darkroom, "down"))).toBe("path");
+    expect(isReachableFromSpawn(tileAhead(darkroom, "down"))).toBe(true);
+    for (const side of ["left", "right"] as const) expect(tileKindAt(tileAhead(darkroom, side)), side).toBe("building");
+  });
+
   it("lays the Career road out west to east in time order", () => {
     const cols = zoneById("career-road").pointsOfInterest.map((poi) => poi.placement.col);
     expect(cols).toEqual([40, 43, 46, 49, 52, 55]);
@@ -188,7 +197,7 @@ describe("Overworld", () => {
   it("names the Point of Interest directly ahead of the Player, and none otherwise", () => {
     expect(facedPointOfInterest({ col: 40, row: 23 }, "up")?.id).toBe("tum");
     expect(facedPointOfInterest({ col: 43, row: 23 }, "down")?.id).toBe("bmw-group");
-    expect(facedPointOfInterest({ col: 20, row: 2 }, "right")?.id).toBe("darkroom");
+    expect(facedPointOfInterest({ col: 22, row: 4 }, "up")?.id).toBe("darkroom");
     expect(facedPointOfInterest({ col: 40, row: 23 }, "down")).toBeUndefined();
     expect(facedPointOfInterest({ col: 40, row: 24 }, "up")).toBeUndefined();
   });

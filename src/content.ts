@@ -465,7 +465,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/analog/" }],
-          placement: { col: 21, row: 2 },
+          placement: { col: 22, row: 3 },
         },
       ],
     },

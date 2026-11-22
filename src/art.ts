@@ -275,6 +275,7 @@ const TINY_TOWN = {
   roofTop: [52, 53, 54],
   roof: [64, 65, 66],
   wall: 84,
+  plainWall: 73,
   door: 85,
   sign: 83,
   well: 104,
@@ -601,7 +602,7 @@ const MAILBOX: Prop = {
 
 const PROPS = {
   "camera stand": CAMERA_STAND,
-  "darkroom door": DARKROOM_DOOR,
+  "darkroom door": [{ town: TINY_TOWN.plainWall }, DARKROOM_DOOR],
   "welcome board": WELCOME_BOARD,
   university: UNIVERSITY,
   "office tower": OFFICE_TOWER,
