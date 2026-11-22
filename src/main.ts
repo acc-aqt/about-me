@@ -41,7 +41,7 @@ function showFilmRollCount() {
 }
 
 const fastTravelToggle = query<HTMLButtonElement>(document, ".fast-travel-toggle");
-const fastTravelZones = query<HTMLUListElement>(document, "#fast-travel-zones");
+const fastTravelZones = query<HTMLUListElement>(document, `#${fastTravelToggle.getAttribute("aria-controls")}`);
 const soundToggle = query<HTMLButtonElement>(document, "#sound-toggle");
 const soundToggleState = query<HTMLElement>(soundToggle, ".sound-toggle-state");
 
