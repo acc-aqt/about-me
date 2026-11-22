@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import { facingStatus, fastTravel } from "./walk";
+import { ARROW_KEYS, facingStatus, fastTravel, tapDpad, tapKeys } from "./walk";
+import type { Direction } from "../src/overworld.ts";
 
 type AudioLog = { tones: number; samples: number };
 
@@ -80,5 +81,62 @@ test("the Shutter stays silent while muted", async ({ page, isMobile }) => {
   await openGame(page);
 
   await fireShutterAtMtu(page, isMobile);
+  expect(await audioLog(page)).toEqual({ tones: 0, samples: 0 });
+});
+
+async function walk(page: Page, isMobile: boolean, taps: Direction[]) {
+  if (isMobile) await tapDpad(page, taps);
+  else await tapKeys(page, taps);
+}
+
+async function turnSoundOn(page: Page) {
+  await page.getByRole("button", { name: "Sound" }).click();
+  await page.getByRole("application", { name: /game/i }).focus();
+}
+
+test("each completed step plays a footstep", async ({ page, isMobile }) => {
+  await openGame(page);
+  await turnSoundOn(page);
+
+  // The Player spawns facing down with open ground below.
+  await walk(page, isMobile, ["down", "down", "down"]);
+  await expect.poll(async () => (await audioLog(page)).samples).toBe(3);
+});
+
+test("a blocked step plays a bump and leaves the Player in place", async ({ page, isMobile }) => {
+  await openGame(page);
+  await turnSoundOn(page);
+  await fastTravel(page, "career-road");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+
+  await walk(page, isMobile, ["up"]);
+  await expect.poll(async () => (await audioLog(page)).samples).toBe(1);
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+});
+
+test("holding against a solid tile does not repeat the bump every frame", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Holding a key needs a keyboard");
+  await openGame(page);
+  await turnSoundOn(page);
+  await fastTravel(page, "career-road");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+
+  await page.keyboard.down(ARROW_KEYS.up);
+  await page.waitForTimeout(1000);
+  await page.keyboard.up(ARROW_KEYS.up);
+  const { samples } = await audioLog(page);
+  expect(samples).toBeGreaterThanOrEqual(1);
+  expect(samples).toBeLessThanOrEqual(3);
+});
+
+test("muting silences footsteps and bumps", async ({ page, isMobile }) => {
+  await openGame(page);
+  await page.getByRole("application", { name: /game/i }).focus();
+
+  await walk(page, isMobile, ["down", "down"]);
+  const landing = await fastTravel(page, "career-road");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+  await walk(page, isMobile, [landing.facing]);
+  await page.waitForTimeout(500);
   expect(await audioLog(page)).toEqual({ tones: 0, samples: 0 });
 });
