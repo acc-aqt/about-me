@@ -103,10 +103,10 @@ test.describe("on a phone", () => {
     });
 
     test("the Handheld's printed labels are hidden from assistive technology and carry no Nintendo marks", async ({ page }) => {
-      await expect(page.getByText("DOT MATRIX PORTFOLIO")).toBeVisible();
+      await expect(page.getByText("PIXEL PORTFOLIO")).toBeVisible();
       await expect(page.getByText("ALEXANDER CARRELS")).toBeVisible();
       const accessibilityTree = await page.locator("body").ariaSnapshot();
-      expect(accessibilityTree).not.toContain("DOT MATRIX PORTFOLIO");
+      expect(accessibilityTree).not.toContain("PIXEL PORTFOLIO");
       expect(accessibilityTree).not.toContain("ALEXANDER CARRELS");
       await expect(page.locator("body")).not.toContainText(/nintendo|game ?boy/i);
     });
