@@ -1,6 +1,6 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
-import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, type Rgb } from "./art";
+import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
   facedPointOfInterest,
   fastTravelLanding,
@@ -159,7 +159,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   // The current Zone's title sits top-centre of the view, clear of the DOM corner controls.
   const zoneTitle = addLabel("", k.vec2(VIEW_WIDTH / 2, ZONE_TITLE_Y), "top", { fixed: true });
 
-  const player = k.add([k.sprite("player", { anim: "idle" }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
+  const player = k.add([k.sprite("player", { anim: playerAnim("down", false) }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
 
   let tile: Tile = SPAWN;
   let facing: Direction = "down";
@@ -187,7 +187,6 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   function turn(direction: Direction) {
     facing = direction;
-    if (direction === "left" || direction === "right") player.flipX = direction === "left";
     setFaced(facedPointOfInterest(tile, facing) ?? null);
   }
 
@@ -250,7 +249,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       }
     }
     if (!step) nextMove();
-    const anim = step ? "walk" : "idle";
+    const anim = playerAnim(facing, step !== null);
     if (player.getCurAnim()?.name !== anim) player.play(anim);
     updateCamera();
   });
