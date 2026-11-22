@@ -52,11 +52,11 @@ export const OVERWORLD_MAP: readonly string[] = [
   "TT.BBBBBB...BBBBBB.p..T........=.....TT...................TT",
   "TT.BBBBBB...BBBBBB....T........=.....TT.........BBBBB.....TT",
   "TT.BBBBBBp..BBBBBB....T*.......=....*TT.........BBBBB.....TT",
-  "TT....................TTT.TTTTT=TTTTTTT.........BBBBB.....TT",
-  "TT....................#....#***=******T~~~~~~.............TT",
-  "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTT#....#***=******TTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTT######TTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT....................TTTTTTTTT=TTTTTTT.........BBBBB.....TT",
+  "TT....................TTTTTT***=******T~~~~~~.............TT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
   "TT.................p.p........T=...p.p....................TT",
   "TT========================================================TT",
   "TT............................TT..........................TT",
@@ -83,23 +83,32 @@ export const SPAWN: Tile = { col: 29, row: 24 };
 /** Inclusive tile bounds. */
 export type TileRect = { left: number; top: number; right: number; bottom: number };
 
-/** Tiles in no rectangle, such as the southern path before its fork, belong to no Zone. */
+/**
+ * Tiles in no rectangle, such as the southern path before its fork, belong to no Zone. Contact's corner lies inside
+ * the Hub's rectangle and wins there; no other rectangles overlap.
+ */
 export const ZONE_RECTS: Record<ZoneId, TileRect> = {
   start: { left: 22, top: 17, right: 37, bottom: 29 },
   "photography-trail": { left: 1, top: 1, right: 58, bottom: 16 },
   "career-road": { left: 38, top: 17, right: 58, bottom: 33 },
   "maker-workshop": { left: 1, top: 17, right: 21, bottom: 33 },
-  contact: { left: 22, top: 30, right: 27, bottom: 33 },
+  contact: { left: 23, top: 26, right: 28, bottom: 28 },
   sport: { left: 1, top: 34, right: 30, bottom: 48 },
   "music-and-games": { left: 31, top: 34, right: 58, bottom: 48 },
 };
 
+function area({ left, top, right, bottom }: TileRect) {
+  return (right - left + 1) * (bottom - top + 1);
+}
+
+/** The Zone whose rectangle contains the tile, the smallest one where rectangles nest. */
 export function zoneAt({ col, row }: Tile): ZoneId | undefined {
   const zones = Object.keys(ZONE_RECTS) as ZoneId[];
-  return zones.find((zone) => {
+  const containing = zones.filter((zone) => {
     const rect = ZONE_RECTS[zone];
     return col >= rect.left && col <= rect.right && row >= rect.top && row <= rect.bottom;
   });
+  return containing.sort((a, b) => area(ZONE_RECTS[a]) - area(ZONE_RECTS[b]))[0];
 }
 
 export function tileKindAt({ col, row }: Tile): TileKind | undefined {
@@ -121,13 +130,12 @@ function pointOfInterestAt(tile: Tile): PointOfInterest | undefined {
 
 export type Signpost = { tile: Tile; leadsTo: ZoneId[] };
 
-/** One signpost beside each path out of the Hub, naming the Zones down that path. */
+/** One signpost beside each path out of the Hub, naming the Zones down that path; Contact is in the Hub itself. */
 export const HUB_SIGNPOSTS: Signpost[] = [
   { tile: { col: 31, row: 18 }, leadsTo: ["photography-trail"] },
   { tile: { col: 23, row: 22 }, leadsTo: ["maker-workshop"] },
   { tile: { col: 36, row: 22 }, leadsTo: ["career-road"] },
   { tile: { col: 32, row: 28 }, leadsTo: ["sport", "music-and-games"] },
-  { tile: { col: 26, row: 28 }, leadsTo: ["contact"] },
 ];
 
 const signpostTiles = new Set(HUB_SIGNPOSTS.map(({ tile }) => tileKey(tile)));

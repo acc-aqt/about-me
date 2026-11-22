@@ -520,7 +520,7 @@ export const content: Content = {
       id: "contact",
       title: "Contact",
       fastTravelTo: "contact-board",
-      filmRoll: { col: 26, row: 32 },
+      filmRoll: { col: 25, row: 28 },
       pointsOfInterest: [
         {
           id: "contact-board",
@@ -532,7 +532,7 @@ export const content: Content = {
             { label: "Instagram", url: "https://www.instagram.com/carrels.photography/" },
             { label: "carrels.photography", url: "https://www.carrels.photography/" },
           ],
-          placement: { col: 24, row: 31 },
+          placement: { col: 27, row: 27 },
         },
       ],
     },

@@ -72,7 +72,7 @@ describe("Overworld", () => {
 
   it("puts a signpost at each Hub exit, naming the Zones its path leads to", () => {
     const named = HUB_SIGNPOSTS.flatMap((signpost) => signpost.leadsTo).sort();
-    expect(named).toEqual(zoneIds.filter((id) => id !== "start").sort());
+    expect(named).toEqual(zoneIds.filter((id) => id !== "start" && id !== "contact").sort());
     for (const { tile, leadsTo } of HUB_SIGNPOSTS) {
       expect(zoneAt(tile), leadsTo.join()).toBe("start");
       expect(isWalkable(tile), leadsTo.join()).toBe(false);
@@ -91,15 +91,27 @@ describe("Overworld", () => {
     expect(zoneAt({ col: 31, row: 31 })).toBeUndefined();
   });
 
-  it("keeps Zone rectangles from overlapping", () => {
+  it("keeps Zone rectangles from overlapping, apart from Contact's corner inside the Hub", () => {
     for (const [index, a] of zoneIds.entries()) {
       for (const b of zoneIds.slice(index + 1)) {
+        if ([a, b].includes("start") && [a, b].includes("contact")) continue;
         const ra = ZONE_RECTS[a];
         const rb = ZONE_RECTS[b];
         const overlaps = ra.left <= rb.right && rb.left <= ra.right && ra.top <= rb.bottom && rb.top <= ra.bottom;
         expect(overlaps, `${a} and ${b}`).toBe(false);
       }
     }
+  });
+
+  it("puts the Contact mailbox inside the Hub's clearing, a few steps from the spawn", () => {
+    const hub = ZONE_RECTS.start;
+    const contact = ZONE_RECTS.contact;
+    expect(contact.left >= hub.left && contact.right <= hub.right && contact.top >= hub.top && contact.bottom <= hub.bottom).toBe(true);
+    const [mailbox] = zoneById("contact").pointsOfInterest;
+    expect(zoneAt(mailbox.placement)).toBe("contact");
+    expect(zoneAt({ col: mailbox.placement.col, row: hub.top })).toBe("start");
+    const landing = fastTravelLanding("contact").tile;
+    expect(Math.abs(landing.col - SPAWN.col) + Math.abs(landing.row - SPAWN.row)).toBeLessThanOrEqual(8);
   });
 
   it("places every Point of Interest and Film roll inside its own Zone's rectangle", () => {
