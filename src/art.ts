@@ -1,8 +1,9 @@
 // Original pixel art, painted in code at start-up so no large image files ship.
-// The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town tiles (see CREDITS.md);
-// the water, the Player and the Film roll are painted here.
+// The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town and Tiny Dungeon tiles
+// (see CREDITS.md); the water, the Player, the Film roll and the scenery Kenney lacks are painted here.
 
 import { MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Tile, type TileKind } from "./overworld";
+import { SCENERY, type SceneryArt } from "./scenery";
 
 export type Rgb = [number, number, number];
 
@@ -180,6 +181,9 @@ const TINY_TOWN = {
   wall: 84,
   door: 85,
   sign: 83,
+  wheelbarrow: 57,
+  archeryTarget: 95,
+  barrel: 130,
 } as const;
 
 const WATER: Rgb = hex("#3d7fc4");
@@ -275,5 +279,217 @@ export function paintOverworld(sheet: CanvasImageSource, signs: Tile[]): HTMLCan
     }
   }
   for (const { col, row } of signs) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, col * size, row * size);
+  return pixels.canvas;
+}
+
+/** Frames of Kenney's Tiny Dungeon packed tilemap, laid out like Tiny Town. */
+const TINY_DUNGEON = { table: 72, anvil: 74, chest: 89 } as const;
+
+const SCENERY_COLORS: Record<string, Rgb> = {
+  k: INK,
+  g: hex("#c4c8d0"),
+  s: hex("#8a8f9c"),
+  d: hex("#3a3a48"),
+  o: hex("#e6873c"),
+  r: hex("#d04a3a"),
+  y: hex("#e6c84a"),
+  w: hex("#f4f4f0"),
+  b: hex("#3f6fc4"),
+  c: hex("#7fd8e6"),
+  N: hex("#5a3825"),
+  p: hex("#7a4ab0"),
+  m: hex("#d05ab0"),
+  G: hex("#4ab05a"),
+};
+
+/** Pixel rows painted centred on the tile, the last row ending `bottom` pixels below the tile's top edge. */
+type PaintedLayer = { rows: string[]; bottom: number };
+type SceneryLayer = { town: number } | { dungeon: number } | PaintedLayer;
+
+const SCENERY_ART: Record<SceneryArt, SceneryLayer[]> = {
+  workbench: [{ dungeon: TINY_DUNGEON.table }],
+  computer: [
+    { dungeon: TINY_DUNGEON.table },
+    {
+      bottom: 8,
+      rows: ["kkkkkkkkkk", "kbbbbbbbbk", "kbcbbbbbbk", "kbbbbGGbbk", "kbbbGGGGbk", "kkkkkkkkkk", "....kk....", "..kkkkkk.."],
+    },
+  ],
+  anvil: [{ dungeon: TINY_DUNGEON.anvil }],
+  "kit-chest": [{ dungeon: TINY_DUNGEON.chest }],
+  barrel: [{ town: TINY_TOWN.barrel }],
+  wheelbarrow: [{ town: TINY_TOWN.wheelbarrow }],
+  "archery-target": [{ town: TINY_TOWN.archeryTarget }],
+  printer: [
+    {
+      bottom: 15,
+      rows: [
+        "kkkkkkkkkkkk",
+        "ksggggggggsk",
+        "ksdddkkdddsk",
+        "ksdddkkdddsk",
+        "ksdddoodddsk",
+        "ksddddddddsk",
+        "ksddooooddsk",
+        "ksddooooddsk",
+        "kssssssssssk",
+        "kkkkkkkkkkkk",
+        "kggggggggggk",
+        "kgcggggggggk",
+        "kkkkkkkkkkkk",
+        ".k........k.",
+      ],
+    },
+  ],
+  "tennis-net": [
+    {
+      bottom: 15,
+      rows: [
+        "kk............kk",
+        "kkwwwwwwwwwwwwkk",
+        "kkdsdsdsdsdsdskk",
+        "kksdsdsdsdsdsdkk",
+        "kkdsdsdsdsdsdskk",
+        "kksdsdsdsdsdsdkk",
+        "kk............kk",
+        "kk............kk",
+      ],
+    },
+  ],
+  "life-ring": [
+    {
+      bottom: 16,
+      rows: [
+        "..kkkkkk..",
+        ".krrwwrrk.",
+        "krrkkkkrrk",
+        "kwk....kwk",
+        "kwk....kwk",
+        "kwk....kwk",
+        "kwk....kwk",
+        "krrkkkkrrk",
+        ".krrwwrrk.",
+        "..kkkkkk..",
+        "....kk....",
+        "....kk....",
+        "....kk....",
+        "...kkkk...",
+      ],
+    },
+  ],
+  skis: [
+    {
+      bottom: 16,
+      rows: [
+        ".kk...kk.",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kryk.kryk",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kssk.kssk",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kyyk.kyyk",
+        "kwwwwwwwk",
+        ".kkkkkkk.",
+      ],
+    },
+  ],
+  jukebox: [
+    {
+      bottom: 16,
+      rows: [
+        "...kkkkkk...",
+        "..kyyyyyyk..",
+        ".kyrrrrrryk.",
+        "kyrkkkkkkryk",
+        "kyrkwwwwkryk",
+        "kyrkwkkwkryk",
+        "kyrkwwwwkryk",
+        "kyrkkkkkkryk",
+        "kyrrrrrrrryk",
+        "kyrpmpmpmryk",
+        "kyrrrrrrrryk",
+        "kyrNNNNNNryk",
+        "kyrNkNkNkryk",
+        "kyrNNNNNNryk",
+        "kyyyyyyyyyyk",
+        "kkkkkkkkkkkk",
+      ],
+    },
+  ],
+  speaker: [
+    {
+      bottom: 16,
+      rows: [
+        "kkkkkkkkkk",
+        "kddddddddk",
+        "kdddssdddk",
+        "kddsddsddk",
+        "kdddssdddk",
+        "kddddddddk",
+        "kddssssddk",
+        "kdssddssdk",
+        "kdsdkkdsdk",
+        "kdssddssdk",
+        "kddssssddk",
+        "kddddddddk",
+        "kkkkkkkkkk",
+      ],
+    },
+  ],
+  "arcade-cabinet": [
+    {
+      bottom: 16,
+      rows: [
+        ".kkkkkkkkkk.",
+        ".kmmmmmmmmk.",
+        ".kkkkkkkkkk.",
+        ".kbbbbbbbbk.",
+        ".kbccbbbbbk.",
+        ".kbbbbGbbbk.",
+        ".kbbbGGGbbk.",
+        ".kkkkkkkkkk.",
+        "kppppppppppk",
+        "kpkppppyprpk",
+        "kkkkkkkkkkkk",
+        ".kppppppppk.",
+        ".kpppyypppk.",
+        ".kppppppppk.",
+        ".kppppppppk.",
+        ".kkkkkkkkkk.",
+      ],
+    },
+  ],
+};
+
+function paintRows(pixels: Pixels, { rows, bottom }: PaintedLayer, x: number, y: number) {
+  const left = x + Math.floor((OVERWORLD_TILE_SIZE - rows[0].length) / 2);
+  const top = y + bottom - rows.length;
+  rows.forEach((line, row) =>
+    [...line].forEach((char, col) => SCENERY_COLORS[char] && pixels.dot(left + col, top + row, SCENERY_COLORS[char])),
+  );
+}
+
+/**
+ * Paints the themed objects of SCENERY on a transparent canvas the size of the Overworld, drawn above the
+ * Film rolls so that a roll beside a piece only peeks out.
+ */
+export function paintScenery(town: CanvasImageSource, dungeon: CanvasImageSource): HTMLCanvasElement {
+  const size = OVERWORLD_TILE_SIZE;
+  const pixels = new Pixels(MAP_COLUMNS * size, MAP_ROWS * size);
+  for (const { at, art } of SCENERY) {
+    const [x, y] = [at.col * size, at.row * size];
+    for (const layer of SCENERY_ART[art]) {
+      if ("town" in layer) pixels.tile(town, TINY_TOWN_COLUMNS, layer.town, x, y);
+      else if ("dungeon" in layer) pixels.tile(dungeon, TINY_TOWN_COLUMNS, layer.dungeon, x, y);
+      else paintRows(pixels, layer, x, y);
+    }
+  }
   return pixels.canvas;
 }

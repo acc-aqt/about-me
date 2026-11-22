@@ -1,6 +1,6 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
-import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, type Rgb } from "./art";
+import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, paintScenery, type Rgb } from "./art";
 import {
   facedPointOfInterest,
   fastTravelLanding,
@@ -14,6 +14,7 @@ import {
   type Direction,
   type Tile,
 } from "./overworld";
+import { filmRollCover, sceneryAt } from "./scenery";
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CHARS, PIXEL_FONT_NAME, paintPixelFont } from "./pixel-font";
 
 const VIEW_WIDTH = 320;
@@ -32,8 +33,13 @@ const LABEL_PADDING = 2;
 const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 const ZONE_TITLE_Y = 8;
 const Z_FILM_ROLL = 1;
+/** Scenery sits over Film rolls, so a roll tucked beside a piece only peeks out. */
+const Z_SCENERY = 1.5;
 const Z_PLAYER = 2;
 const Z_LABEL = 3;
+
+/** How far a Film roll is pushed towards the scenery covering it, by the side the scenery is on. */
+const FILM_ROLL_PEEK: Partial<Record<Direction, [number, number]>> = { down: [0, 8], left: [-9, 0], right: [9, 0] };
 
 const KEY_BUTTONS: Record<string, GameButton> = {
   arrowup: "up",
@@ -72,6 +78,12 @@ function tileFoot({ col, row }: Tile): [number, number] {
   return [(col + 0.5) * OVERWORLD_TILE_SIZE, (row + 1) * OVERWORLD_TILE_SIZE];
 }
 
+function loadImage(path: string) {
+  const image = new Image();
+  image.src = import.meta.env.BASE_URL + path;
+  return image;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -98,11 +110,14 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     chars: PIXEL_FONT_CHARS,
   });
 
-  const tileset = new Image();
-  tileset.src = import.meta.env.BASE_URL + "art/kenney-tiny-town-tiles.png";
-  tileset.decode().then(() => {
-    k.loadSprite("overworld", paintOverworld(tileset, pointsOfInterest.map((poi) => poi.placement)));
+  const tileset = loadImage("art/kenney-tiny-town-tiles.png");
+  const dungeonTileset = loadImage("art/kenney-tiny-dungeon-tiles.png");
+  Promise.all([tileset.decode(), dungeonTileset.decode()]).then(() => {
+    const signs = pointsOfInterest.map((poi) => poi.placement).filter((tile) => !sceneryAt(tile));
+    k.loadSprite("overworld", paintOverworld(tileset, signs));
     k.add([k.sprite("overworld"), k.pos(0, 0)]);
+    k.loadSprite("scenery", paintScenery(tileset, dungeonTileset));
+    k.add([k.sprite("scenery"), k.pos(0, 0), k.z(Z_SCENERY)]);
   });
 
   function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
@@ -148,7 +163,9 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   for (const zone of content.zones) {
     if (!zone.filmRoll) continue;
     const [x, y] = tileFoot(zone.filmRoll);
-    const sprite = k.add([k.sprite("film-roll"), k.pos(x, y - 4), k.anchor("bot"), k.z(Z_FILM_ROLL)]);
+    const cover = filmRollCover(zone.filmRoll);
+    const [peekX, peekY] = (cover && FILM_ROLL_PEEK[cover]) ?? [0, 0];
+    const sprite = k.add([k.sprite("film-roll"), k.pos(x + peekX, y - 4 + peekY), k.anchor("bot"), k.z(Z_FILM_ROLL)]);
     filmRolls.set(tileKey(zone.filmRoll), { zone, sprite });
   }
 
