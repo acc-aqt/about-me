@@ -12,5 +12,6 @@ Attribution is not required; it is given here with thanks.
 
 ## Original art
 
-The Player (photographer) sprite, the Film roll and the water are original pixel art painted in code
+The Player (photographer) sprite, the Film roll, the water, the Hub maypole and the themed Points of Interest
+(such as the Contact mailbox and the Career road buildings) are original pixel art painted in code
 in `src/art.ts`. The pixel font used for in-world labels is an original 5×9 font drawn in `src/pixel-font.ts`.

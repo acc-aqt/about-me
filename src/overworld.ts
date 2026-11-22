@@ -4,7 +4,7 @@ export type Tile = { col: number; row: number };
 
 export type Direction = "up" | "down" | "left" | "right";
 
-export type TileKind = "grass" | "path" | "tree" | "water" | "building" | "bush" | "fence";
+export type TileKind = "grass" | "path" | "tree" | "water" | "building" | "bush" | "fence" | "maypole" | "well";
 
 export const OVERWORLD_TILE_SIZE = 16;
 
@@ -16,6 +16,8 @@ export const LEGEND: Record<string, { kind: TileKind; walkable: boolean }> = {
   B: { kind: "building", walkable: false },
   "*": { kind: "bush", walkable: false },
   "#": { kind: "fence", walkable: false },
+  Y: { kind: "maypole", walkable: false },
+  o: { kind: "well", walkable: false },
 };
 
 /** One string per row, one character per tile; see LEGEND. Row 0 is the top (north) edge. */
@@ -40,12 +42,12 @@ export const OVERWORLD_MAP: readonly string[] = [
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
   "TTTTTTTTTTTTTTTTTTTTTTT**.....=....**TTTTTTTTTTTTTTTTTTTTTTT",
   "TT****................T*......=.....*TT*...*...*...*...*..TT",
-  "TT****................T.......=......TT...................TT",
-  "TT....................T.......=......TT...................TT",
+  "TT****................T.......=...Y..TT...................TT",
+  "TT....................T.......=...Y..TT...................TT",
   "TT....................T.......=......TT...................TT",
   "TT========================================================TT",
   "TT....................T........=.....TT...................TT",
-  "TT....................T........=.....TT...................TT",
+  "TT....................T...o....=.....TT...................TT",
   "TT.BBBBBB...BBBBBB....T........=.....TT...................TT",
   "TT.BBBBBB...BBBBBB....T........=.....TT.........BBBBB.....TT",
   "TT.BBBBBB...BBBBBB....T*.......=....*TT.........BBBBB.....TT",
@@ -116,10 +118,23 @@ function pointOfInterestAt(tile: Tile): PointOfInterest | undefined {
   return pointsOfInterestByTile.get(tileKey(tile));
 }
 
-/** Points of Interest are solid; Film roll tiles keep the ground's walkability. */
+export type Signpost = { tile: Tile; leadsTo: ZoneId[] };
+
+/** One signpost beside each path out of the Hub, naming the Zones down that path. */
+export const HUB_SIGNPOSTS: Signpost[] = [
+  { tile: { col: 31, row: 18 }, leadsTo: ["photography-trail"] },
+  { tile: { col: 23, row: 22 }, leadsTo: ["maker-workshop"] },
+  { tile: { col: 36, row: 22 }, leadsTo: ["career-road"] },
+  { tile: { col: 32, row: 28 }, leadsTo: ["sport", "music-and-games"] },
+  { tile: { col: 26, row: 28 }, leadsTo: ["contact"] },
+];
+
+const signpostTiles = new Set(HUB_SIGNPOSTS.map(({ tile }) => tileKey(tile)));
+
+/** Points of Interest and signposts are solid; Film roll tiles keep the ground's walkability. */
 export function isWalkable(tile: Tile): boolean {
   const char = OVERWORLD_MAP[tile.row]?.[tile.col];
-  return char !== undefined && LEGEND[char].walkable && !pointOfInterestAt(tile);
+  return char !== undefined && LEGEND[char].walkable && !pointOfInterestAt(tile) && !signpostTiles.has(tileKey(tile));
 }
 
 const STEPS: Record<Direction, Tile> = {

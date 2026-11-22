@@ -1,8 +1,8 @@
 // Original pixel art, painted in code at start-up so no large image files ship.
 // The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town tiles (see CREDITS.md);
-// the water, the Player, the Film roll and the Photography trail's camera stands and darkroom door are painted here.
+// the water, the Player, the Film roll, the Hub's maypole and the Points of Interest's themed objects are painted here.
 
-import { MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Direction, type Tile, type TileKind } from "./overworld";
+import { HUB_SIGNPOSTS, MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Direction, type Tile, type TileKind } from "./overworld";
 
 export type Rgb = [number, number, number];
 
@@ -276,6 +276,7 @@ const TINY_TOWN = {
   wall: 84,
   door: 85,
   sign: 83,
+  well: 104,
 } as const;
 
 const WATER: Rgb = hex("#3d7fc4");
@@ -347,6 +348,8 @@ function objectFrame(tile: Tile, kind: TileKind): number | undefined {
       return fenceFrame(tile);
     case "building":
       return buildingFrame(tile);
+    case "well":
+      return TINY_TOWN.well;
     default:
       return undefined;
   }
@@ -398,7 +401,184 @@ const DARKROOM_DOOR: Prop = {
   colors: { k: INK, r: hex("#d23c3c"), w: hex("#8a5a3a"), d: hex("#2b2b33"), y: hex("#e6b43c") },
 };
 
-const PROPS = { "camera stand": CAMERA_STAND, "darkroom door": DARKROOM_DOOR } as const;
+const WELCOME_BOARD: Prop = {
+  rows: [
+      ".kkkkkkkkkkkkkk.",
+      ".kwwwwwwwwwwwwk.",
+      ".kwwkwkwkkkwkwk.",
+      ".kwwkwkwwkwwkwk.",
+      ".kwwkkkwwkwwkwk.",
+      ".kwwkwkwwkwwwwk.",
+      ".kwwkwkwkkkwkwk.",
+      ".kwwwwwwwwwwwwk.",
+      ".kkkkkkkkkkkkkk.",
+      "..kpk......kpk..",
+      "..kpk......kpk..",
+      "..kpk......kpk..",
+      "..kpk......kpk..",
+  ],
+  colors: { k: INK, w: hex("#fbf8f0"), p: hex("#8a5a3a") },
+};
+
+const UNIVERSITY: Prop = {
+  rows: [
+      "......kkkk......",
+      "....kkbbbbkk....",
+      "..kkbbbwwbbbkk..",
+      "kkbbbbbbbbbbbbkk",
+      "kwwwwwwwwwwwwwwk",
+      "kkkkkkkkkkkkkkkk",
+      "kwkddkwkkwkddkwk",
+      "kwkddkwkkwkddkwk",
+      "kwkddkwkkwkddkwk",
+      "kwkddkwkkwkddkwk",
+      "kwkddkwkkwkddkwk",
+      "kwkddkwkkwkddkwk",
+      "kwkddkwkkwkddkwk",
+      "kkkkkkkkkkkkkkkk",
+      "kssssssssssssssk",
+      "kkkkkkkkkkkkkkkk",
+  ],
+  colors: { k: INK, b: hex("#3070b3"), w: hex("#f4f1e8"), d: hex("#2b3a55"), s: hex("#b8b8b0") },
+};
+
+const OFFICE_TOWER: Prop = {
+  rows: [
+      "...kkkkkkkkkk...",
+      "...kssssssssk...",
+      "...kllsllsllk...",
+      "...kssssssssk...",
+      "...kllsllsllk...",
+      "...kssssssssk...",
+      "...kllsllsllk...",
+      "...kssssssssk...",
+      "...kllsllsllk...",
+      "...kssssssssk...",
+      "...kllsllsllk...",
+      "...kssssssssk...",
+      ".kkkkkkkkkkkkkk.",
+      ".ksssssddsssssk.",
+      ".ksssssddsssssk.",
+      "kkkkkkkkkkkkkkkk",
+  ],
+  colors: { k: INK, s: hex("#c4c8d0"), l: hex("#5aa0d8"), d: hex("#2b2b33") },
+};
+
+const KANGAROO_SIGN: Prop = {
+  rows: [
+      ".......k........",
+      "......kyk.......",
+      ".....kyyyk......",
+      "....kyyyykk.....",
+      "...kyyyykkyk....",
+      "..kyyyyykyyyk...",
+      ".kyyyykkkkyyyk..",
+      "kyyyykkkkyyyyyk.",
+      ".kykkkkkkyyyyk..",
+      "..kyyyykkkyyk...",
+      "...kyyyykkkk....",
+      "....kyyyyyk.....",
+      ".....kyyyk......",
+      "......kyk.......",
+      ".......k........",
+      ".......p........",
+  ],
+  colors: { k: INK, y: hex("#e6b43c"), p: hex("#6b4129") },
+};
+
+const WORKS: Prop = {
+  rows: [
+      "k...k...k...k...",
+      "kk..kk..kk..kk..",
+      "klk.klk.klk.klk.",
+      "kllkkllkkllkkllk",
+      "kkkkkkkkkkkkkkkk",
+      "krrrrrrrrrrrrrrk",
+      "krwwrrwwrrwwrrrk",
+      "krwwrrwwrrwwrrrk",
+      "krrrrrrrrrrrrrrk",
+      "krwwrrwwrrrddrrk",
+      "krwwrrwwrrrddrrk",
+      "krrrrrrrrrrddrrk",
+      "krrrrrrrrrrddrrk",
+      "kkkkkkkkkkkkkkkk",
+  ],
+  colors: { k: INK, l: hex("#8fd2ee"), r: hex("#b8643c"), w: hex("#8fd2ee"), d: hex("#5a3825") },
+};
+
+const OFFICE_BLOCK: Prop = {
+  rows: [
+      "....k...........",
+      "....k...........",
+      ".kkkkkkkkkkkkkk.",
+      ".kggggggggggggk.",
+      ".kgwgwgwgwgwggk.",
+      ".kkkkkkkkkkkkkk.",
+      ".kggggggggggggk.",
+      ".kgwgwgwgwgwggk.",
+      ".kkkkkkkkkkkkkk.",
+      ".kggggggggggggk.",
+      ".kgwgwgddgwgwgk.",
+      ".kgggggddgggggk.",
+      "kkkkkkkkkkkkkkkk",
+  ],
+  colors: { k: INK, g: hex("#3c8c84"), w: hex("#9fd3f2"), d: hex("#2b2b33") },
+};
+
+const JET_ENGINE: Prop = {
+  rows: [
+      ".....kkkkkk.....",
+      "...kksssssskk...",
+      "..kssddddddssk..",
+      ".ksddgddddgddsk.",
+      "ksdddgddddgdddsk",
+      "ksddddgkkgddddsk",
+      "ksddddkwwkddddsk",
+      "ksddddkwwkddddsk",
+      "ksddddgkkgddddsk",
+      "ksdddgddddgdddsk",
+      ".ksddgddddgddsk.",
+      "..kssddddddssk..",
+      "...kksssssskk...",
+      ".....kkkkkk.....",
+      "......kppk......",
+      "....kkkkkkkk....",
+  ],
+  colors: { k: INK, s: hex("#c4c8d0"), d: hex("#3b4466"), g: hex("#8a93a8"), w: hex("#f4f1e8"), p: hex("#6b6f7a") },
+};
+
+const MAILBOX: Prop = {
+  rows: [
+      "....kkkkkkkk....",
+      "...kyyyyyyyyk...",
+      "...kyyyyyyyyk...",
+      "...kykkkkkkyk...",
+      "...kyyyyyyyyk...",
+      "...kyyyyyyyyk...",
+      "...kyyyyyyyyk...",
+      "...kYYYYYYYYk...",
+      "....kkkkkkkk....",
+      "......kppk......",
+      "......kppk......",
+      "......kppk......",
+      "......kppk......",
+      ".....kkkkkk.....",
+  ],
+  colors: { k: INK, y: hex("#f2c230"), Y: hex("#c89a1e"), p: hex("#6b6f7a") },
+};
+
+const PROPS = {
+  "camera stand": CAMERA_STAND,
+  "darkroom door": DARKROOM_DOOR,
+  "welcome board": WELCOME_BOARD,
+  university: UNIVERSITY,
+  "office tower": OFFICE_TOWER,
+  "kangaroo sign": KANGAROO_SIGN,
+  "composites works": WORKS,
+  "office block": OFFICE_BLOCK,
+  "jet engine": JET_ENGINE,
+  mailbox: MAILBOX,
+} as const;
 
 type PropName = keyof typeof PROPS;
 
@@ -412,15 +592,56 @@ const THEMED_PROPS: Record<string, PropName> = {
   "eastern-adriatic": "camera stand",
   peru: "camera stand",
   darkroom: "darkroom door",
+  intro: "welcome board",
+  tum: "university",
+  "bmw-group": "office tower",
+  "canberra-detour": "kangaroo sign",
+  "forward-engineering": "composites works",
+  "arrk-engineering": "office block",
+  mtu: "jet engine",
+  "contact-board": "mailbox",
 };
 
 export function themedProp(poiId: string): PropName | undefined {
   return THEMED_PROPS[poiId];
 }
 
-function paintProp(pixels: Pixels, { rows, colors }: Prop, x: number, y: number) {
+/** Draws a prop standing on a tile: bottom-aligned, so a prop taller than a tile rises into the tile above. */
+function paintProp(pixels: Pixels, { rows, colors }: Prop, { col, row }: Tile) {
+  const [x, y] = [col * OVERWORLD_TILE_SIZE, (row + 1) * OVERWORLD_TILE_SIZE - rows.length];
   rows.forEach((row, dy) => [...row].forEach((char, dx) => colors[char] && pixels.dot(x + dx, y + dy, colors[char])));
 }
+
+const MAYPOLE_HEIGHT = 32;
+const MAYPOLE_STRIPE_ROWS = 2;
+const MAYPOLE_CROWN = ["......kkkk......", ".....kggggk.....", "....kggggggk....", ".....kggggk.....", "......kkkk......"];
+const MAYPOLE_BASE = ["......kkkk......", ".....kssssk.....", ".....kkkkkk....."];
+/** Crossbars and the guild boards hanging from them, by row; the striped pole runs through the middle. */
+const MAYPOLE_BARS: Record<number, string> = {
+  10: "..kkkkkkkkkkkk..",
+  11: "..r..r....r..r..",
+  12: "..r..r....r..r..",
+  18: "kkkkkkkkkkkkkkkk",
+  19: ".b..b......b..b.",
+  20: ".b..b......b..b.",
+};
+
+/** Munich's blue-and-white maypole, two tiles tall, with a green crown and guild boards on its crossbars. */
+function maypole(): Prop {
+  const poleRows = MAYPOLE_HEIGHT - MAYPOLE_CROWN.length - MAYPOLE_BASE.length;
+  const pole = Array.from({ length: poleRows }, (_, index) => {
+    const row = MAYPOLE_CROWN.length + index;
+    const stripe = Math.floor(row / MAYPOLE_STRIPE_ROWS) % 2 === 0 ? "bw" : "wb";
+    const bar = MAYPOLE_BARS[row] ?? "................";
+    return `${bar.slice(0, 6)}k${stripe}k${bar.slice(10)}`;
+  });
+  return {
+    rows: [...MAYPOLE_CROWN, ...pole, ...MAYPOLE_BASE],
+    colors: { k: INK, g: hex("#3f8f3a"), b: hex("#2f7fd0"), w: hex("#f4f1e8"), r: hex("#d8613a"), s: hex("#b8b8b0") },
+  };
+}
+
+const MAYPOLE = maypole();
 
 /** Paints the whole Overworld from the text tilemap, with a themed object or a sign on each Point of Interest tile. */
 export function paintOverworld(sheet: CanvasImageSource, pointsOfInterest: { id: string; placement: Tile }[]): HTMLCanvasElement {
@@ -438,13 +659,15 @@ export function paintOverworld(sheet: CanvasImageSource, pointsOfInterest: { id:
       pixels.tile(sheet, TINY_TOWN_COLUMNS, kind === "path" ? TINY_TOWN.path : pick(TINY_TOWN.grass, tile), x, y);
       const object = objectFrame(tile, kind);
       if (object !== undefined) pixels.tile(sheet, TINY_TOWN_COLUMNS, object, x, y);
+      // A maypole is drawn whole from its bottom tile.
+      if (kind === "maypole" && tileKindAt({ col, row: row + 1 }) !== "maypole") paintProp(pixels, MAYPOLE, tile);
     }
   }
+  for (const { tile } of HUB_SIGNPOSTS) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, tile.col * size, tile.row * size);
   for (const { id, placement } of pointsOfInterest) {
-    const [x, y] = [placement.col * size, placement.row * size];
     const prop = themedProp(id);
-    if (prop) paintProp(pixels, PROPS[prop], x, y);
-    else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, x, y);
+    if (prop) paintProp(pixels, PROPS[prop], placement);
+    else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, placement.col * size, placement.row * size);
   }
   return pixels.canvas;
 }
