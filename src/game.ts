@@ -1,9 +1,10 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
-import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, paintScenery, type Rgb } from "./art";
+import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
   facedPointOfInterest,
   fastTravelLanding,
+  filmRollCover,
   isWalkable,
   MAP_COLUMNS,
   MAP_ROWS,
@@ -14,7 +15,6 @@ import {
   type Direction,
   type Tile,
 } from "./overworld";
-import { filmRollCover, sceneryAt } from "./scenery";
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CHARS, PIXEL_FONT_NAME, paintPixelFont } from "./pixel-font";
 
 const VIEW_WIDTH = 320;
@@ -25,6 +25,8 @@ const MAP_HEIGHT = MAP_ROWS * OVERWORLD_TILE_SIZE;
 const STEP_TIME = 0.16;
 /** A direction held at least this long walks; a shorter tap in a new direction only turns. */
 const HOLD_DELAY = 0.12;
+/** Seconds between bump sounds while the Player keeps walking into a solid tile. */
+const BUMP_INTERVAL = 0.4;
 const BACKGROUND: Rgb = [20, 20, 30];
 const POI_LABEL_WIDTH = 120;
 /** Tiles from the Player within which a Point of Interest's name plate shows. */
@@ -33,13 +35,10 @@ const LABEL_PADDING = 2;
 const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 const ZONE_TITLE_Y = 8;
 const Z_FILM_ROLL = 1;
-/** Scenery sits over Film rolls, so a roll tucked beside a piece only peeks out. */
-const Z_SCENERY = 1.5;
+/** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
+const Z_FILM_ROLL_COVER = 1.5;
 const Z_PLAYER = 2;
 const Z_LABEL = 3;
-
-/** How far a Film roll is pushed towards the scenery covering it, by the side the scenery is on. */
-const FILM_ROLL_PEEK: Partial<Record<Direction, [number, number]>> = { down: [0, 8], left: [-9, 0], right: [9, 0] };
 
 const KEY_BUTTONS: Record<string, GameButton> = {
   arrowup: "up",
@@ -66,6 +65,8 @@ export type GameEvents = {
   onShutter(poi: PointOfInterest): void;
   canFireShutter(): boolean;
   onFilmRollCollected(zone: Zone): void;
+  onFootstep(): void;
+  onBump(): void;
 };
 
 type LabelOptions = { wrapWidth?: number; fixed?: boolean };
@@ -110,15 +111,30 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     chars: PIXEL_FONT_CHARS,
   });
 
-  const tileset = loadImage("art/kenney-tiny-town-tiles.png");
-  const dungeonTileset = loadImage("art/kenney-tiny-dungeon-tiles.png");
-  Promise.all([tileset.decode(), dungeonTileset.decode()]).then(() => {
-    const signs = pointsOfInterest.map((poi) => poi.placement).filter((tile) => !sceneryAt(tile));
-    k.loadSprite("overworld", paintOverworld(tileset, signs));
+  const sheets = { town: loadImage("art/kenney-tiny-town-tiles.png"), dungeon: loadImage("art/kenney-tiny-dungeon-tiles.png") };
+  Promise.all([sheets.town.decode(), sheets.dungeon.decode()]).then(() => {
+    k.loadSprite("overworld", paintOverworld(sheets, pointsOfInterest));
     k.add([k.sprite("overworld"), k.pos(0, 0)]);
-    k.loadSprite("scenery", paintScenery(tileset, dungeonTileset));
-    k.add([k.sprite("scenery"), k.pos(0, 0), k.z(Z_SCENERY)]);
+    for (const zone of content.zones) if (zone.filmRoll) addFilmRollCover(zone.filmRoll);
   });
+
+  /** Half a tile from the tile's centre towards its cover, so the cover hides half the roll. */
+  function filmRollCentre(roll: Tile): Vec2 {
+    const centre = k.vec2((roll.col + 0.5) * OVERWORLD_TILE_SIZE, (roll.row + 0.5) * OVERWORLD_TILE_SIZE);
+    const cover = filmRollCover(roll);
+    if (!cover) return centre;
+    const towards = tileAhead(roll, cover);
+    return centre.add(k.vec2(towards.col - roll.col, towards.row - roll.row).scale(OVERWORLD_TILE_SIZE / 2));
+  }
+
+  function addFilmRollCover(roll: Tile) {
+    const cover = filmRollCover(roll);
+    if (!cover) return;
+    const { col, row } = tileAhead(roll, cover);
+    const size = OVERWORLD_TILE_SIZE;
+    const quad = k.quad((col * size) / MAP_WIDTH, (row * size) / MAP_HEIGHT, size / MAP_WIDTH, size / MAP_HEIGHT);
+    k.add([k.sprite("overworld", { quad }), k.pos(col * size, row * size), k.z(Z_FILM_ROLL_COVER)]);
+  }
 
   function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
     const plate = k.add([
@@ -162,22 +178,20 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   const filmRolls = new Map<string, { zone: Zone; sprite: GameObj }>();
   for (const zone of content.zones) {
     if (!zone.filmRoll) continue;
-    const [x, y] = tileFoot(zone.filmRoll);
-    const cover = filmRollCover(zone.filmRoll);
-    const [peekX, peekY] = (cover && FILM_ROLL_PEEK[cover]) ?? [0, 0];
-    const sprite = k.add([k.sprite("film-roll"), k.pos(x + peekX, y - 4 + peekY), k.anchor("bot"), k.z(Z_FILM_ROLL)]);
+    const sprite = k.add([k.sprite("film-roll"), k.pos(filmRollCentre(zone.filmRoll)), k.anchor("center"), k.z(Z_FILM_ROLL)]);
     filmRolls.set(tileKey(zone.filmRoll), { zone, sprite });
   }
 
   // The current Zone's title sits top-centre of the view, clear of the DOM corner controls.
   const zoneTitle = addLabel("", k.vec2(VIEW_WIDTH / 2, ZONE_TITLE_Y), "top", { fixed: true });
 
-  const player = k.add([k.sprite("player", { anim: "idle" }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
+  const player = k.add([k.sprite("player", { anim: playerAnim("down", false) }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
 
   let tile: Tile = SPAWN;
   let facing: Direction = "down";
   let step: Step | null = null;
   let faced: PointOfInterest | null = null;
+  let lastBumpAt = -Infinity;
   /** Directions held down, the most recently pressed last. */
   const held: Direction[] = [];
   const heldSince = new Map<Direction, number>();
@@ -199,21 +213,30 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   function turn(direction: Direction) {
     facing = direction;
-    if (direction === "left" || direction === "right") player.flipX = direction === "left";
     setFaced(facedPointOfInterest(tile, facing) ?? null);
   }
 
   function tryStep(direction: Direction) {
     turn(direction);
     const next = tileAhead(tile, direction);
-    if (!isWalkable(next)) return;
+    if (!isWalkable(next)) {
+      bump();
+      return;
+    }
     step = { from: tile, to: next, elapsed: 0 };
     setFaced(null);
+  }
+
+  function bump() {
+    if (k.time() - lastBumpAt < BUMP_INTERVAL) return;
+    lastBumpAt = k.time();
+    events.onBump();
   }
 
   function arrive() {
     tile = step!.to;
     step = null;
+    events.onFootstep();
     player.pos = k.vec2(...tileFoot(tile));
     const roll = filmRolls.get(tileKey(tile));
     if (roll) {
@@ -252,7 +275,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       }
     }
     if (!step) nextMove();
-    const anim = step ? "walk" : "idle";
+    const anim = playerAnim(facing, step !== null);
     if (player.getCurAnim()?.name !== anim) player.play(anim);
     updateCamera();
   });

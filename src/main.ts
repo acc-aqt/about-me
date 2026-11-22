@@ -65,6 +65,8 @@ const controls = startGame(canvas, content, {
     showFilmRollCount();
     if (collectedFilmRolls === totalFilmRolls) viewfinder.open(content.filmRollBonus);
   },
+  onFootstep: () => audio.playFootstep(),
+  onBump: () => audio.playBump(),
 });
 
 function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
