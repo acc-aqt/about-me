@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (2026-11-21)
+Accepted (2026-11-21). The side-scroller reasoning is superseded by [ADR 0002](0002-top-down-overworld-replaces-side-scrolling-route.md); the stack and hosting decisions stand.
 
 ## Decision
 
