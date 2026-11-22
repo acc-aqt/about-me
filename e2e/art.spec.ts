@@ -1,17 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
+import { facingStatus, openGame, pointOfInterest, SPAWN_LANDING, tapKeys, tapsTo } from "./walk";
 
 async function openViewfinderAtFirstSign(page: Page) {
-  await page.goto("./");
-  await page.getByRole("application", { name: /game/i }).focus();
-  const status = page.getByRole("status");
-  for (let step = 0; step < 60; step++) {
-    if ((await status.textContent())?.includes("Technical University of Munich")) break;
-    await page.keyboard.down("ArrowRight");
-    await page.waitForTimeout(100);
-    await page.keyboard.up("ArrowRight");
-  }
+  const intro = pointOfInterest("intro");
+  await openGame(page);
+  await tapKeys(page, tapsTo(SPAWN_LANDING, intro.placement, { face: true }));
+  await expect(page.getByRole("status")).toHaveText(facingStatus(intro.title));
   await page.keyboard.press("Space");
-  const viewfinder = page.getByRole("dialog", { name: "Technical University of Munich" });
+  const viewfinder = page.getByRole("dialog", { name: intro.title });
   await expect(viewfinder).toBeVisible();
   return viewfinder;
 }

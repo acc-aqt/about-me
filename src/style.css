@@ -84,7 +84,36 @@ body {
     pointer-events: none;
   }
 
-  .touch-controls-walk,
+  .touch-controls-dpad {
+    display: grid;
+    grid-template-areas:
+      ". up ."
+      "left . right"
+      ". down .";
+    gap: 0.25rem;
+  }
+
+  .touch-controls-dpad .touch-button {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .dpad-up {
+    grid-area: up;
+  }
+
+  .dpad-left {
+    grid-area: left;
+  }
+
+  .dpad-right {
+    grid-area: right;
+  }
+
+  .dpad-down {
+    grid-area: down;
+  }
+
   .touch-controls-actions {
     display: flex;
     align-items: flex-end;

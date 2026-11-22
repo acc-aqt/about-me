@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { facingStatus, fastTravel } from "./walk";
 
 type AudioLog = { tones: number; samples: number };
 
@@ -29,7 +30,7 @@ const audioLog = (page: Page) => page.evaluate(() => ({ ...window.audioLog }));
 async function openGame(page: Page) {
   await recordAudio(page);
   await page.goto("./");
-  await expect(page.getByRole("status")).toContainText("near a sign");
+  await expect(page.getByRole("status")).toContainText("Face a sign");
 }
 
 test("sound is muted on load with a visible toggle", async ({ page }) => {
@@ -58,20 +59,10 @@ test("the toggle turns the music on and off", async ({ page }) => {
   expect((await audioLog(page)).tones).toBe(tonesWhenMuted);
 });
 
-async function walkRightUntilNear(page: Page, title: string) {
-  const status = page.getByRole("status");
-  for (let step = 0; step < 400; step++) {
-    if ((await status.textContent())?.includes(title)) return;
-    await page.keyboard.down("ArrowRight");
-    await page.waitForTimeout(100);
-    await page.keyboard.up("ArrowRight");
-  }
-  throw new Error(`Never got near ${title}`);
-}
-
 async function fireShutterAtMtu(page: Page, isMobile: boolean) {
   await page.getByRole("application", { name: /game/i }).focus();
-  await walkRightUntilNear(page, "MTU Aero Engines");
+  await fastTravel(page, "career-road");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
   if (isMobile) await page.getByRole("button", { name: "Shutter" }).tap();
   else await page.keyboard.press("Space");
   await expect(page.getByRole("dialog", { name: "MTU Aero Engines" })).toBeVisible();

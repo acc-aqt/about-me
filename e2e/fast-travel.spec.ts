@@ -1,10 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { content } from "../src/content";
-
-async function openGame(page: Page) {
-  await page.goto("./");
-  await expect(page.getByRole("status")).toContainText("near a sign");
-}
+import { facingStatus, openGame } from "./walk";
 
 async function fastTravelByClick(page: Page, zoneTitle: string | RegExp) {
   await page.getByRole("button", { name: "Fast-travel" }).click();
@@ -15,7 +11,7 @@ test("Fast-travel to the Career road lands at MTU, and the Shutter opens its Vie
   await openGame(page);
 
   await fastTravelByClick(page, "Career road");
-  await expect(page.getByRole("status")).toContainText("MTU Aero Engines");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
 
   await page.keyboard.press("Space");
   const viewfinder = page.getByRole("dialog", { name: "MTU Aero Engines" });
@@ -32,7 +28,7 @@ test("on a phone, Fast-travel to the Career road and the on-screen Shutter open 
 
   await page.getByRole("button", { name: "Fast-travel" }).tap();
   await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: "Career road" }).tap();
-  await expect(page.getByRole("status")).toContainText("MTU Aero Engines");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
   await page.getByRole("button", { name: "Shutter" }).tap();
 
   await expect(page.getByRole("dialog", { name: "MTU Aero Engines" })).toBeVisible();
@@ -44,7 +40,7 @@ test("Fast-travel to Contact shows LinkedIn, GitHub, Instagram and carrels.photo
   await openGame(page);
 
   await fastTravelByClick(page, "Contact");
-  await expect(page.getByRole("status")).toContainText("Say hello");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("Say hello"));
   await page.keyboard.press("Space");
 
   const links = page.getByRole("dialog").getByRole("link");
@@ -84,7 +80,7 @@ test("Fast-travel works with the keyboard alone", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Contact" })).toBeFocused();
   await page.keyboard.press("Enter");
 
-  await expect(page.getByRole("status")).toContainText("Say hello");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("Say hello"));
   await page.keyboard.press("Space");
   await expect(page.getByRole("dialog", { name: "Say hello" })).toBeVisible();
 });

@@ -9,9 +9,9 @@ import { query } from "./dom";
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
 
 const CONTROLS_HINT = isTouch
-  ? "Walk with ◀ ▶. Tap the Shutter near a sign to take a photo. Tap ▤ for the Inventory."
-  : "Walk with ← → or A D. Press Space near a sign to take a photo. Press I for the Inventory.";
-const SHUTTER_PROMPT = isTouch ? "Tap the Shutter to photograph" : "Press Space to photograph";
+  ? "Walk with the d-pad. Face a sign and tap the Shutter to take a photo. Tap ▤ for the Inventory."
+  : "Walk with the arrow keys or WASD. Face a sign and press Space to take a photo. Press I for the Inventory.";
+const SHUTTER_PROMPT = isTouch ? "tap the Shutter" : "press Space";
 
 const canvas = query<HTMLCanvasElement>(document, "#game");
 const hint = query<HTMLElement>(document, "#hint");
@@ -52,8 +52,8 @@ canvas.addEventListener("keydown", (event) => {
 });
 
 const controls = startGame(canvas, content, {
-  onNearbyChange(poi) {
-    hint.textContent = poi ? `${SHUTTER_PROMPT} ${poi.title}` : CONTROLS_HINT;
+  onFacingChange(poi) {
+    hint.textContent = poi ? `Facing ${poi.title} — ${SHUTTER_PROMPT}` : CONTROLS_HINT;
   },
   onShutter(poi) {
     audio.playShutter();
