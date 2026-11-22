@@ -204,6 +204,7 @@ describe("Overworld", () => {
 
   it("lands Fast-travel in front of a Zone's featured Point of Interest, facing it", () => {
     expect(fastTravelLanding("career-road")).toEqual({ tile: { col: 55, row: 23 }, facing: "up" });
+    expect(fastTravelLanding("music-and-games")).toEqual({ tile: { col: 36, row: 35 }, facing: "up" });
     for (const zone of content.zones) {
       if (zone.fastTravelTo === undefined) continue;
       const landing = fastTravelLanding(zone.id);
@@ -216,6 +217,5 @@ describe("Overworld", () => {
     expect(fastTravelLanding("photography-trail")).toEqual({ tile: { col: 30, row: 16 }, facing: "up" });
     expect(fastTravelLanding("maker-workshop")).toEqual({ tile: { col: 21, row: 23 }, facing: "left" });
     expect(fastTravelLanding("sport")).toEqual({ tile: { col: 30, row: 35 }, facing: "left" });
-    expect(fastTravelLanding("music-and-games")).toEqual({ tile: { col: 31, row: 34 }, facing: "down" });
   });
 });

@@ -500,6 +500,7 @@ export const content: Content = {
     {
       id: "music-and-games",
       title: "Music & games",
+      fastTravelTo: "track-back",
       filmRoll: { col: 49, row: 40 },
       pointsOfInterest: [
         {
