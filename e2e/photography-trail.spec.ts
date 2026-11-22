@@ -1,31 +1,37 @@
 import { expect, test, type Page } from "@playwright/test";
-import { content } from "../src/content.ts";
+import { zoneById, type PointOfInterest } from "../src/content.ts";
+import { facingStatus, fastTravel, openGame, tapKeys, tapsTo } from "./walk";
 
-const trail = content.zones.find((zone) => zone.id === "photography-trail")!;
+const trail = zoneById("photography-trail");
 const norway = trail.pointsOfInterest.find((poi) => poi.id === "norway")!;
+const jordan = trail.pointsOfInterest.find((poi) => poi.id === "jordan")!;
 const darkroom = trail.pointsOfInterest.find((poi) => poi.id === "darkroom")!;
 const photos = norway.photos!;
 
-async function walkRightUntilNear(page: Page, title: string) {
-  const status = page.getByRole("status");
-  for (let step = 0; step < 400; step++) {
-    if ((await status.textContent())?.includes(title)) return;
-    await page.keyboard.down("ArrowRight");
-    await page.waitForTimeout(100);
-    await page.keyboard.up("ArrowRight");
-  }
-  throw new Error(`Never got near ${title}`);
+async function fastTravelAndFace(page: Page, poi: PointOfInterest) {
+  const landing = await fastTravel(page, "photography-trail");
+  await tapKeys(page, tapsTo(landing, poi.placement, { face: true }));
+  await expect(page.getByRole("status")).toHaveText(facingStatus(poi.title), { timeout: 60_000 });
 }
 
 async function openNorwayViewfinder(page: Page) {
-  await page.goto("./");
-  await page.getByRole("application", { name: /game/i }).focus();
-  await walkRightUntilNear(page, norway.title);
+  await openGame(page);
+  await fastTravelAndFace(page, norway);
   await page.keyboard.press("Space");
   const viewfinder = page.getByRole("dialog", { name: norway.title });
   await expect(viewfinder).toBeVisible();
   return viewfinder;
 }
+
+test("Fast-travel to the Photography trail lands where its path leaves the Hub, a short walk from Jordan", async ({ page }) => {
+  await openGame(page);
+  const landing = await fastTravel(page, "photography-trail");
+  const taps = tapsTo(landing, jordan.placement, { face: true });
+  expect(taps.length).toBeLessThanOrEqual(20);
+
+  await tapKeys(page, taps);
+  await expect(page.getByRole("status")).toHaveText(facingStatus(jordan.title));
+});
 
 test("the Norway Viewfinder shows a full-resolution photo and steps through the trip", async ({ page }) => {
   const viewfinder = await openNorwayViewfinder(page);
@@ -67,12 +73,12 @@ test("Space activates the focused photo button or link instead of closing the Vi
   await expect(viewfinder).toBeHidden();
 });
 
-test("the darkroom Viewfinder shows the Analog gallery with the film each frame was shot on", async ({ page }) => {
-  await page.goto("./");
-  await page.getByRole("button", { name: "Fast-travel" }).click();
-  await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: trail.title }).click();
-  await page.getByRole("application", { name: /game/i }).focus();
-  await walkRightUntilNear(page, darkroom.title);
+test("the darkroom Viewfinder at the end of the trail shows the Analog gallery with the film each frame was shot on", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openGame(page);
+  await fastTravelAndFace(page, darkroom);
   await page.keyboard.press("Space");
 
   const viewfinder = page.getByRole("dialog", { name: darkroom.title });

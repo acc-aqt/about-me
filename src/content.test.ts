@@ -1,15 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { content, type ZoneId } from "./content";
+import { content, zoneById } from "./content";
 import { neverShowItemsIn } from "./never-show";
 import { PIXEL_FONT_CHARS } from "./pixel-font";
 
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
-
-function zoneById(id: ZoneId) {
-  const zone = content.zones.find((candidate) => candidate.id === id);
-  if (!zone) throw new Error(`No Zone with id ${id}`);
-  return zone;
-}
 
 function linkUrls(poiId: string) {
   const poi = pointsOfInterest.find((candidate) => candidate.id === poiId);
@@ -18,7 +12,7 @@ function linkUrls(poiId: string) {
 }
 
 describe("Content file", () => {
-  it("starts the Route with the Munich Start Zone", () => {
+  it("lists the Munich Hub, where the Player spawns, first", () => {
     expect(content.zones[0].id).toBe("start");
     expect(content.zones[0].title).toMatch(/Munich/);
   });
@@ -35,9 +29,8 @@ describe("Content file", () => {
     expect(mtu?.title).toBe("MTU Aero Engines");
   });
 
-  it("ends the Route with a Contact Zone linking LinkedIn, GitHub, Instagram and carrels.photography", () => {
-    const contact = content.zones.at(-1)!;
-    expect(contact.id).toBe("contact");
+  it("has a Contact Zone linking LinkedIn, GitHub, Instagram and carrels.photography", () => {
+    const contact = zoneById("contact");
     const urls = contact.pointsOfInterest.flatMap((poi) => poi.links ?? []).map((link) => link.url);
     expect(urls).toEqual([
       "https://de.linkedin.com/in/alexander-carrels-8b98b0182",
@@ -75,23 +68,7 @@ describe("Content file", () => {
     }
   });
 
-  it("places Career road stops left to right", () => {
-    const careerRoad = zoneById("career-road");
-    const xs = careerRoad.pointsOfInterest.map((poi) => poi.placement.x);
-    expect(xs).toEqual([...xs].sort((a, b) => a - b));
-  });
 
-  it("orders the Zones along the Route as the spec does", () => {
-    expect(content.zones.map((zone) => zone.id)).toEqual([
-      "start",
-      "career-road",
-      "maker-workshop",
-      "photography-trail",
-      "sport",
-      "music-and-games",
-      "contact",
-    ]);
-  });
 
   it("has a Maker workshop with framewise, lens caps, ReelMaker and preset fitting", () => {
     const zone = zoneById("maker-workshop");
@@ -152,40 +129,29 @@ describe("Content file", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("gives every Zone an id, title and positive width", () => {
+  it("gives every Zone an id and title", () => {
     for (const zone of content.zones) {
       expect(zone.id, JSON.stringify(zone)).toMatch(/^[a-z0-9-]+$/);
       expect(zone.title.trim()).not.toBe("");
-      expect(zone.width).toBeGreaterThan(0);
     }
   });
 
-  it("gives every Point of Interest the required fields and a placement inside its Zone", () => {
+  it("gives every Point of Interest the required fields", () => {
     for (const zone of content.zones) {
       for (const poi of zone.pointsOfInterest) {
         expect(poi.id, poi.title).toMatch(/^[a-z0-9-]+$/);
         expect(poi.title.trim(), poi.id).not.toBe("");
         expect(poi.body.trim(), poi.id).not.toBe("");
-        expect(poi.placement.x, poi.id).toBeGreaterThanOrEqual(0);
-        expect(poi.placement.x, poi.id).toBeLessThanOrEqual(zone.width);
       }
     }
   });
 
-  it("hides one Film roll inside every Zone, away from its Points of Interest", () => {
+  it("hides one Film roll in every Zone", () => {
     for (const zone of content.zones) {
       expect(zone.filmRoll, zone.id).toBeDefined();
-      expect(zone.filmRoll!.x, zone.id).toBeGreaterThanOrEqual(0);
-      expect(zone.filmRoll!.x, zone.id).toBeLessThanOrEqual(zone.width);
-      for (const poi of zone.pointsOfInterest) {
-        expect(Math.abs(zone.filmRoll!.x - poi.placement.x), `${zone.id} roll vs ${poi.id}`).toBeGreaterThan(40);
-      }
     }
   });
 
-  it("keeps the first Film roll off the opening screen, which shows the first 320 pixels of the Route", () => {
-    expect(zoneById("start").filmRoll!.x).toBeGreaterThan(320);
-  });
 
   it("has a Film roll bonus that teases the Analog gallery", () => {
     expect(content.filmRollBonus.title.trim()).not.toBe("");
@@ -216,8 +182,7 @@ describe("Content file", () => {
   });
 
   it("puts Norway ski touring on the Photography trail with several photos", () => {
-    const trail = content.zones.find((zone) => zone.id === "photography-trail");
-    const norway = trail?.pointsOfInterest.find((poi) => poi.id === "norway");
+    const norway = zoneById("photography-trail").pointsOfInterest.find((poi) => poi.id === "norway");
     expect(norway?.title).toMatch(/Norway/);
     expect(norway?.photos?.length).toBeGreaterThanOrEqual(2);
   });
@@ -234,8 +199,6 @@ describe("Content file", () => {
       "Peru",
       "Darkroom",
     ]);
-    const xs = trail.pointsOfInterest.map((poi) => poi.placement.x);
-    expect(xs).toEqual([...xs].sort((a, b) => a - b));
   });
 
   it("gives every trip on the Photography trail a few curated photos and a link to its carrels.photography gallery", () => {

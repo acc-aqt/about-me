@@ -10,9 +10,12 @@ export type Photo = {
   caption?: string;
 };
 
+/** A tile on the Overworld; game-only data that the Plain view ignores. */
 export type Placement = {
-  /** Horizontal offset in world pixels from the left edge of the Zone. */
-  x: number;
+  /** Overworld tile column, counted from the west edge of the map. */
+  col: number;
+  /** Overworld tile row, counted from the north edge of the map. */
+  row: number;
 };
 
 export type PointOfInterest = {
@@ -38,16 +41,14 @@ export type ZoneId =
 export type Zone = {
   id: ZoneId;
   title: string;
-  /** Length of the Zone along the Route, in world pixels. */
-  width: number;
-  /** Id of the Point of Interest Fast-travel lands at; otherwise the Zone's left edge. */
+  /** Id of the Point of Interest Fast-travel lands in front of; otherwise where the Zone's path leaves the Hub. */
   fastTravelTo?: string;
   pointsOfInterest: PointOfInterest[];
   /** Where this Zone's hidden Film roll lies; every Zone should carry one. */
   filmRoll?: Placement;
 };
 
-/** Shown in the Viewfinder once every Film roll on the Route is collected. */
+/** Shown in the Viewfinder once every Film roll on the Overworld is collected. */
 export type FilmRollBonus = {
   title: string;
   body: string;
@@ -69,14 +70,13 @@ export const content: Content = {
   filmRollBonus: {
     title: "All Film rolls collected",
     body:
-      "You found every Film roll on the Route – thanks for exploring! Film is close to my heart: the Analog gallery in the darkroom on the Photography trail holds my 35mm and medium-format photos.",
+      "You found every Film roll – thanks for exploring! Film is close to my heart: the Analog gallery in the darkroom on the Photography trail holds my 35mm and medium-format photos.",
   },
   zones: [
     {
       id: "start",
       title: "Start – Munich",
-      width: 480,
-      filmRoll: { x: 440 },
+      filmRoll: { col: 36, row: 27 },
       pointsOfInterest: [
         {
           id: "intro",
@@ -84,16 +84,15 @@ export const content: Content = {
           subtitle: "Software developer, mechanical engineer, photographer",
           body:
             "I'm a software developer for computer-aided engineering methods at MTU Aero Engines in Munich, and a mechanical engineer from TUM. I'm also a travel and landscape photographer. I like building tools, and I swim, play tennis and go ski touring.",
-          placement: { x: 140 },
+          placement: { col: 26, row: 21 },
         },
       ],
     },
     {
       id: "career-road",
       title: "Career road",
-      width: 1040,
       fastTravelTo: "mtu",
-      filmRoll: { x: 810 },
+      filmRoll: { col: 53, row: 28 },
       pointsOfInterest: [
         {
           id: "tum",
@@ -103,7 +102,7 @@ export const content: Content = {
           body:
             "I studied vehicle and engine technology (BSc, 2010–2014) and mechanical engineering (MSc, 2014–2017, grade 1.3).",
           links: [{ label: "Technical University of Munich", url: "https://www.tum.de/" }],
-          placement: { x: 80 },
+          placement: { col: 40, row: 22 },
         },
         {
           id: "bmw-group",
@@ -113,7 +112,7 @@ export const content: Content = {
           body:
             "I interned in chassis engineering and worked on a research project on CFRP (carbon-fibre-reinforced plastic) technology.",
           links: [{ label: "BMW Group", url: "https://www.bmwgroup.com/" }],
-          placement: { x: 240 },
+          placement: { col: 43, row: 24 },
         },
         {
           id: "canberra-detour",
@@ -122,7 +121,7 @@ export const content: Content = {
           dates: "2014–2015",
           body: "I took a detour to Canberra to do research at the Australian National University.",
           links: [{ label: "Australian National University", url: "https://www.anu.edu.au/" }],
-          placement: { x: 400 },
+          placement: { col: 46, row: 22 },
         },
         {
           id: "forward-engineering",
@@ -131,7 +130,7 @@ export const content: Content = {
           dates: "2017–2018",
           body: "I developed structural simulation methods for composite parts in LS-DYNA.",
           links: [{ label: "Forward Engineering", url: "https://www.forward-engineering.com/" }],
-          placement: { x: 560 },
+          placement: { col: 49, row: 24 },
         },
         {
           id: "arrk-engineering",
@@ -140,7 +139,7 @@ export const content: Content = {
           dates: "2018–2020",
           body: "I built tooling that automates simulation pre- and post-processing.",
           links: [{ label: "ARRK Engineering", url: "https://engineering.arrk.com/" }],
-          placement: { x: 720 },
+          placement: { col: 52, row: 22 },
         },
         {
           id: "mtu",
@@ -150,15 +149,14 @@ export const content: Content = {
           body:
             "I build a platform that coordinates engineering design processes and workflows and stores the engineering data behind them.",
           links: [{ label: "MTU Aero Engines", url: "https://www.mtu.de/" }],
-          placement: { x: 900 },
+          placement: { col: 55, row: 22 },
         },
       ],
     },
     {
       id: "maker-workshop",
       title: "Maker workshop",
-      width: 640,
-      filmRoll: { x: 320 },
+      filmRoll: { col: 9, row: 27 },
       pointsOfInterest: [
         {
           id: "framewise",
@@ -170,35 +168,34 @@ export const content: Content = {
             { label: "framewise on GitHub", url: "https://github.com/acc-aqt/framewise" },
             { label: "framewise-cull on PyPI", url: "https://pypi.org/project/framewise-cull/" },
           ],
-          placement: { x: 80 },
+          placement: { col: 19, row: 22 },
         },
         {
           id: "lens-caps",
           title: "3D-printed lens caps",
           body: "A tool that builds 3D-printable CAD models for slip-over camera lens caps.",
           links: [{ label: "lens-cap-model on GitHub", url: "https://github.com/acc-aqt/lens-cap-model" }],
-          placement: { x: 240 },
+          placement: { col: 15, row: 24 },
         },
         {
           id: "reelmaker",
           title: "ReelMaker",
           body:
             "A tool that builds reels from a set of images and videos and an audio file. It detects the rhythm of the song, so the visuals change on the beat.",
-          placement: { x: 400 },
+          placement: { col: 11, row: 22 },
         },
         {
           id: "preset-fitting",
           title: "Lightroom preset fitting",
           body: "Fits Lightroom presets so that Fuji and Leica raws match a target JPG look.",
-          placement: { x: 560 },
+          placement: { col: 7, row: 24 },
         },
       ],
     },
     {
       id: "photography-trail",
       title: "Photography trail",
-      width: 1440,
-      filmRoll: { x: 60 },
+      filmRoll: { col: 56, row: 9 },
       pointsOfInterest: [
         {
           id: "jordan",
@@ -228,7 +225,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/jordan/" }],
-          placement: { x: 160 },
+          placement: { col: 22, row: 15 },
         },
         {
           id: "norway",
@@ -262,7 +259,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/norway-skitouring/" }],
-          placement: { x: 320 },
+          placement: { col: 11, row: 15 },
         },
         {
           id: "new-york",
@@ -296,7 +293,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/newyork/" }],
-          placement: { x: 480 },
+          placement: { col: 20, row: 11 },
         },
         {
           id: "nepal",
@@ -330,7 +327,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/nepal/" }],
-          placement: { x: 640 },
+          placement: { col: 40, row: 11 },
         },
         {
           id: "lisbon",
@@ -360,7 +357,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/lisbon/" }],
-          placement: { x: 800 },
+          placement: { col: 45, row: 7 },
         },
         {
           id: "eastern-adriatic",
@@ -394,7 +391,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/eastern_adriatic/" }],
-          placement: { x: 960 },
+          placement: { col: 28, row: 7 },
         },
         {
           id: "peru",
@@ -428,7 +425,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/peru/" }],
-          placement: { x: 1120 },
+          placement: { col: 12, row: 7 },
         },
         {
           id: "darkroom",
@@ -468,27 +465,26 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/analog/" }],
-          placement: { x: 1280 },
+          placement: { col: 22, row: 3 },
         },
       ],
     },
     {
       id: "sport",
       title: "Sport",
-      width: 480,
-      filmRoll: { x: 160 },
+      filmRoll: { col: 7, row: 43 },
       pointsOfInterest: [
         {
           id: "swimming-pool",
           title: "Swimming pool",
           body: "Swimming is one of the sports I do for fun.",
-          placement: { x: 80 },
+          placement: { col: 27, row: 36 },
         },
         {
           id: "tennis-court",
           title: "Tennis court",
           body: "I also play tennis.",
-          placement: { x: 240 },
+          placement: { col: 20, row: 34 },
         },
         {
           id: "ski-touring-slope",
@@ -497,15 +493,15 @@ export const content: Content = {
           links: [
             { label: "Norway ski touring gallery", url: "https://www.carrels.photography/norway-skitouring/" },
           ],
-          placement: { x: 400 },
+          placement: { col: 10, row: 36 },
         },
       ],
     },
     {
       id: "music-and-games",
       title: "Music & games",
-      width: 320,
-      filmRoll: { x: 270 },
+      fastTravelTo: "track-back",
+      filmRoll: { col: 49, row: 40 },
       pointsOfInterest: [
         {
           id: "track-back",
@@ -517,28 +513,27 @@ export const content: Content = {
             { label: "Play the track-back web demo", url: "https://acc-aqt.github.io/track-back/web_ui/index.html" },
             { label: "track-back on GitHub", url: "https://github.com/acc-aqt/track-back" },
           ],
-          placement: { x: 160 },
+          placement: { col: 36, row: 34 },
         },
       ],
     },
     {
       id: "contact",
       title: "Contact",
-      width: 320,
       fastTravelTo: "contact-board",
-      filmRoll: { x: 270 },
+      filmRoll: { col: 25, row: 28 },
       pointsOfInterest: [
         {
           id: "contact-board",
           title: "Say hello",
-          body: "Thanks for walking the Route. Find me here:",
+          body: "Thanks for exploring. Find me here:",
           links: [
             { label: "LinkedIn", url: "https://de.linkedin.com/in/alexander-carrels-8b98b0182" },
             { label: "GitHub", url: "https://github.com/acc-aqt" },
             { label: "Instagram", url: "https://www.instagram.com/carrels.photography/" },
             { label: "carrels.photography", url: "https://www.carrels.photography/" },
           ],
-          placement: { x: 160 },
+          placement: { col: 27, row: 27 },
         },
       ],
     },
@@ -559,3 +554,9 @@ export const content: Content = {
     { id: "3d-printing", name: "3D printing", description: "Printing parts such as my slip-over lens caps." },
   ],
 };
+
+export function zoneById(id: ZoneId): Zone {
+  const zone = content.zones.find((candidate) => candidate.id === id);
+  if (!zone) throw new Error(`No Zone with id ${id}`);
+  return zone;
+}

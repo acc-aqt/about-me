@@ -1,52 +1,55 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
-import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
+import { zoneById, type Content, type PointOfInterest, type Zone, type ZoneId } from "./content";
+import { LABEL_PADDING, NAME_PLATE_WRAP_WIDTH, NAME_PLATES, needsWrap, shownNamePlates, ZONE_TITLE_Y, type NamePlate } from "./namePlates";
+import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
-  GROUND_Y,
-  INK,
-  PLAYER_ANIMS,
-  PLAYER_FRAME_COUNT,
-  Pixels,
-  TILE_COLUMNS,
-  TILE_ROWS,
-  TILE_SIZE,
-  TILES,
-  ZONE_ART,
-  paintFilmRoll,
-  paintPlayerSheet,
-  paintSky,
-  type Rgb,
-  type ZoneArt,
-} from "./art";
-import { photoPaths } from "./photos";
+  facedPointOfInterest,
+  fastTravelLanding,
+  filmRollCover,
+  isWalkable,
+  MAP_COLUMNS,
+  MAP_ROWS,
+  OVERWORLD_TILE_SIZE,
+  SPAWN,
+  tileAhead,
+  tileKey,
+  tileToPixels,
+  zoneAt,
+  type Direction,
+  type Tile,
+} from "./overworld";
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CHARS, PIXEL_FONT_NAME, paintPixelFont } from "./pixel-font";
 
 const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 180;
-const PLAYER_SPEED = 160;
-const PLAYER_START_X = 40;
-const SHUTTER_RANGE = 28;
-const FILM_ROLL_PICKUP_RANGE = 8;
-/** How far right of its Film roll a Zone's cover prop stands, so only an edge of the roll peeks out. */
-const FILM_ROLL_COVER_OFFSET = 6;
-const FAST_TRAVEL_OFFSET = 16;
-const POI_LABEL_WIDTH = 120;
-const PRINTS_PER_POI = 3;
-const PRINT_SPACING = 34;
-const PRINT_Y = GROUND_Y - 64;
-const PRINT_FRAME_SIZE = 30;
-const PRINT_MAT_SIZE = 26;
-const PRINT_FRAME_COLOR: Rgb = [60, 40, 25];
-const PRINT_MAT_COLOR: Rgb = [245, 240, 225];
-const CUE_Y = GROUND_Y - 56;
-const CUE_ABOVE_PRINTS_Y = PRINT_Y - 18;
-const CUE_BOB = 2;
+const MAP_WIDTH = MAP_COLUMNS * OVERWORLD_TILE_SIZE;
+const MAP_HEIGHT = MAP_ROWS * OVERWORLD_TILE_SIZE;
+const STEP_TIME = 0.16;
+/** A direction held at least this long walks; a shorter tap in a new direction only turns. */
+const HOLD_DELAY = 0.12;
+/** Seconds between bump sounds while the Player keeps walking into a solid tile. */
+const BUMP_INTERVAL = 0.4;
 const BACKGROUND: Rgb = [20, 20, 30];
-const LABEL_PADDING = 2;
 const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
-const ZONE_TITLE_Y = 8;
-const SIGN_LABEL_Y = GROUND_Y - 30;
+const Z_FILM_ROLL = 1;
+/** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
+const Z_FILM_ROLL_COVER = 1.5;
+const Z_PLAYER = 2;
+const Z_LABEL = 3;
 
-export type GameButton = "left" | "right" | "shutter";
+const KEY_BUTTONS: Record<string, GameButton> = {
+  arrowup: "up",
+  w: "up",
+  arrowdown: "down",
+  s: "down",
+  arrowleft: "left",
+  a: "left",
+  arrowright: "right",
+  d: "right",
+  " ": "shutter",
+};
+
+export type GameButton = Direction | "shutter";
 
 export type GameControls = {
   press(button: GameButton): void;
@@ -54,36 +57,32 @@ export type GameControls = {
   travelTo(zoneId: ZoneId): void;
 };
 
-type PlacedPointOfInterest = { poi: PointOfInterest; x: number };
-type PlacedZone = { zone: Zone; x: number };
-type PlacedFilmRoll = { zone: Zone; x: number; sprite: GameObj };
-type LabelOptions = { wrapWidth?: number; fixed?: boolean };
-
 export type GameEvents = {
-  onNearbyChange(poi: PointOfInterest | null): void;
+  onFacingChange(poi: PointOfInterest | null): void;
   onShutter(poi: PointOfInterest): void;
   canFireShutter(): boolean;
   onFilmRollCollected(zone: Zone): void;
+  onFootstep(): void;
+  onBump(): void;
 };
 
-function layOutRoute(content: Content) {
-  const zones: PlacedZone[] = [];
-  const pointsOfInterest: PlacedPointOfInterest[] = [];
-  let x = 0;
-  for (const zone of content.zones) {
-    zones.push({ zone, x });
-    for (const poi of zone.pointsOfInterest) {
-      pointsOfInterest.push({ poi, x: x + poi.placement.x });
-    }
-    x += zone.width;
-  }
-  return { zones, pointsOfInterest, routeWidth: x };
+type LabelOptions = { wrap?: boolean; fixed?: boolean };
+type Step = { from: Tile; to: Tile; elapsed: number };
+
+/** Where a sprite standing on a tile is anchored: the bottom centre of the tile. */
+function tileFoot(tile: Tile): [number, number] {
+  const [x, y] = tileToPixels(tile);
+  return [x + OVERWORLD_TILE_SIZE / 2, y + OVERWORLD_TILE_SIZE];
 }
 
-function fastTravelX(placed: PlacedZone): number {
-  const target = placed.zone.pointsOfInterest.find((poi) => poi.id === placed.zone.fastTravelTo);
-  if (target) return placed.x + target.placement.x - FAST_TRAVEL_OFFSET;
-  return placed.x + FAST_TRAVEL_OFFSET;
+function loadImage(path: string) {
+  const image = new Image();
+  image.src = import.meta.env.BASE_URL + path;
+  return image;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export function startGame(canvas: HTMLCanvasElement, content: Content, events: GameEvents): GameControls {
@@ -98,82 +97,56 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     global: false,
     debug: false,
     background: BACKGROUND,
-    buttons: {
-      left: { keyboard: ["left", "a"] },
-      right: { keyboard: ["right", "d"] },
-      shutter: { keyboard: ["space"] },
-    },
   });
 
-  const route = layOutRoute(content);
+  const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
 
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  k.loadSprite("tiles", import.meta.env.BASE_URL + "art/kenney-pixel-platformer-tiles.png", {
-    sliceX: TILE_COLUMNS,
-    sliceY: TILE_ROWS,
-  });
   k.loadSprite("player", paintPlayerSheet(), { sliceX: PLAYER_FRAME_COUNT, anims: PLAYER_ANIMS });
   k.loadSprite("film-roll", paintFilmRoll());
   k.loadBitmapFont(PIXEL_FONT_NAME, paintPixelFont(), PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CELL_HEIGHT, {
     chars: PIXEL_FONT_CHARS,
   });
 
-  const filmRolls: PlacedFilmRoll[] = [];
-  const parallaxLayers = route.zones.flatMap((placed) => addZoneScenery(placed, ZONE_ART[placed.zone.id]));
+  const sheets = { town: loadImage("art/kenney-tiny-town-tiles.png"), dungeon: loadImage("art/kenney-tiny-dungeon-tiles.png") };
+  Promise.all([sheets.town.decode(), sheets.dungeon.decode()]).then(() => {
+    k.loadSprite("overworld", paintOverworld(sheets, pointsOfInterest));
+    k.add([k.sprite("overworld"), k.pos(0, 0)]);
+    for (const zone of content.zones) if (zone.filmRoll) addFilmRollCover(zone.filmRoll);
+  });
 
-  function addZoneScenery({ zone, x }: PlacedZone, art: ZoneArt) {
-    const skyName = `sky-${zone.id}`;
-    k.loadSprite(skyName, paintSky(art.sky, GROUND_Y));
-    const frame = k.add([k.rect(zone.width, GROUND_Y), k.pos(x, 0), k.mask("intersect")]);
-    frame.add([k.sprite(skyName, { width: zone.width, height: GROUND_Y })]);
-
-    const cameraAtCentre = Math.min(Math.max(x + zone.width / 2, VIEW_WIDTH / 2), route.routeWidth - VIEW_WIDTH / 2);
-    const layers = art.layers.map((layer, index) => {
-      const depth = reducedMotion ? 0 : layer.depth;
-      const margin = Math.ceil((zone.width / 2 + VIEW_WIDTH) * depth);
-      const pixels = new Pixels(zone.width + margin * 2, GROUND_Y, -margin);
-      layer.paint(pixels, -margin, zone.width + margin);
-      const name = `backdrop-${zone.id}-${index}`;
-      k.loadSprite(name, pixels.canvas);
-      const object = frame.add([k.sprite(name), k.pos(-margin, 0)]);
-      return { object, depth, restX: -margin, cameraAtCentre };
-    });
-
-    art.ground.forEach(({ frame, from }, index) => {
-      const until = art.ground[index + 1]?.from ?? zone.width;
-      addTiles(frame, x + from, GROUND_Y, until - from, art.groundTint);
-    });
-    addTiles(TILES.dirt, x, GROUND_Y + TILE_SIZE, zone.width, art.groundTint);
-    if (zone.filmRoll) {
-      const rollX = x + zone.filmRoll.x;
-      filmRolls.push({ zone, x: rollX, sprite: k.add([k.sprite("film-roll"), k.pos(rollX, GROUND_Y), k.anchor("bot")]) });
-    }
-    const cover = zone.filmRoll && { frame: art.filmRollCover, x: zone.filmRoll.x + FILM_ROLL_COVER_OFFSET };
-    for (const prop of cover ? [...art.props, cover] : art.props) {
-      k.add([k.sprite("tiles", { frame: prop.frame }), k.pos(x + prop.x, GROUND_Y), k.anchor("bot"), k.color(...art.groundTint)]);
-    }
-    return layers;
+  /** Half a tile from the tile's centre towards its cover, so the cover hides half the roll. */
+  function filmRollCentre(roll: Tile): Vec2 {
+    const centre = k.vec2(...tileToPixels(roll)).add(OVERWORLD_TILE_SIZE / 2, OVERWORLD_TILE_SIZE / 2);
+    const cover = filmRollCover(roll);
+    if (!cover) return centre;
+    const towards = tileAhead(roll, cover);
+    return centre.add(k.vec2(towards.col - roll.col, towards.row - roll.row).scale(OVERWORLD_TILE_SIZE / 2));
   }
 
-  function addTiles(frame: number, x: number, y: number, width: number, tint: Rgb) {
-    k.add([k.sprite("tiles", { frame, tiled: true, width, height: TILE_SIZE }), k.pos(x, y), k.color(...tint)]);
+  function addFilmRollCover(roll: Tile) {
+    const cover = filmRollCover(roll);
+    if (!cover) return;
+    const [x, y] = tileToPixels(tileAhead(roll, cover));
+    const size = OVERWORLD_TILE_SIZE;
+    const quad = k.quad(x / MAP_WIDTH, y / MAP_HEIGHT, size / MAP_WIDTH, size / MAP_HEIGHT);
+    k.add([k.sprite("overworld", { quad }), k.pos(x, y), k.z(Z_FILM_ROLL_COVER)]);
   }
 
-  function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
+  function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrap = false, fixed = false }: LabelOptions = {}) {
     const plate = k.add([
       k.rect(0, 0),
       k.pos(position),
       k.anchor(anchor),
       k.color(...LABEL_PLATE_COLOR),
       k.opacity(0.9),
+      k.z(Z_LABEL),
       ...(fixed ? [k.fixed()] : []),
     ]);
     const textY = anchor === "top" ? LABEL_PADDING + 1 : -LABEL_PADDING + 1;
     // Kaplay reports the wrap width as the text width, so only wrap titles that need it.
-    const needsWrap = wrapWidth !== undefined && text.length * PIXEL_FONT_CELL_WIDTH > wrapWidth;
+    const width = wrap && needsWrap(text) ? NAME_PLATE_WRAP_WIDTH : undefined;
     const label = plate.add([
-      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width: needsWrap ? wrapWidth : undefined, align: "center" }),
+      k.text(text, { font: PIXEL_FONT_NAME, size: PIXEL_FONT_CELL_HEIGHT, width, align: "center" }),
       k.pos(0, textY),
       k.anchor(anchor),
       k.color(...INK),
@@ -185,106 +158,166 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     return label;
   }
 
-  function updateParallax(cameraX: number) {
-    for (const layer of parallaxLayers) {
-      if (layer.depth > 0) layer.object.pos.x = Math.round(layer.restX + (cameraX - layer.cameraAtCentre) * layer.depth);
-    }
+  function addNamePlate({ text, at }: NamePlate) {
+    const [x, y] = tileFoot(at);
+    return addLabel(text, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrap: true }).parent!;
   }
 
-  for (const { poi, x } of route.pointsOfInterest) {
-    k.add([k.sprite("tiles", { frame: TILES.sign }), k.pos(x, GROUND_Y), k.anchor("bot")]);
-    addLabel(poi.title, k.vec2(x, SIGN_LABEL_Y), "bot", { wrapWidth: POI_LABEL_WIDTH });
+  const namePlates = new Map(NAME_PLATES.map((namePlate) => [namePlate, addNamePlate(namePlate)]));
+
+  function showNearbyNamePlates() {
+    const shown = new Set(shownNamePlates(tile, facing));
+    for (const [namePlate, plate] of namePlates) plate.hidden = !shown.has(namePlate);
   }
 
-  for (const { poi, x } of route.pointsOfInterest) {
-    const prints = (poi.photos ?? []).slice(0, PRINTS_PER_POI);
-    prints.forEach((photo, index) => {
-      const sprite = photoPaths(photo).thumb;
-      k.loadSprite(sprite, import.meta.env.BASE_URL + sprite);
-      const printX = x + (index - (prints.length - 1) / 2) * PRINT_SPACING;
-      k.add([k.rect(PRINT_FRAME_SIZE, PRINT_FRAME_SIZE), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(...PRINT_FRAME_COLOR)]);
-      k.add([k.rect(PRINT_MAT_SIZE, PRINT_MAT_SIZE), k.pos(printX, PRINT_Y), k.anchor("center"), k.color(...PRINT_MAT_COLOR)]);
-      k.add([k.sprite(sprite), k.pos(printX, PRINT_Y), k.anchor("center")]);
-    });
+  const filmRolls = new Map<string, { zone: Zone; sprite: GameObj }>();
+  for (const zone of content.zones) {
+    if (!zone.filmRoll) continue;
+    const sprite = k.add([k.sprite("film-roll"), k.pos(filmRollCentre(zone.filmRoll)), k.anchor("center"), k.z(Z_FILM_ROLL)]);
+    filmRolls.set(tileKey(zone.filmRoll), { zone, sprite });
   }
-
-  const proximityCue = k.add([
-    k.text("!", { size: 16 }),
-    k.pos(0, 0),
-    k.anchor("bot"),
-    k.color(255, 240, 120),
-    k.outline(2, k.rgb(...INK)),
-    k.opacity(0),
-  ]);
 
   // The current Zone's title sits top-centre of the view, clear of the DOM corner controls.
   const zoneTitle = addLabel("", k.vec2(VIEW_WIDTH / 2, ZONE_TITLE_Y), "top", { fixed: true });
 
-  const player = k.add([k.sprite("player", { anim: "idle" }), k.pos(PLAYER_START_X, GROUND_Y), k.anchor("bot")]);
+  const player = k.add([k.sprite("player", { anim: playerAnim("down", false) }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
 
-  function animatePlayer(direction: number) {
-    if (direction !== 0) player.flipX = direction < 0;
-    const anim = direction === 0 ? "idle" : "walk";
-    if (player.getCurAnim()?.name !== anim) player.play(anim);
+  let tile: Tile = SPAWN;
+  let facing: Direction = "down";
+  let step: Step | null = null;
+  let facedPoi: PointOfInterest | null = null;
+  let lastBumpAt = -Infinity;
+  /** Directions held down, the most recently pressed last. */
+  const held: Direction[] = [];
+  const heldSince = new Map<Direction, number>();
+  /** Each press of a direction, in order, so quick taps are never lost between frames. */
+  const taps: Direction[] = [];
+
+  function setFacedPoi(poi: PointOfInterest | null) {
+    if (poi === facedPoi) return;
+    facedPoi = poi;
+    events.onFacingChange(poi);
   }
 
-  function zoneAt(x: number): Zone {
-    return route.zones.filter((placed) => placed.x <= x).at(-1)!.zone;
+  function showSurroundings() {
+    const zoneId = zoneAt(tile);
+    // Tiles between Zones keep the last Zone's title.
+    if (zoneId) zoneTitle.text = zoneById(zoneId).title;
+    showNearbyNamePlates();
   }
 
-  let nearby: PointOfInterest | null = null;
+  function turn(direction: Direction) {
+    facing = direction;
+    setFacedPoi(facedPointOfInterest(tile, facing) ?? null);
+    showNearbyNamePlates();
+  }
 
-  function nearestInRange(): PlacedPointOfInterest | null {
-    const inRange = route.pointsOfInterest
-      .filter(({ x }) => Math.abs(player.pos.x - x) <= SHUTTER_RANGE)
-      .sort((a, b) => Math.abs(player.pos.x - a.x) - Math.abs(player.pos.x - b.x));
-    return inRange[0] ?? null;
+  function tryStep(direction: Direction) {
+    turn(direction);
+    const next = tileAhead(tile, direction);
+    if (!isWalkable(next)) {
+      bump();
+      return;
+    }
+    step = { from: tile, to: next, elapsed: 0 };
+    setFacedPoi(null);
+  }
+
+  function bump() {
+    if (k.time() - lastBumpAt < BUMP_INTERVAL) return;
+    lastBumpAt = k.time();
+    events.onBump();
+  }
+
+  function arrive() {
+    tile = step!.to;
+    step = null;
+    events.onFootstep();
+    player.pos = k.vec2(...tileFoot(tile));
+    const roll = filmRolls.get(tileKey(tile));
+    if (roll) {
+      filmRolls.delete(tileKey(tile));
+      roll.sprite.destroy();
+      events.onFilmRollCollected(roll.zone);
+    }
+    showSurroundings();
+    setFacedPoi(facedPointOfInterest(tile, facing) ?? null);
+  }
+
+  function nextMove() {
+    const tap = taps.shift();
+    if (tap) {
+      if (tap === facing) tryStep(tap);
+      else turn(tap);
+      return;
+    }
+    const direction = held.at(-1);
+    if (direction && k.time() - heldSince.get(direction)! >= HOLD_DELAY) tryStep(direction);
+  }
+
+  function updateCamera() {
+    const x = clamp(player.pos.x, VIEW_WIDTH / 2, MAP_WIDTH - VIEW_WIDTH / 2);
+    const y = clamp(player.pos.y - OVERWORLD_TILE_SIZE / 2, VIEW_HEIGHT / 2, MAP_HEIGHT - VIEW_HEIGHT / 2);
+    k.setCamPos(Math.round(x), Math.round(y));
   }
 
   k.onUpdate(() => {
-    const direction = Number(k.isButtonDown("right")) - Number(k.isButtonDown("left"));
-    const previousX = player.pos.x;
-    player.pos.x = Math.min(Math.max(player.pos.x + direction * PLAYER_SPEED * k.dt(), 0), route.routeWidth);
-    animatePlayer(direction);
-    zoneTitle.text = zoneAt(player.pos.x).title;
-
-    const halfView = VIEW_WIDTH / 2;
-    const cameraX = Math.min(Math.max(player.pos.x, halfView), route.routeWidth - halfView);
-    k.setCamPos(Math.round(cameraX), VIEW_HEIGHT / 2);
-    updateParallax(cameraX);
-
-    const sweptFrom = Math.min(previousX, player.pos.x) - FILM_ROLL_PICKUP_RANGE;
-    const sweptTo = Math.max(previousX, player.pos.x) + FILM_ROLL_PICKUP_RANGE;
-    for (const roll of filmRolls) {
-      if (roll.sprite.exists() && roll.x >= sweptFrom && roll.x <= sweptTo) {
-        roll.sprite.destroy();
-        events.onFilmRollCollected(roll.zone);
+    if (step) {
+      step.elapsed += k.dt();
+      if (step.elapsed >= STEP_TIME) arrive();
+      else {
+        const from = k.vec2(...tileFoot(step.from));
+        player.pos = from.lerp(k.vec2(...tileFoot(step.to)), step.elapsed / STEP_TIME);
       }
     }
-
-    const current = nearestInRange();
-    if (current?.poi !== nearby) {
-      nearby = current?.poi ?? null;
-      events.onNearbyChange(nearby);
-    }
-    proximityCue.opacity = current ? 1 : 0;
-    if (current) {
-      const cueY = current.poi.photos?.length ? CUE_ABOVE_PRINTS_Y : CUE_Y;
-      const bob = reducedMotion ? 0 : Math.sin(k.time() * 8) * CUE_BOB;
-      proximityCue.pos = k.vec2(current.x, cueY + bob);
-    }
+    if (!step) nextMove();
+    const anim = playerAnim(facing, step !== null);
+    if (player.getCurAnim()?.name !== anim) player.play(anim);
+    updateCamera();
   });
 
-  k.onButtonPress("shutter", () => {
-    if (nearby && events.canFireShutter()) events.onShutter(nearby);
+  function press(button: GameButton) {
+    if (button === "shutter") {
+      if (facedPoi && events.canFireShutter()) events.onShutter(facedPoi);
+      return;
+    }
+    if (held.includes(button)) return;
+    held.push(button);
+    heldSince.set(button, k.time());
+    taps.push(button);
+  }
+
+  function release(button: GameButton) {
+    if (button === "shutter") return;
+    const index = held.indexOf(button);
+    if (index >= 0) held.splice(index, 1);
+  }
+
+  canvas.addEventListener("keydown", (event) => {
+    const button = KEY_BUTTONS[event.key.toLowerCase()];
+    if (!button) return;
+    event.preventDefault();
+    if (!event.repeat) press(button);
   });
+  canvas.addEventListener("keyup", (event) => {
+    const button = KEY_BUTTONS[event.key.toLowerCase()];
+    if (button) release(button);
+  });
+  canvas.addEventListener("blur", () => held.splice(0));
+
+  showSurroundings();
 
   return {
-    press: (button) => k.pressButton(button),
-    release: (button) => k.releaseButton(button),
+    press,
+    release,
     travelTo(zoneId) {
-      const placed = route.zones.find(({ zone }) => zone.id === zoneId);
-      if (placed) player.pos.x = fastTravelX(placed);
+      const landing = fastTravelLanding(zoneId);
+      step = null;
+      taps.splice(0);
+      tile = landing.tile;
+      player.pos = k.vec2(...tileFoot(tile));
+      showSurroundings();
+      turn(landing.facing);
     },
   };
 }
