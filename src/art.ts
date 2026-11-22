@@ -3,7 +3,18 @@
 // (see CREDITS.md); the water, the Player, the Film roll, the Hub's maypole and the themed objects Kenney lacks are
 // painted here.
 
-import { HUB_SIGNPOSTS, MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Direction, type Tile, type TileKind } from "./overworld";
+import {
+  HUB_SIGNPOSTS,
+  MAP_COLUMNS,
+  MAP_ROWS,
+  mapCharAt,
+  OVERWORLD_TILE_SIZE,
+  tileKindAt,
+  tileToPixels,
+  type Direction,
+  type Tile,
+  type TileKind,
+} from "./overworld";
 
 export type Rgb = [number, number, number];
 
@@ -289,10 +300,6 @@ const WATER_DEEP: Rgb = hex("#2f67a8");
 const WATER_GLINT: Rgb = hex("#9fd3f2");
 const SHORE: Rgb = hex("#d9c48c");
 
-function charAt({ col, row }: Tile): string | undefined {
-  return OVERWORLD_MAP[row]?.[col];
-}
-
 function tileSeed({ col, row }: Tile): number {
   return hash(row * MAP_COLUMNS + col);
 }
@@ -303,15 +310,15 @@ function pick<T>(choices: readonly T[], tile: Tile): T {
 
 /** Left, middle or right piece of a row of joined tiles, such as a roof. */
 function piece(tile: Tile, char: string, pieces: readonly [number, number, number]): number {
-  if (charAt({ ...tile, col: tile.col - 1 }) !== char) return pieces[0];
-  if (charAt({ ...tile, col: tile.col + 1 }) !== char) return pieces[2];
+  if (mapCharAt({ ...tile, col: tile.col - 1 }) !== char) return pieces[0];
+  if (mapCharAt({ ...tile, col: tile.col + 1 }) !== char) return pieces[2];
   return pieces[1];
 }
 
 function paintWater(pixels: Pixels, tile: Tile, x: number, y: number) {
   const size = OVERWORLD_TILE_SIZE;
   pixels.rect(x, y, size, size, WATER);
-  if (charAt({ ...tile, row: tile.row - 1 }) !== "~") {
+  if (mapCharAt({ ...tile, row: tile.row - 1 }) !== "~") {
     pixels.rect(x, y, size, 2, SHORE);
     pixels.rect(x, y + 2, size, 2, WATER_DEEP);
   }
@@ -320,25 +327,25 @@ function paintWater(pixels: Pixels, tile: Tile, x: number, y: number) {
 }
 
 function buildingFrame(tile: Tile): number {
-  if (charAt({ ...tile, row: tile.row + 1 }) === "B") {
-    return piece(tile, "B", charAt({ ...tile, row: tile.row - 1 }) === "B" ? TINY_TOWN.roof : TINY_TOWN.roofTop);
+  if (mapCharAt({ ...tile, row: tile.row + 1 }) === "B") {
+    return piece(tile, "B", mapCharAt({ ...tile, row: tile.row - 1 }) === "B" ? TINY_TOWN.roof : TINY_TOWN.roofTop);
   }
   let left = tile.col;
-  while (charAt({ ...tile, col: left - 1 }) === "B") left--;
+  while (mapCharAt({ ...tile, col: left - 1 }) === "B") left--;
   let right = tile.col;
-  while (charAt({ ...tile, col: right + 1 }) === "B") right++;
+  while (mapCharAt({ ...tile, col: right + 1 }) === "B") right++;
   return tile.col === Math.floor((left + right) / 2) ? TINY_TOWN.door : TINY_TOWN.wall;
 }
 
 function treeFrame(tile: Tile): number {
   const surrounded = [-1, 1].every(
-    (offset) => charAt({ ...tile, col: tile.col + offset }) === "T" && charAt({ ...tile, row: tile.row + offset }) === "T",
+    (offset) => mapCharAt({ ...tile, col: tile.col + offset }) === "T" && mapCharAt({ ...tile, row: tile.row + offset }) === "T",
   );
   return surrounded ? TINY_TOWN.forest : pick(TINY_TOWN.trees, tile);
 }
 
 function fenceFrame(tile: Tile): number {
-  const across = [-1, 1].some((offset) => charAt({ ...tile, col: tile.col + offset }) === "#");
+  const across = [-1, 1].some((offset) => mapCharAt({ ...tile, col: tile.col + offset }) === "#");
   return across ? TINY_TOWN.fenceAcross : TINY_TOWN.fenceDown;
 }
 
@@ -802,9 +809,10 @@ export function themedProp(poiId: string): PropName | undefined {
 }
 
 /** Draws a prop standing on a tile: bottom-aligned, so a prop taller than a tile rises into the tile above. */
-function paintProp(pixels: Pixels, { rows, colors, bottom = OVERWORLD_TILE_SIZE }: Prop, { col, row }: Tile) {
-  const x = col * OVERWORLD_TILE_SIZE + Math.floor((OVERWORLD_TILE_SIZE - rows[0].length) / 2);
-  const y = row * OVERWORLD_TILE_SIZE + bottom - rows.length;
+function paintProp(pixels: Pixels, { rows, colors, bottom = OVERWORLD_TILE_SIZE }: Prop, tile: Tile) {
+  const [tileX, tileY] = tileToPixels(tile);
+  const x = tileX + Math.floor((OVERWORLD_TILE_SIZE - rows[0].length) / 2);
+  const y = tileY + bottom - rows.length;
   rows.forEach((row, dy) => [...row].forEach((char, dx) => colors[char] && pixels.dot(x + dx, y + dy, colors[char])));
 }
 
@@ -813,7 +821,7 @@ export type TileSheets = { town: CanvasImageSource; dungeon: CanvasImageSource }
 function paintThemedObject(pixels: Pixels, sheets: TileSheets, prop: PropName, tile: Tile) {
   const art: Prop | readonly PropLayer[] = PROPS[prop];
   const layers: readonly PropLayer[] = Array.isArray(art) ? art : [art];
-  const [x, y] = [tile.col * OVERWORLD_TILE_SIZE, tile.row * OVERWORLD_TILE_SIZE];
+  const [x, y] = tileToPixels(tile);
   for (const layer of layers) {
     if ("town" in layer) pixels.tile(sheets.town, TINY_TOWN_COLUMNS, layer.town, x, y);
     else if ("dungeon" in layer) pixels.tile(sheets.dungeon, TINY_TOWN_COLUMNS, layer.dungeon, x, y);
@@ -860,7 +868,7 @@ export function paintOverworld(sheets: TileSheets, pointsOfInterest: { id: strin
   for (let row = 0; row < MAP_ROWS; row++) {
     for (let col = 0; col < MAP_COLUMNS; col++) {
       const tile = { col, row };
-      const [x, y] = [col * size, row * size];
+      const [x, y] = tileToPixels(tile);
       const kind = tileKindAt(tile)!;
       if (kind === "water") {
         paintWater(pixels, tile, x, y);
@@ -873,12 +881,12 @@ export function paintOverworld(sheets: TileSheets, pointsOfInterest: { id: strin
       if (kind === "maypole" && tileKindAt({ col, row: row + 1 }) !== "maypole") paintProp(pixels, MAYPOLE, tile);
     }
   }
-  for (const { tile } of HUB_SIGNPOSTS) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, tile.col * size, tile.row * size);
+  for (const { tile } of HUB_SIGNPOSTS) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, ...tileToPixels(tile));
   for (const { at, prop } of SCENERY_PROPS) paintThemedObject(pixels, sheets, prop, at);
   for (const { id, placement } of pointsOfInterest) {
     const prop = themedProp(id);
     if (prop) paintThemedObject(pixels, sheets, prop, placement);
-    else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, placement.col * size, placement.row * size);
+    else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, ...tileToPixels(placement));
   }
   return pixels.canvas;
 }

@@ -111,13 +111,22 @@ export function zoneAt({ col, row }: Tile): ZoneId | undefined {
   return containing.sort((a, b) => area(ZONE_RECTS[a]) - area(ZONE_RECTS[b]))[0];
 }
 
-export function tileKindAt({ col, row }: Tile): TileKind | undefined {
-  const char = OVERWORLD_MAP[row]?.[col];
+export function mapCharAt({ col, row }: Tile): string | undefined {
+  return OVERWORLD_MAP[row]?.[col];
+}
+
+export function tileKindAt(tile: Tile): TileKind | undefined {
+  const char = mapCharAt(tile);
   return char === undefined ? undefined : LEGEND[char].kind;
 }
 
-function tileKey({ col, row }: Tile) {
+export function tileKey({ col, row }: Tile) {
   return `${col},${row}`;
+}
+
+/** The map pixel at a tile's top-left corner. */
+export function tileToPixels({ col, row }: Tile): [number, number] {
+  return [col * OVERWORLD_TILE_SIZE, row * OVERWORLD_TILE_SIZE];
 }
 
 const pointsOfInterestByTile = new Map(
@@ -142,7 +151,7 @@ const signpostTiles = new Set(HUB_SIGNPOSTS.map(({ tile }) => tileKey(tile)));
 
 /** Points of Interest and signposts are solid; Film roll tiles keep the ground's walkability. */
 export function isWalkable(tile: Tile): boolean {
-  const char = OVERWORLD_MAP[tile.row]?.[tile.col];
+  const char = mapCharAt(tile);
   return char !== undefined && LEGEND[char].walkable && !pointOfInterestAt(tile) && !signpostTiles.has(tileKey(tile));
 }
 

@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { content, zoneById, type ZoneId } from "../src/content.ts";
-import { DIRECTIONS, fastTravelLanding, isWalkable, SPAWN, tileAhead, type Direction, type Landing, type Tile } from "../src/overworld.ts";
+import { DIRECTIONS, fastTravelLanding, isWalkable, SPAWN, tileAhead, tileKey as key, type Direction, type Landing, type Tile } from "../src/overworld.ts";
 
 export const ARROW_KEYS: Record<Direction, string> = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
 export const DPAD_BUTTONS: Record<Direction, string> = { up: "Walk up", down: "Walk down", left: "Walk left", right: "Walk right" };
@@ -27,8 +27,6 @@ export async function fastTravel(page: Page, zoneId: ZoneId) {
   await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: zoneTitle(zoneId) }).click();
   return fastTravelLanding(zoneId);
 }
-
-const key = ({ col, row }: Tile) => `${col},${row}`;
 
 /** Shortest walk from a tile to any of the goal tiles, as the direction of each step. */
 function shortestWalk(from: Tile, goals: Tile[]): Direction[] {

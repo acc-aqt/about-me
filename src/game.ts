@@ -12,6 +12,8 @@ import {
   OVERWORLD_TILE_SIZE,
   SPAWN,
   tileAhead,
+  tileKey,
+  tileToPixels,
   zoneAt,
   type Direction,
   type Tile,
@@ -68,11 +70,10 @@ export type GameEvents = {
 type LabelOptions = { wrap?: boolean; fixed?: boolean };
 type Step = { from: Tile; to: Tile; elapsed: number };
 
-const tileKey = ({ col, row }: Tile) => `${col},${row}`;
-
 /** Where a sprite standing on a tile is anchored: the bottom centre of the tile. */
-function tileFoot({ col, row }: Tile): [number, number] {
-  return [(col + 0.5) * OVERWORLD_TILE_SIZE, (row + 1) * OVERWORLD_TILE_SIZE];
+function tileFoot(tile: Tile): [number, number] {
+  const [x, y] = tileToPixels(tile);
+  return [x + OVERWORLD_TILE_SIZE / 2, y + OVERWORLD_TILE_SIZE];
 }
 
 function loadImage(path: string) {
@@ -116,7 +117,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   /** Half a tile from the tile's centre towards its cover, so the cover hides half the roll. */
   function filmRollCentre(roll: Tile): Vec2 {
-    const centre = k.vec2((roll.col + 0.5) * OVERWORLD_TILE_SIZE, (roll.row + 0.5) * OVERWORLD_TILE_SIZE);
+    const centre = k.vec2(...tileToPixels(roll)).add(OVERWORLD_TILE_SIZE / 2, OVERWORLD_TILE_SIZE / 2);
     const cover = filmRollCover(roll);
     if (!cover) return centre;
     const towards = tileAhead(roll, cover);
@@ -126,10 +127,10 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   function addFilmRollCover(roll: Tile) {
     const cover = filmRollCover(roll);
     if (!cover) return;
-    const { col, row } = tileAhead(roll, cover);
+    const [x, y] = tileToPixels(tileAhead(roll, cover));
     const size = OVERWORLD_TILE_SIZE;
-    const quad = k.quad((col * size) / MAP_WIDTH, (row * size) / MAP_HEIGHT, size / MAP_WIDTH, size / MAP_HEIGHT);
-    k.add([k.sprite("overworld", { quad }), k.pos(col * size, row * size), k.z(Z_FILM_ROLL_COVER)]);
+    const quad = k.quad(x / MAP_WIDTH, y / MAP_HEIGHT, size / MAP_WIDTH, size / MAP_HEIGHT);
+    k.add([k.sprite("overworld", { quad }), k.pos(x, y), k.z(Z_FILM_ROLL_COVER)]);
   }
 
   function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrap = false, fixed = false }: LabelOptions = {}) {

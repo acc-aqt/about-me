@@ -1,5 +1,5 @@
 import { content, zoneById } from "./content";
-import { HUB_SIGNPOSTS, OVERWORLD_TILE_SIZE, tileAhead, type Direction, type Tile } from "./overworld";
+import { HUB_SIGNPOSTS, OVERWORLD_TILE_SIZE, tileAhead, tileToPixels, type Direction, type Tile } from "./overworld";
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH } from "./pixel-font";
 
 export const LABEL_PADDING = 2;
@@ -48,8 +48,9 @@ export function namePlateBox({ text, at }: NamePlate): PlateBox {
   const textWidth = needsWrap(text) ? NAME_PLATE_WRAP_WIDTH : text.length * PIXEL_FONT_CELL_WIDTH;
   const width = textWidth + LABEL_PADDING * 2;
   const height = lineCount(text) * PIXEL_FONT_CELL_HEIGHT + LABEL_PADDING * 2;
-  const centre = (at.col + 0.5) * OVERWORLD_TILE_SIZE;
-  const bottom = at.row * OVERWORLD_TILE_SIZE - 1;
+  const [x, y] = tileToPixels(at);
+  const centre = x + OVERWORLD_TILE_SIZE / 2;
+  const bottom = y - 1;
   return { left: centre - width / 2, top: bottom - height, right: centre + width / 2, bottom };
 }
 

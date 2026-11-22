@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { content, zoneById } from "./content";
-import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, HUB_SIGNPOSTS, isReachableFromSpawn, isWalkable, tileAhead, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, type TileKind, ZONE_RECTS, zoneAt } from "./overworld";
+import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, HUB_SIGNPOSTS, isReachableFromSpawn, isWalkable, tileAhead, tileKey as key, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, type TileKind, ZONE_RECTS, zoneAt } from "./overworld";
 
 const zoneIds = content.zones.map((zone) => zone.id);
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
@@ -14,7 +14,6 @@ function neighbours(tile: Tile) {
 
 /** Fewest steps from any walkable Hub tile to stand next to the target. */
 function stepsFromHubTo(target: Tile) {
-  const key = ({ col, row }: Tile) => `${col},${row}`;
   const goals = new Set(neighbours(target).map(key));
   const seen = new Set<string>();
   let frontier: Tile[] = [];
