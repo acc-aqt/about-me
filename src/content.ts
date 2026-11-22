@@ -11,8 +11,12 @@ export type Photo = {
 };
 
 export type Placement = {
-  /** Horizontal offset in world pixels from the left edge of the Zone. */
+  /** Horizontal offset in world pixels from the left edge of the Zone on the side-scrolling Route. */
   x: number;
+  /** Overworld tile column, counted from the west edge of the map. */
+  col: number;
+  /** Overworld tile row, counted from the north edge of the map. */
+  row: number;
 };
 
 export type PointOfInterest = {
@@ -76,7 +80,7 @@ export const content: Content = {
       id: "start",
       title: "Start – Munich",
       width: 480,
-      filmRoll: { x: 440 },
+      filmRoll: { x: 440, col: 36, row: 27 },
       pointsOfInterest: [
         {
           id: "intro",
@@ -84,7 +88,7 @@ export const content: Content = {
           subtitle: "Software developer, mechanical engineer, photographer",
           body:
             "I'm a software developer for computer-aided engineering methods at MTU Aero Engines in Munich, and a mechanical engineer from TUM. I'm also a travel and landscape photographer. I like building tools, and I swim, play tennis and go ski touring.",
-          placement: { x: 140 },
+          placement: { x: 140, col: 26, row: 21 },
         },
       ],
     },
@@ -93,7 +97,7 @@ export const content: Content = {
       title: "Career road",
       width: 1040,
       fastTravelTo: "mtu",
-      filmRoll: { x: 810 },
+      filmRoll: { x: 810, col: 53, row: 28 },
       pointsOfInterest: [
         {
           id: "tum",
@@ -103,7 +107,7 @@ export const content: Content = {
           body:
             "I studied vehicle and engine technology (BSc, 2010–2014) and mechanical engineering (MSc, 2014–2017, grade 1.3).",
           links: [{ label: "Technical University of Munich", url: "https://www.tum.de/" }],
-          placement: { x: 80 },
+          placement: { x: 80, col: 40, row: 22 },
         },
         {
           id: "bmw-group",
@@ -113,7 +117,7 @@ export const content: Content = {
           body:
             "I interned in chassis engineering and worked on a research project on CFRP (carbon-fibre-reinforced plastic) technology.",
           links: [{ label: "BMW Group", url: "https://www.bmwgroup.com/" }],
-          placement: { x: 240 },
+          placement: { x: 240, col: 43, row: 24 },
         },
         {
           id: "canberra-detour",
@@ -122,7 +126,7 @@ export const content: Content = {
           dates: "2014–2015",
           body: "I took a detour to Canberra to do research at the Australian National University.",
           links: [{ label: "Australian National University", url: "https://www.anu.edu.au/" }],
-          placement: { x: 400 },
+          placement: { x: 400, col: 46, row: 22 },
         },
         {
           id: "forward-engineering",
@@ -131,7 +135,7 @@ export const content: Content = {
           dates: "2017–2018",
           body: "I developed structural simulation methods for composite parts in LS-DYNA.",
           links: [{ label: "Forward Engineering", url: "https://www.forward-engineering.com/" }],
-          placement: { x: 560 },
+          placement: { x: 560, col: 49, row: 24 },
         },
         {
           id: "arrk-engineering",
@@ -140,7 +144,7 @@ export const content: Content = {
           dates: "2018–2020",
           body: "I built tooling that automates simulation pre- and post-processing.",
           links: [{ label: "ARRK Engineering", url: "https://engineering.arrk.com/" }],
-          placement: { x: 720 },
+          placement: { x: 720, col: 52, row: 22 },
         },
         {
           id: "mtu",
@@ -150,7 +154,7 @@ export const content: Content = {
           body:
             "I build a platform that coordinates engineering design processes and workflows and stores the engineering data behind them.",
           links: [{ label: "MTU Aero Engines", url: "https://www.mtu.de/" }],
-          placement: { x: 900 },
+          placement: { x: 900, col: 55, row: 22 },
         },
       ],
     },
@@ -158,7 +162,7 @@ export const content: Content = {
       id: "maker-workshop",
       title: "Maker workshop",
       width: 640,
-      filmRoll: { x: 320 },
+      filmRoll: { x: 320, col: 9, row: 27 },
       pointsOfInterest: [
         {
           id: "framewise",
@@ -170,27 +174,27 @@ export const content: Content = {
             { label: "framewise on GitHub", url: "https://github.com/acc-aqt/framewise" },
             { label: "framewise-cull on PyPI", url: "https://pypi.org/project/framewise-cull/" },
           ],
-          placement: { x: 80 },
+          placement: { x: 80, col: 19, row: 22 },
         },
         {
           id: "lens-caps",
           title: "3D-printed lens caps",
           body: "A tool that builds 3D-printable CAD models for slip-over camera lens caps.",
           links: [{ label: "lens-cap-model on GitHub", url: "https://github.com/acc-aqt/lens-cap-model" }],
-          placement: { x: 240 },
+          placement: { x: 240, col: 15, row: 24 },
         },
         {
           id: "reelmaker",
           title: "ReelMaker",
           body:
             "A tool that builds reels from a set of images and videos and an audio file. It detects the rhythm of the song, so the visuals change on the beat.",
-          placement: { x: 400 },
+          placement: { x: 400, col: 11, row: 22 },
         },
         {
           id: "preset-fitting",
           title: "Lightroom preset fitting",
           body: "Fits Lightroom presets so that Fuji and Leica raws match a target JPG look.",
-          placement: { x: 560 },
+          placement: { x: 560, col: 7, row: 24 },
         },
       ],
     },
@@ -198,7 +202,7 @@ export const content: Content = {
       id: "photography-trail",
       title: "Photography trail",
       width: 1440,
-      filmRoll: { x: 60 },
+      filmRoll: { x: 60, col: 56, row: 9 },
       pointsOfInterest: [
         {
           id: "jordan",
@@ -228,7 +232,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/jordan/" }],
-          placement: { x: 160 },
+          placement: { x: 160, col: 22, row: 15 },
         },
         {
           id: "norway",
@@ -262,7 +266,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/norway-skitouring/" }],
-          placement: { x: 320 },
+          placement: { x: 320, col: 11, row: 15 },
         },
         {
           id: "new-york",
@@ -296,7 +300,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/newyork/" }],
-          placement: { x: 480 },
+          placement: { x: 480, col: 20, row: 11 },
         },
         {
           id: "nepal",
@@ -330,7 +334,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/nepal/" }],
-          placement: { x: 640 },
+          placement: { x: 640, col: 40, row: 11 },
         },
         {
           id: "lisbon",
@@ -360,7 +364,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/lisbon/" }],
-          placement: { x: 800 },
+          placement: { x: 800, col: 45, row: 7 },
         },
         {
           id: "eastern-adriatic",
@@ -394,7 +398,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/eastern_adriatic/" }],
-          placement: { x: 960 },
+          placement: { x: 960, col: 28, row: 7 },
         },
         {
           id: "peru",
@@ -428,7 +432,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/peru/" }],
-          placement: { x: 1120 },
+          placement: { x: 1120, col: 12, row: 7 },
         },
         {
           id: "darkroom",
@@ -468,7 +472,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/analog/" }],
-          placement: { x: 1280 },
+          placement: { x: 1280, col: 21, row: 2 },
         },
       ],
     },
@@ -476,19 +480,19 @@ export const content: Content = {
       id: "sport",
       title: "Sport",
       width: 480,
-      filmRoll: { x: 160 },
+      filmRoll: { x: 160, col: 7, row: 43 },
       pointsOfInterest: [
         {
           id: "swimming-pool",
           title: "Swimming pool",
           body: "Swimming is one of the sports I do for fun.",
-          placement: { x: 80 },
+          placement: { x: 80, col: 27, row: 36 },
         },
         {
           id: "tennis-court",
           title: "Tennis court",
           body: "I also play tennis.",
-          placement: { x: 240 },
+          placement: { x: 240, col: 20, row: 34 },
         },
         {
           id: "ski-touring-slope",
@@ -497,7 +501,7 @@ export const content: Content = {
           links: [
             { label: "Norway ski touring gallery", url: "https://www.carrels.photography/norway-skitouring/" },
           ],
-          placement: { x: 400 },
+          placement: { x: 400, col: 10, row: 36 },
         },
       ],
     },
@@ -505,7 +509,7 @@ export const content: Content = {
       id: "music-and-games",
       title: "Music & games",
       width: 320,
-      filmRoll: { x: 270 },
+      filmRoll: { x: 270, col: 49, row: 40 },
       pointsOfInterest: [
         {
           id: "track-back",
@@ -517,7 +521,7 @@ export const content: Content = {
             { label: "Play the track-back web demo", url: "https://acc-aqt.github.io/track-back/web_ui/index.html" },
             { label: "track-back on GitHub", url: "https://github.com/acc-aqt/track-back" },
           ],
-          placement: { x: 160 },
+          placement: { x: 160, col: 36, row: 34 },
         },
       ],
     },
@@ -526,7 +530,7 @@ export const content: Content = {
       title: "Contact",
       width: 320,
       fastTravelTo: "contact-board",
-      filmRoll: { x: 270 },
+      filmRoll: { x: 270, col: 26, row: 32 },
       pointsOfInterest: [
         {
           id: "contact-board",
@@ -538,7 +542,7 @@ export const content: Content = {
             { label: "Instagram", url: "https://www.instagram.com/carrels.photography/" },
             { label: "carrels.photography", url: "https://www.carrels.photography/" },
           ],
-          placement: { x: 160 },
+          placement: { x: 160, col: 24, row: 31 },
         },
       ],
     },
