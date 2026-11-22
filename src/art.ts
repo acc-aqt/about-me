@@ -2,7 +2,7 @@
 // The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town tiles (see CREDITS.md);
 // the water, the Player and the Film roll are painted here.
 
-import { MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Tile, type TileKind } from "./overworld";
+import { MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Direction, type Tile, type TileKind } from "./overworld";
 
 export type Rgb = [number, number, number];
 
@@ -70,7 +70,9 @@ const PLAYER_COLORS: Record<string, Rgb> = {
   o: hex("#6b4129"),
 };
 
-const PLAYER_BODY = [
+type PlayerPose = { body: string[]; legs: string[][] };
+
+const PLAYER_SIDE_BODY = [
   "......kkkk......",
   ".....kbbbbk.....",
   "....kbbbbbbk....",
@@ -89,7 +91,8 @@ const PLAYER_BODY = [
   "....kJJJJJJk....",
 ];
 
-const PLAYER_LEGS = [
+/** Standing, then the stride, passing and opposite-stride poses. */
+const PLAYER_SIDE_LEGS = [
   [
     "....kppkppk.....",
     "....kppkppk.....",
@@ -132,21 +135,114 @@ const PLAYER_LEGS = [
   ],
 ];
 
-/** Leg pose per sheet frame: frame 0 stands idle, the rest form the walk cycle. */
-const PLAYER_LEG_SEQUENCE = [0, 1, 2, 3, 2];
+const PLAYER_FRONT_BODY = [
+  "......kkkk......",
+  ".....kbbbbk.....",
+  "....kbbbbbbk....",
+  "...kBBBBBBBBk...",
+  "....khsssshk....",
+  "....ksessesk....",
+  "....kssssssk....",
+  ".....kssssk.....",
+  "....kjrjjrjk....",
+  "...kjjrjjrjjk...",
+  "..kjjjcggcjjjk..",
+  "..kjjjcllcjjjk..",
+  "..ksjjccccjjsk..",
+  "...kJjjjjjjJk...",
+  "...kJjjjjjjJk...",
+  "....kJJJJJJk....",
+];
 
-export const PLAYER_FRAME_COUNT = PLAYER_LEG_SEQUENCE.length;
+const PLAYER_BACK_BODY = [
+  "......kkkk......",
+  ".....kbbbbk.....",
+  "....kbbbbbbk....",
+  "....kBBBBBBk....",
+  "....khhhhhhk....",
+  "....khhhhhhk....",
+  "....khhhhhhk....",
+  ".....kssssk.....",
+  "....kjjjjrjk....",
+  "...kjjjjrjjjk...",
+  "..kjjjjrjjjjjk..",
+  "..kjjjrjjjjjjk..",
+  "..ksjjjjjjjjsk..",
+  "...kJjjjjjjJk...",
+  "...kJjjjjjjJk...",
+  "....kJJJJJJk....",
+];
 
-export const PLAYER_ANIMS = {
-  idle: 0,
-  walk: { from: 1, to: PLAYER_FRAME_COUNT - 1, loop: true, speed: 10 },
+const PLAYER_FACING_LEGS_STANDING = [
+  "....kppkkppk....",
+  "....kppkkppk....",
+  "....kppkkppk....",
+  "....kppkkppk....",
+  "....kppkkppk....",
+  "...koookkoook...",
+  "...koookkoook...",
+  "...kkkkkkkkkk...",
+];
+
+const PLAYER_FACING_LEGS_STRIDE = [
+  "....kppkkppk....",
+  "....kppkkppk....",
+  "....kppkkppk....",
+  "...koookkppk....",
+  "...koookkppk....",
+  "...kkkkkkoook...",
+  "........koook...",
+  "........kkkkk...",
+];
+
+function mirror(rows: string[]): string[] {
+  return rows.map((row) => [...row].reverse().join(""));
+}
+
+/** Legs seen from the front or back: one foot lifts, they pass, then the other lifts. */
+const PLAYER_FACING_LEGS = [
+  PLAYER_FACING_LEGS_STANDING,
+  PLAYER_FACING_LEGS_STRIDE,
+  PLAYER_FACING_LEGS_STANDING,
+  mirror(PLAYER_FACING_LEGS_STRIDE),
+];
+
+const PLAYER_POSES: Record<Direction, PlayerPose> = {
+  down: { body: PLAYER_FRONT_BODY, legs: PLAYER_FACING_LEGS },
+  up: { body: PLAYER_BACK_BODY, legs: PLAYER_FACING_LEGS },
+  left: { body: mirror(PLAYER_SIDE_BODY), legs: PLAYER_SIDE_LEGS.map(mirror) },
+  right: { body: PLAYER_SIDE_BODY, legs: PLAYER_SIDE_LEGS },
 };
+
+/** Leg pose per frame of one direction: frame 0 stands idle, the rest form the walk cycle. */
+const PLAYER_LEG_SEQUENCE = [0, 1, 2, 3, 2];
+const PLAYER_PASSING_LEGS = 2;
+
+const PLAYER_DIRECTIONS: Direction[] = ["down", "up", "left", "right"];
+
+export const PLAYER_FRAME_COUNT = PLAYER_DIRECTIONS.length * PLAYER_LEG_SEQUENCE.length;
+
+export function playerAnim(facing: Direction, walking: boolean): string {
+  return `${walking ? "walk" : "idle"}-${facing}`;
+}
+
+export const PLAYER_ANIMS = Object.fromEntries(
+  PLAYER_DIRECTIONS.flatMap((direction, index) => {
+    const first = index * PLAYER_LEG_SEQUENCE.length;
+    const last = first + PLAYER_LEG_SEQUENCE.length - 1;
+    return [
+      [playerAnim(direction, false), first],
+      [playerAnim(direction, true), { from: first + 1, to: last, loop: true, speed: 10 }],
+    ];
+  }),
+);
 
 export function paintPlayerSheet(): HTMLCanvasElement {
   const pixels = new Pixels(PLAYER_FRAME_WIDTH * PLAYER_FRAME_COUNT, PLAYER_FRAME_HEIGHT);
-  PLAYER_LEG_SEQUENCE.forEach((legs, frame) => {
-    const bob = legs === 2 ? 1 : 0;
-    const rows = [...PLAYER_BODY.map((row, y) => ({ row, y: y + bob })), ...PLAYER_LEGS[legs].map((row, y) => ({ row, y: y + PLAYER_BODY.length }))];
+  const frames = PLAYER_DIRECTIONS.flatMap((direction) => PLAYER_LEG_SEQUENCE.map((legs) => ({ pose: PLAYER_POSES[direction], legs })));
+  frames.forEach(({ pose, legs }, frame) => {
+    const bob = legs === PLAYER_PASSING_LEGS ? 1 : 0;
+    const rows = [...pose.body.map((row, y) => ({ row, y: y + bob })), ...pose.legs[legs].map((row, y) => ({ row, y: y + pose.body.length }))];
     for (const { row, y } of rows) {
       [...row].forEach((char, x) => {
         const color = PLAYER_COLORS[char];
