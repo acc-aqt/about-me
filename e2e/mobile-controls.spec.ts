@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { DPAD_BUTTONS, facingStatus, holdButton, tapDpad } from "./walk";
+import { DPAD_BUTTONS, facingStatus, fastTravel, holdButton, openGame as openGameWithKeyboard, tapDpad, tapKeys } from "./walk";
 import type { Direction } from "../src/overworld.ts";
 
 const PORTRAIT = { width: 412, height: 839 };
@@ -18,6 +18,15 @@ async function fastTravelToMtuByTouch(page: Page) {
   await page.getByRole("button", { name: "Fast-travel" }).tap();
   await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: "Career road" }).tap();
   await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+}
+
+async function expectInside(outer: Locator, inner: Locator) {
+  const outerBox = (await outer.boundingBox())!;
+  const innerBox = (await inner.boundingBox())!;
+  expect(innerBox.x).toBeGreaterThanOrEqual(outerBox.x);
+  expect(innerBox.y).toBeGreaterThanOrEqual(outerBox.y);
+  expect(innerBox.x + innerBox.width).toBeLessThanOrEqual(outerBox.x + outerBox.width + 0.5);
+  expect(innerBox.y + innerBox.height).toBeLessThanOrEqual(outerBox.y + outerBox.height + 0.5);
 }
 
 async function expectInsideViewport(page: Page, locator: Locator) {
@@ -59,6 +68,50 @@ test.describe("on a phone", () => {
     await expect(page.getByRole("status")).not.toHaveText(facingStatus("MTU Aero Engines"));
   });
 
+  test("in portrait the game runs inside the Handheld", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    const handheld = page.getByTestId("handheld");
+    const game = page.getByRole("application", { name: /game/i });
+    await expect(handheld).toBeVisible();
+    await expectInsideViewport(page, handheld);
+    await expectInside(handheld, game);
+    const gameBox = (await game.boundingBox())!;
+    expect(gameBox.width / gameBox.height).toBeCloseTo(16 / 9, 1);
+  });
+
+  test("in portrait the Handheld's printed labels are hidden from assistive technology and carry no Nintendo marks", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    await expect(page.getByText("DOT MATRIX PORTFOLIO")).toBeVisible();
+    await expect(page.getByText("ALEXANDER CARRELS")).toBeVisible();
+    const accessibilityTree = await page.locator("body").ariaSnapshot();
+    expect(accessibilityTree).not.toContain("DOT MATRIX PORTFOLIO");
+    expect(accessibilityTree).not.toContain("ALEXANDER CARRELS");
+    await expect(page.locator("body")).not.toContainText(/nintendo|game ?boy/i);
+  });
+
+  test("in portrait the hint and Film roll counter show under the game, not over it", async ({ page }) => {
+    await page.setViewportSize(PORTRAIT);
+    await openGame(page);
+
+    const gameBox = (await page.getByRole("application", { name: /game/i }).boundingBox())!;
+    for (const label of [page.getByRole("status"), page.getByText(/^Film rolls:/)]) {
+      await expect(label).toBeVisible();
+      expect((await label.boundingBox())!.y).toBeGreaterThanOrEqual(gameBox.y + gameBox.height);
+    }
+  });
+
+  test("in landscape there is no Handheld and the game fills the screen", async ({ page }) => {
+    await page.setViewportSize(LANDSCAPE);
+    await openGame(page);
+
+    await expect(page.getByRole("application", { name: /game/i })).toHaveJSProperty("offsetWidth", LANDSCAPE.width);
+    await expect(page.getByRole("application", { name: /game/i })).toHaveJSProperty("offsetHeight", LANDSCAPE.height);
+  });
+
   for (const [orientation, viewport] of [
     ["portrait", PORTRAIT],
     ["landscape", LANDSCAPE],
@@ -81,6 +134,22 @@ test.describe("on a phone", () => {
       await expectInsideViewport(page, viewfinder);
     });
   }
+});
+
+test("a portrait-shaped desktop window shows the Handheld, and the arrow keys still walk", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Desktop only");
+  await page.setViewportSize({ width: 600, height: 1000 });
+  await openGameWithKeyboard(page);
+
+  const handheld = page.getByTestId("handheld");
+  await expect(handheld).toBeVisible();
+  await expectInsideViewport(page, handheld);
+  await expectInside(handheld, page.getByRole("application", { name: /game/i }));
+
+  await fastTravel(page, "career-road");
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
+  await tapKeys(page, LOOP_BACK_TO_MTU);
+  await expect(page.getByRole("status")).toHaveText(facingStatus("MTU Aero Engines"));
 });
 
 test("on a desktop the on-screen buttons are not shown", async ({ page, isMobile }) => {

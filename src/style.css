@@ -5,6 +5,11 @@
   --accent: #e6b43c;
   --paper: #fbf8f0;
   --ink: #1d1d24;
+  --shell: #c9c4b6;
+  --shell-ink: #3c3a44;
+  --bezel: #5d5e6e;
+  --bezel-ink: #d8d4e2;
+  --logo-ink: #2a2f86;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--fg);
   background: var(--bg);
@@ -29,6 +34,11 @@ body {
 .screen {
   position: absolute;
   inset: 0;
+}
+
+.screen-window {
+  width: 100%;
+  height: 100%;
 }
 
 #game {
@@ -72,7 +82,7 @@ body {
   display: none;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse), (orientation: portrait) {
   .hint {
     top: 5.75rem;
     bottom: auto;
@@ -173,6 +183,127 @@ body {
 .skip-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.bezel-label,
+.handheld-logo {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  .handheld {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 28rem);
+    height: 100dvh;
+    margin: 0 auto;
+    padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+      max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+    border-radius: 0.75rem 0.75rem 3rem 0.75rem;
+    background: var(--shell);
+    color: var(--shell-ink);
+  }
+
+  .skip-link {
+    position: static;
+    align-self: flex-end;
+    margin-bottom: 0.75rem;
+    background: none;
+    color: var(--shell-ink);
+    font-size: 0.75rem;
+  }
+
+  .stage {
+    position: static;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .screen {
+    position: static;
+    padding: 0.5rem 1.25rem 0.75rem;
+    border-radius: 0.5rem 0.5rem 2rem 0.5rem;
+    background: var(--bezel);
+  }
+
+  .bezel-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.4rem;
+    color: var(--bezel-ink);
+    font: bold 0.6rem/1 ui-monospace, monospace;
+    letter-spacing: 0.15em;
+  }
+
+  .power-led {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #e8343c;
+    box-shadow: 0 0 0.35rem #e8343c;
+  }
+
+  .screen-window {
+    height: auto;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .status-strip {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: calc(2 * 1.3 * 0.7rem);
+    margin-top: 0.4rem;
+    color: var(--bezel-ink);
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+
+  .hint,
+  .film-rolls {
+    position: static;
+    max-width: none;
+    padding: 0;
+    transform: none;
+    background: none;
+    font-size: inherit;
+  }
+
+  .hint {
+    text-align: left;
+  }
+
+  .film-rolls {
+    flex-shrink: 0;
+  }
+
+  .handheld-logo {
+    display: block;
+    margin: 0.6rem 0 0;
+    color: var(--logo-ink);
+    font: italic bold 0.95rem/1 ui-monospace, monospace;
+    letter-spacing: 0.1em;
+  }
+
+  .controls {
+    display: flex;
+    flex: 1;
+  }
+
+  .touch-controls {
+    position: static;
+    flex: 1;
+    align-items: center;
+    padding: 0.5rem;
+  }
 }
 
 .overlay {
