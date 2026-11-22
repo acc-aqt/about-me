@@ -1,4 +1,4 @@
-// Original chiptune loop and shutter click, synthesised with the Web Audio API so no audio files are shipped.
+// Original chiptune loop, shutter click, footstep and bump, synthesised with the Web Audio API so no audio files are shipped.
 
 const STEP_SECONDS = 0.2;
 const LOOKAHEAD_SECONDS = 0.3;
@@ -19,7 +19,16 @@ export type Audio = {
   isMuted(): boolean;
   setMuted(muted: boolean): void;
   playShutter(): void;
+  playFootstep(): void;
+  playBump(): void;
 };
+
+type NoiseBurst = { filter: BiquadFilterType; cutoff: number; duration: number; volume: number };
+
+const SHUTTER_CLICK: Omit<NoiseBurst, "volume"> = { filter: "highpass", cutoff: 1800, duration: 0.04 };
+const FOOTSTEP: NoiseBurst = { filter: "lowpass", cutoff: 900, duration: 0.03, volume: 0.25 };
+const BUMP: NoiseBurst = { filter: "lowpass", cutoff: 220, duration: 0.08, volume: 0.9 };
+const NOISE_SECONDS = 0.1;
 
 function frequency(midiNote: number) {
   return 440 * 2 ** ((midiNote - 69) / 12);
@@ -45,22 +54,22 @@ function playTone(
   oscillator.stop(start + duration);
 }
 
-function playClick(context: AudioContext, output: AudioNode, noise: AudioBuffer, start: number, volume: number) {
+function playNoise(context: AudioContext, output: AudioNode, noise: AudioBuffer, start: number, burst: NoiseBurst) {
   const source = context.createBufferSource();
   const filter = context.createBiquadFilter();
   const envelope = context.createGain();
   source.buffer = noise;
-  filter.type = "highpass";
-  filter.frequency.value = 1800;
-  envelope.gain.setValueAtTime(volume, start);
-  envelope.gain.exponentialRampToValueAtTime(0.001, start + 0.04);
+  filter.type = burst.filter;
+  filter.frequency.value = burst.cutoff;
+  envelope.gain.setValueAtTime(burst.volume, start);
+  envelope.gain.exponentialRampToValueAtTime(0.001, start + burst.duration);
   source.connect(filter).connect(envelope).connect(output);
   source.start(start);
-  source.stop(start + 0.05);
+  source.stop(start + burst.duration + 0.01);
 }
 
 function createNoise(context: AudioContext) {
-  const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * 0.05), context.sampleRate);
+  const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * NOISE_SECONDS), context.sampleRate);
   const samples = buffer.getChannelData(0);
   for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
   return buffer;
@@ -122,8 +131,16 @@ export function createAudio(): Audio {
       if (muted || !engine) return;
       const { context, master, noise } = engine;
       const now = context.currentTime;
-      playClick(context, master, noise, now, 0.9);
-      playClick(context, master, noise, now + 0.07, 0.6);
+      playNoise(context, master, noise, now, { ...SHUTTER_CLICK, volume: 0.9 });
+      playNoise(context, master, noise, now + 0.07, { ...SHUTTER_CLICK, volume: 0.6 });
+    },
+    playFootstep() {
+      if (muted || !engine) return;
+      playNoise(engine.context, engine.master, engine.noise, engine.context.currentTime, FOOTSTEP);
+    },
+    playBump() {
+      if (muted || !engine) return;
+      playNoise(engine.context, engine.master, engine.noise, engine.context.currentTime, BUMP);
     },
   };
 }
