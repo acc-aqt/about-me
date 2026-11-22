@@ -22,6 +22,7 @@ Attribution is not required; it is given here with thanks.
 
 ## Original art
 
-The Player (photographer) sprite, the Film roll, the water and the scenery Kenney's packs lack (such as the
-3D printer, the jukebox, the speakers, the arcade cabinets and the tennis net) are original pixel art painted in code
+The Player (photographer) sprite, the Film roll, the water, the Hub maypole and the themed Points of Interest
+and scenery Kenney's packs lack (such as the Contact mailbox, the Career road buildings, the 3D printer, the jukebox,
+the speakers, the arcade cabinets and the tennis net) are original pixel art painted in code
 in `src/art.ts`. The pixel font used for in-world labels is an original 5×9 font drawn in `src/pixel-font.ts`.

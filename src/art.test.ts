@@ -14,6 +14,22 @@ describe("Overworld art", () => {
     expect(props.at(-1)).toBe("darkroom door");
   });
 
+  it("draws the intro, the Career road stops and the Contact mailbox as themed objects", () => {
+    const ids = content.zones
+      .filter((zone) => ["start", "career-road", "contact"].includes(zone.id))
+      .flatMap((zone) => zone.pointsOfInterest.map((poi) => poi.id));
+    expect(Object.fromEntries(ids.map((id) => [id, themedProp(id)]))).toEqual({
+      intro: "welcome board",
+      tum: "university",
+      "bmw-group": "office tower",
+      "canberra-detour": "kangaroo sign",
+      "forward-engineering": "composites works",
+      "arrk-engineering": "office block",
+      mtu: "jet engine",
+      "contact-board": "mailbox",
+    });
+  });
+
   it("has no themed object for an unknown Point of Interest, which keeps the signpost", () => {
     expect(themedProp("no-such-point")).toBeUndefined();
   });
