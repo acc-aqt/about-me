@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { SCENERY_PROPS, themedProp } from "./art";
-import { content, type ZoneId } from "./content";
+import { content, zoneById, type ZoneId } from "./content";
 import { MAP_COLUMNS, MAP_ROWS, tileKindAt, zoneAt } from "./overworld";
 
 const themedZones: ZoneId[] = ["maker-workshop", "sport", "music-and-games"];
-const zone = (id: ZoneId) => content.zones.find((candidate) => candidate.id === id)!;
 
 describe("Overworld art", () => {
   it("draws every trip on the Photography trail as a camera stand and the Darkroom as its door", () => {
-    const trail = content.zones.find((zone) => zone.id === "photography-trail")!.pointsOfInterest;
+    const trail = zoneById("photography-trail").pointsOfInterest;
     const props = trail.map((poi) => themedProp(poi.id));
     expect(props.slice(0, -1).every((prop) => prop === "camera stand")).toBe(true);
     expect(props.at(-1)).toBe("darkroom door");
@@ -36,13 +35,13 @@ describe("Overworld art", () => {
 
   it("draws every Point of Interest in the Maker workshop, Sport and Music & games as a themed object", () => {
     for (const id of themedZones) {
-      for (const poi of zone(id).pointsOfInterest) expect(themedProp(poi.id), poi.id).toBeDefined();
+      for (const poi of zoneById(id).pointsOfInterest) expect(themedProp(poi.id), poi.id).toBeDefined();
     }
   });
 
   it("dresses the Maker workshop with workbenches and a 3D printer, and Sport and Music & games with their own props", () => {
     const propsIn = (id: ZoneId) => [
-      ...zone(id).pointsOfInterest.map((poi) => themedProp(poi.id)),
+      ...zoneById(id).pointsOfInterest.map((poi) => themedProp(poi.id)),
       ...SCENERY_PROPS.filter(({ at }) => zoneAt(at) === id).map(({ prop }) => prop),
     ];
     expect(propsIn("maker-workshop")).toEqual(expect.arrayContaining(["workbench", "3D printer", "anvil"]));

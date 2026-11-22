@@ -553,3 +553,9 @@ export const content: Content = {
     { id: "3d-printing", name: "3D printing", description: "Printing parts such as my slip-over lens caps." },
   ],
 };
+
+export function zoneById(id: ZoneId): Zone {
+  const zone = content.zones.find((candidate) => candidate.id === id);
+  if (!zone) throw new Error(`No Zone with id ${id}`);
+  return zone;
+}

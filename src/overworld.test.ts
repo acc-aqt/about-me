@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { content } from "./content";
+import { content, zoneById } from "./content";
 import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, HUB_SIGNPOSTS, isReachableFromSpawn, isWalkable, tileAhead, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, type TileKind, ZONE_RECTS, zoneAt } from "./overworld";
 
 const zoneIds = content.zones.map((zone) => zone.id);
@@ -159,7 +159,7 @@ describe("Overworld", () => {
   });
 
   it("winds the Photography trail north from the Hub, each trip farther along it, ending at the Darkroom", () => {
-    const trail = content.zones.find((zone) => zone.id === "photography-trail")!.pointsOfInterest;
+    const trail = zoneById("photography-trail").pointsOfInterest;
     const distances = trail.map((poi) => stepsFromHubTo(poi.placement));
     expect(distances).toEqual([...distances].sort((a, b) => a - b));
     expect(new Set(distances).size).toBe(trail.length);
@@ -169,7 +169,7 @@ describe("Overworld", () => {
   });
 
   it("lays the Career road out west to east in time order", () => {
-    const cols = content.zones.find((zone) => zone.id === "career-road")!.pointsOfInterest.map((poi) => poi.placement.col);
+    const cols = zoneById("career-road").pointsOfInterest.map((poi) => poi.placement.col);
     expect(cols).toEqual([40, 43, 46, 49, 52, 55]);
   });
 

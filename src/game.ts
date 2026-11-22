@@ -1,5 +1,5 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
-import type { Content, PointOfInterest, Zone, ZoneId } from "./content";
+import { zoneById, type Content, type PointOfInterest, type Zone, type ZoneId } from "./content";
 import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
   facedPointOfInterest,
@@ -169,7 +169,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     return { at, plate: label.parent! };
   }
 
-  const zoneTitles = (zoneIds: ZoneId[]) => zoneIds.map((id) => content.zones.find((zone) => zone.id === id)!.title).join(" / ");
+  const zoneTitles = (zoneIds: ZoneId[]) => zoneIds.map((id) => zoneById(id).title).join(" / ");
   const namePlates = [
     ...pointsOfInterest.map((poi) => addNamePlate(poi.title, poi.placement)),
     ...HUB_SIGNPOSTS.map((signpost) => addNamePlate(zoneTitles(signpost.leadsTo), signpost.tile)),
@@ -214,7 +214,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   function showSurroundings() {
     const zoneId = zoneAt(tile);
     // Tiles between Zones keep the last Zone's title.
-    if (zoneId) zoneTitle.text = content.zones.find((zone) => zone.id === zoneId)!.title;
+    if (zoneId) zoneTitle.text = zoneById(zoneId).title;
     showNearbyNamePlates();
   }
 

@@ -1,4 +1,4 @@
-import { content, type PointOfInterest, type ZoneId } from "./content";
+import { content, zoneById, type PointOfInterest, type ZoneId } from "./content";
 
 export type Tile = { col: number; row: number };
 
@@ -205,8 +205,8 @@ const APPROACHES: { from: Direction; facing: Direction }[] = [
  * Zone on the shortest walk from the spawn (where its path leaves the Hub), facing onward.
  */
 export function fastTravelLanding(zoneId: ZoneId): Landing {
-  const zone = content.zones.find((candidate) => candidate.id === zoneId);
-  const featured = zone?.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
+  const zone = zoneById(zoneId);
+  const featured = zone.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
   if (featured) {
     for (const { from, facing } of APPROACHES) {
       const tile = tileAhead(featured.placement, from);

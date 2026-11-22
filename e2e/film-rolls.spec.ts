@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { content } from "../src/content";
+import { content, zoneById } from "../src/content";
 import { ARROW_KEYS, fastTravel, openGame, tapKeys, tapsTo } from "./walk";
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
-const contactRoll = content.zones.find((zone) => zone.id === "contact")!.filmRoll!;
+const contactRoll = zoneById("contact").filmRoll!;
 
 test("the Film roll counter starts empty", async ({ page }) => {
   await openGame(page);

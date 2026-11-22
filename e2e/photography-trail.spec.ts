@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { content, type PointOfInterest } from "../src/content.ts";
+import { zoneById, type PointOfInterest } from "../src/content.ts";
 import { facingStatus, fastTravel, openGame, tapKeys, tapsTo } from "./walk";
 
-const trail = content.zones.find((zone) => zone.id === "photography-trail")!;
+const trail = zoneById("photography-trail");
 const norway = trail.pointsOfInterest.find((poi) => poi.id === "norway")!;
 const jordan = trail.pointsOfInterest.find((poi) => poi.id === "jordan")!;
 const darkroom = trail.pointsOfInterest.find((poi) => poi.id === "darkroom")!;

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { content, type ZoneId } from "../src/content.ts";
+import { content, zoneById, type ZoneId } from "../src/content.ts";
 import { DIRECTIONS, fastTravelLanding, isWalkable, SPAWN, tileAhead, type Direction, type Landing, type Tile } from "../src/overworld.ts";
 
 export const ARROW_KEYS: Record<Direction, string> = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
@@ -9,7 +9,7 @@ export const DPAD_BUTTONS: Record<Direction, string> = { up: "Walk up", down: "W
 export const SPAWN_LANDING: Landing = { tile: SPAWN, facing: "down" };
 
 export function zoneTitle(zoneId: ZoneId) {
-  return content.zones.find((zone) => zone.id === zoneId)!.title;
+  return zoneById(zoneId).title;
 }
 
 export function pointOfInterest(id: string) {
