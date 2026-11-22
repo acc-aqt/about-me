@@ -273,7 +273,7 @@ export function paintFilmRoll(): HTMLCanvasElement {
   return pixels.canvas;
 }
 
-/** Frames of Kenney's Tiny Town packed tilemap, which is 12 tiles wide. */
+/** Frames of Kenney's Tiny Town packed tilemap. */
 const TINY_TOWN_COLUMNS = 12;
 const TINY_TOWN = {
   grass: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2],
@@ -373,7 +373,7 @@ type Prop = { rows: readonly string[]; colors: Record<string, Rgb>; bottom?: num
 /** One layer of a themed object: painted pixel rows, or a Tiny Town or Tiny Dungeon frame. */
 type PropLayer = Prop | { town: number } | { dungeon: number };
 
-/** Frames of Kenney's Tiny Dungeon packed tilemap, which is 12 tiles wide. */
+/** Frames of Kenney's Tiny Dungeon packed tilemap. */
 const TINY_DUNGEON_COLUMNS = 12;
 const TINY_DUNGEON = { table: 72, anvil: 74, chest: 89 } as const;
 

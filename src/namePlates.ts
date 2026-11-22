@@ -3,7 +3,6 @@ import { HUB_SIGNPOSTS, OVERWORLD_TILE_SIZE, tileAhead, tileToPixels, type Direc
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH } from "./pixel-font";
 
 export const LABEL_PADDING = 2;
-/** Longer name plates wrap onto more lines at this width. */
 export const NAME_PLATE_WRAP_WIDTH = 120;
 /** Tiles from the Player within which a name plate shows. */
 const NAME_PLATE_RANGE = 2;

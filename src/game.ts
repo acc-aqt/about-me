@@ -24,7 +24,6 @@ const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 180;
 const MAP_WIDTH = MAP_COLUMNS * OVERWORLD_TILE_SIZE;
 const MAP_HEIGHT = MAP_ROWS * OVERWORLD_TILE_SIZE;
-/** Seconds to walk from one tile to the next. */
 const STEP_TIME = 0.16;
 /** A direction held at least this long walks; a shorter tap in a new direction only turns. */
 const HOLD_DELAY = 0.12;
