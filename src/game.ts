@@ -4,6 +4,7 @@ import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, p
 import {
   facedPointOfInterest,
   fastTravelLanding,
+  filmRollCover,
   isWalkable,
   MAP_COLUMNS,
   MAP_ROWS,
@@ -34,6 +35,8 @@ const LABEL_PADDING = 2;
 const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 const ZONE_TITLE_Y = 8;
 const Z_FILM_ROLL = 1;
+/** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
+const Z_FILM_ROLL_COVER = 1.5;
 const Z_PLAYER = 2;
 const Z_LABEL = 3;
 
@@ -105,9 +108,28 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   const tileset = new Image();
   tileset.src = import.meta.env.BASE_URL + "art/kenney-tiny-town-tiles.png";
   tileset.decode().then(() => {
-    k.loadSprite("overworld", paintOverworld(tileset, pointsOfInterest.map((poi) => poi.placement)));
+    k.loadSprite("overworld", paintOverworld(tileset, pointsOfInterest));
     k.add([k.sprite("overworld"), k.pos(0, 0)]);
+    for (const zone of content.zones) if (zone.filmRoll) addFilmRollCover(zone.filmRoll);
   });
+
+  /** Half a tile from the tile's centre towards its cover, so the cover hides half the roll. */
+  function filmRollCentre(roll: Tile): Vec2 {
+    const centre = k.vec2((roll.col + 0.5) * OVERWORLD_TILE_SIZE, (roll.row + 0.5) * OVERWORLD_TILE_SIZE);
+    const cover = filmRollCover(roll);
+    if (!cover) return centre;
+    const towards = tileAhead(roll, cover);
+    return centre.add(k.vec2(towards.col - roll.col, towards.row - roll.row).scale(OVERWORLD_TILE_SIZE / 2));
+  }
+
+  function addFilmRollCover(roll: Tile) {
+    const cover = filmRollCover(roll);
+    if (!cover) return;
+    const { col, row } = tileAhead(roll, cover);
+    const size = OVERWORLD_TILE_SIZE;
+    const quad = k.quad((col * size) / MAP_WIDTH, (row * size) / MAP_HEIGHT, size / MAP_WIDTH, size / MAP_HEIGHT);
+    k.add([k.sprite("overworld", { quad }), k.pos(col * size, row * size), k.z(Z_FILM_ROLL_COVER)]);
+  }
 
   function addLabel(text: string, position: Vec2, anchor: "top" | "bot", { wrapWidth, fixed = false }: LabelOptions = {}) {
     const plate = k.add([
@@ -151,8 +173,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   const filmRolls = new Map<string, { zone: Zone; sprite: GameObj }>();
   for (const zone of content.zones) {
     if (!zone.filmRoll) continue;
-    const [x, y] = tileFoot(zone.filmRoll);
-    const sprite = k.add([k.sprite("film-roll"), k.pos(x, y - 4), k.anchor("bot"), k.z(Z_FILM_ROLL)]);
+    const sprite = k.add([k.sprite("film-roll"), k.pos(filmRollCentre(zone.filmRoll)), k.anchor("center"), k.z(Z_FILM_ROLL)]);
     filmRolls.set(tileKey(zone.filmRoll), { zone, sprite });
   }
 

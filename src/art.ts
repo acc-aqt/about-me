@@ -1,6 +1,6 @@
 // Original pixel art, painted in code at start-up so no large image files ship.
 // The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town tiles (see CREDITS.md);
-// the water, the Player and the Film roll are painted here.
+// the water, the Player, the Film roll and the Photography trail's camera stands and darkroom door are painted here.
 
 import { MAP_COLUMNS, MAP_ROWS, OVERWORLD_MAP, OVERWORLD_TILE_SIZE, tileKindAt, type Direction, type Tile, type TileKind } from "./overworld";
 
@@ -352,8 +352,78 @@ function objectFrame(tile: Tile, kind: TileKind): number | undefined {
   }
 }
 
-/** Paints the whole Overworld from the text tilemap, with a sign on each Point of Interest tile. */
-export function paintOverworld(sheet: CanvasImageSource, signs: Tile[]): HTMLCanvasElement {
+type Prop = { rows: readonly string[]; colors: Record<string, Rgb> };
+
+const CAMERA_STAND: Prop = {
+  rows: [
+    "................",
+    "......kkkk......",
+    ".....kggggk.....",
+    "..kkkkkkkkkkkk..",
+    "..kccccccccrck..",
+    "..kcccckkkkcck..",
+    "..kccckllwkcck..",
+    "..kccckllllcck..",
+    "..kcccckkkkcck..",
+    "..kkkkkkkkkkkk..",
+    ".......kk.......",
+    "......kook......",
+    ".....kokkok.....",
+    "....kok..kok....",
+    "...kok....kok...",
+    "...kk......kk...",
+  ],
+  colors: { k: INK, g: hex("#c4c8d0"), c: hex("#2b2b33"), r: hex("#d23c3c"), l: hex("#3c8c84"), w: hex("#8fd2ee"), o: hex("#8a5a3a") },
+};
+
+const DARKROOM_DOOR: Prop = {
+  rows: [
+    "......kkkk......",
+    ".....krrrrk.....",
+    "......kkkk......",
+    "..kkkkkkkkkkkk..",
+    "..kwwwwwwwwwwk..",
+    "..kwkkkkkkkkwk..",
+    "..kwkddddddkwk..",
+    "..kwkddddddkwk..",
+    "..kwkddddddkwk..",
+    "..kwkddddydkwk..",
+    "..kwkddddddkwk..",
+    "..kwkddddddkwk..",
+    "..kwkddddddkwk..",
+    "..kwkddddddkwk..",
+    "..kwkddddddkwk..",
+    "..kkkkkkkkkkkk..",
+  ],
+  colors: { k: INK, r: hex("#d23c3c"), w: hex("#8a5a3a"), d: hex("#2b2b33"), y: hex("#e6b43c") },
+};
+
+const PROPS = { "camera stand": CAMERA_STAND, "darkroom door": DARKROOM_DOOR } as const;
+
+type PropName = keyof typeof PROPS;
+
+/** Points of Interest drawn as a themed object; the rest stand as a signpost. */
+const THEMED_PROPS: Record<string, PropName> = {
+  jordan: "camera stand",
+  norway: "camera stand",
+  "new-york": "camera stand",
+  nepal: "camera stand",
+  lisbon: "camera stand",
+  "eastern-adriatic": "camera stand",
+  peru: "camera stand",
+  darkroom: "darkroom door",
+};
+
+export function themedProp(poiId: string): PropName | undefined {
+  return THEMED_PROPS[poiId];
+}
+
+function paintProp(pixels: Pixels, { rows, colors }: Prop, x: number, y: number) {
+  rows.forEach((row, dy) => [...row].forEach((char, dx) => colors[char] && pixels.dot(x + dx, y + dy, colors[char])));
+}
+
+/** Paints the whole Overworld from the text tilemap, with a themed object or a sign on each Point of Interest tile. */
+export function paintOverworld(sheet: CanvasImageSource, pointsOfInterest: { id: string; placement: Tile }[]): HTMLCanvasElement {
   const size = OVERWORLD_TILE_SIZE;
   const pixels = new Pixels(MAP_COLUMNS * size, MAP_ROWS * size);
   for (let row = 0; row < MAP_ROWS; row++) {
@@ -370,6 +440,11 @@ export function paintOverworld(sheet: CanvasImageSource, signs: Tile[]): HTMLCan
       if (object !== undefined) pixels.tile(sheet, TINY_TOWN_COLUMNS, object, x, y);
     }
   }
-  for (const { col, row } of signs) pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, col * size, row * size);
+  for (const { id, placement } of pointsOfInterest) {
+    const [x, y] = [placement.col * size, placement.row * size];
+    const prop = themedProp(id);
+    if (prop) paintProp(pixels, PROPS[prop], x, y);
+    else pixels.tile(sheet, TINY_TOWN_COLUMNS, TINY_TOWN.sign, x, y);
+  }
   return pixels.canvas;
 }

@@ -140,6 +140,19 @@ export function facedPointOfInterest(tile: Tile, facing: Direction): PointOfInte
   return pointOfInterestAt(tileAhead(tile, facing));
 }
 
+const COVER_KINDS: readonly TileKind[] = ["tree", "bush", "building", "fence"];
+
+/** Cover to the south stands in front of a Film roll, so it is tried first; cover to the north is the last resort. */
+const COVER_DIRECTIONS: Direction[] = ["down", "left", "right", "up"];
+
+/** The side of a Film roll's tile where solid cover stands, for the roll to peek out from behind. */
+export function filmRollCover(tile: Tile): Direction | undefined {
+  return COVER_DIRECTIONS.find((direction) => {
+    const kind = tileKindAt(tileAhead(tile, direction));
+    return kind !== undefined && COVER_KINDS.includes(kind);
+  });
+}
+
 /** Breadth-first walk from the spawn, nearest tiles first, with the direction of the step that reached each. */
 function walkFromSpawn() {
   const arrivals = new Map<string, { tile: Tile; facing?: Direction }>([[tileKey(SPAWN), { tile: SPAWN }]]);
