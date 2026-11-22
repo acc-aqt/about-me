@@ -5,6 +5,7 @@ import {
   facedPointOfInterest,
   fastTravelLanding,
   filmRollCover,
+  HUB_SIGNPOSTS,
   isWalkable,
   MAP_COLUMNS,
   MAP_ROWS,
@@ -157,11 +158,17 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     return label;
   }
 
-  const namePlates = pointsOfInterest.map((poi) => {
-    const [x, y] = tileFoot(poi.placement);
-    const label = addLabel(poi.title, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrapWidth: POI_LABEL_WIDTH });
-    return { at: poi.placement, plate: label.parent! };
-  });
+  function addNamePlate(text: string, at: Tile) {
+    const [x, y] = tileFoot(at);
+    const label = addLabel(text, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrapWidth: POI_LABEL_WIDTH });
+    return { at, plate: label.parent! };
+  }
+
+  const zoneTitles = (zoneIds: ZoneId[]) => zoneIds.map((id) => content.zones.find((zone) => zone.id === id)!.title).join(" / ");
+  const namePlates = [
+    ...pointsOfInterest.map((poi) => addNamePlate(poi.title, poi.placement)),
+    ...HUB_SIGNPOSTS.map((signpost) => addNamePlate(zoneTitles(signpost.leadsTo), signpost.tile)),
+  ];
 
   /** Only nearby name plates show, so the plates of close-set Points of Interest never pile up. */
   function showNearbyNamePlates() {

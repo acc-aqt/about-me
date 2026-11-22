@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { content } from "./content";
-import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, isReachableFromSpawn, isWalkable, tileAhead, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, ZONE_RECTS, zoneAt } from "./overworld";
+import { DIRECTIONS, facedPointOfInterest, filmRollCover, fastTravelLanding, HUB_SIGNPOSTS, isReachableFromSpawn, isWalkable, tileAhead, LEGEND, MAP_COLUMNS, OVERWORLD_MAP, SPAWN, tileKindAt, type Tile, type TileKind, ZONE_RECTS, zoneAt } from "./overworld";
 
 const zoneIds = content.zones.map((zone) => zone.id);
 const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
+function tilesOfKind(kind: TileKind): Tile[] {
+  return OVERWORLD_MAP.flatMap((line, row) => [...line].map((_, col) => ({ col, row }))).filter((tile) => tileKindAt(tile) === kind);
+}
+
 function neighbours(tile: Tile) {
   return DIRECTIONS.map((direction) => tileAhead(tile, direction));
 }
@@ -53,6 +57,27 @@ describe("Overworld", () => {
     }
     expect(tileKindAt({ col: 30, row: 16 })).toBe("path");
     expect(tileKindAt({ col: 40, row: 12 })).toBe("water");
+  });
+
+  it("dresses the Munich Hub with a maypole and a well that the Player walks around", () => {
+    for (const kind of ["maypole", "well"] as const) {
+      const tiles = tilesOfKind(kind);
+      expect(tiles.length, kind).toBeGreaterThan(0);
+      for (const tile of tiles) {
+        expect(zoneAt(tile), kind).toBe("start");
+        expect(isWalkable(tile), kind).toBe(false);
+      }
+    }
+  });
+
+  it("puts a signpost at each Hub exit, naming the Zones its path leads to", () => {
+    const named = HUB_SIGNPOSTS.flatMap((signpost) => signpost.leadsTo).sort();
+    expect(named).toEqual(zoneIds.filter((id) => id !== "start").sort());
+    for (const { tile, leadsTo } of HUB_SIGNPOSTS) {
+      expect(zoneAt(tile), leadsTo.join()).toBe("start");
+      expect(isWalkable(tile), leadsTo.join()).toBe(false);
+      expect(neighbours(tile).some(isReachableFromSpawn), leadsTo.join()).toBe(true);
+    }
   });
 
   it("spawns the Player in the Munich Hub", () => {
