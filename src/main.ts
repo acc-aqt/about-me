@@ -1,5 +1,5 @@
 import { createAudio } from "./audio";
-import { content } from "./content";
+import { content, type PointOfInterest } from "./content";
 import { createFastTravel } from "./fastTravel";
 import { startGame, type GameButton, type GameControls } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
@@ -7,16 +7,31 @@ import { createViewfinder } from "./viewfinder";
 import { query } from "./dom";
 
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
+const portrait = window.matchMedia("(orientation: portrait)");
 
-const CONTROLS_HINT = isTouch
-  ? "Walk with the d-pad. Face a sign and tap the Shutter to take a photo. Tap ▤ for the Inventory."
-  : "Walk with the arrow keys or WASD. Face a sign and press Space to take a photo. Press I for the Inventory.";
-const SHUTTER_PROMPT = isTouch ? "tap the Shutter" : "press Space";
+function controlsHint() {
+  if (!isTouch) return "Walk with the arrow keys or WASD. Face a sign and press Space to take a photo. Press I for the Inventory.";
+  if (portrait.matches) return "Face a sign and press A to take a photo. Press B for the Inventory.";
+  return "Walk with the d-pad. Face a sign and tap the Shutter to take a photo. Tap ▤ for the Inventory.";
+}
+
+function shutterPrompt() {
+  if (!isTouch) return "press Space";
+  return portrait.matches ? "press A" : "tap the Shutter";
+}
 
 const canvas = query<HTMLCanvasElement>(document, "#game");
 const hint = query<HTMLElement>(document, "#hint");
 const dialog = query<HTMLDialogElement>(document, "#viewfinder");
 const filmRollCounter = query<HTMLElement>(document, "#film-rolls");
+
+let facing: PointOfInterest | null = null;
+
+function showHint() {
+  hint.textContent = facing ? `Facing ${facing.title} — ${shutterPrompt()}` : controlsHint();
+}
+
+portrait.addEventListener("change", showHint);
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
 let collectedFilmRolls = 0;
@@ -26,7 +41,7 @@ function showFilmRollCount() {
 }
 
 const fastTravelToggle = query<HTMLButtonElement>(document, ".fast-travel-toggle");
-const fastTravelZones = query<HTMLUListElement>(document, "#fast-travel-zones");
+const fastTravelZones = query<HTMLUListElement>(document, `#${fastTravelToggle.getAttribute("aria-controls")}`);
 const soundToggle = query<HTMLButtonElement>(document, "#sound-toggle");
 const soundToggleState = query<HTMLElement>(soundToggle, ".sound-toggle-state");
 
@@ -54,7 +69,8 @@ canvas.addEventListener("keydown", (event) => {
 
 const controls = startGame(canvas, content, {
   onFacingChange(poi) {
-    hint.textContent = poi ? `Facing ${poi.title} — ${SHUTTER_PROMPT}` : CONTROLS_HINT;
+    facing = poi;
+    showHint();
   },
   onShutter(poi) {
     audio.playShutter();
@@ -95,5 +111,5 @@ createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   canvas.focus();
 });
 
-hint.textContent = CONTROLS_HINT;
+showHint();
 showFilmRollCount();

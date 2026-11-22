@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { facingStatus, openGame, pointOfInterest, SPAWN_LANDING, tapKeys, tapsTo } from "./walk";
+import { facingStatus, openGameWithKeyboard, pointOfInterest, SPAWN_LANDING, tapKeys, tapsTo } from "./walk";
 
 async function openViewfinderAtFirstSign(page: Page) {
   const intro = pointOfInterest("intro");
-  await openGame(page);
+  await openGameWithKeyboard(page);
   await tapKeys(page, tapsTo(SPAWN_LANDING, intro.placement, { face: true }));
   await expect(page.getByRole("status")).toHaveText(facingStatus(intro.title));
   await page.keyboard.press("Space");
