@@ -301,14 +301,12 @@ body {
 
   .controls {
     display: flex;
-    flex: 1;
   }
 
   .touch-controls {
     position: static;
-    flex: 1;
     align-items: center;
-    padding: 0.5rem;
+    padding: 1.25rem 0.5rem 0.5rem;
   }
 
   .touch-controls-dpad {
@@ -327,6 +325,8 @@ body {
   }
 
   .touch-controls-dpad .touch-button {
+    width: min(3.25rem, 14vw);
+    height: min(3.25rem, 14vw);
     border: none;
     background: var(--dpad);
     color: var(--dpad-ink);
@@ -352,14 +352,14 @@ body {
   .touch-controls-actions {
     align-items: center;
     gap: 1.25rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     transform: rotate(-25deg);
   }
 
   .touch-controls-actions .touch-button {
     position: relative;
-    width: 3.5rem;
-    height: 3.5rem;
+    width: min(3.5rem, 15vw);
+    height: min(3.5rem, 15vw);
     border: none;
     border-radius: 50%;
     background: var(--face-button);
@@ -400,11 +400,11 @@ body {
 
   .speaker {
     position: absolute;
-    right: max(2.5rem, env(safe-area-inset-right));
-    bottom: max(2.5rem, env(safe-area-inset-bottom));
+    right: max(1.5rem, env(safe-area-inset-right));
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
     display: block;
-    width: 4.5rem;
-    height: 3.5rem;
+    width: 3.75rem;
+    height: 2.75rem;
     background: repeating-linear-gradient(90deg, var(--shell-ink) 0 0.35rem, transparent 0.35rem 0.8rem);
     border-radius: 0.2rem;
     opacity: 0.45;
@@ -631,7 +631,7 @@ body {
     order: 1;
     justify-content: center;
     gap: 1.5rem;
-    padding-bottom: 0.5rem;
+    padding: 0.25rem 0 0.5rem;
   }
 
   .corner-controls button {

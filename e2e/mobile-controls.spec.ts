@@ -26,6 +26,15 @@ async function expectInside(outer: Locator | Box, inner: Locator) {
   expect(innerBox.y + innerBox.height).toBeLessThanOrEqual(outerBox.y + outerBox.height + 0.5);
 }
 
+async function lowestEdge(page: Page, buttonNames: string[]) {
+  const boxes = await Promise.all(buttonNames.map(async (name) => (await page.getByRole("button", { name, exact: true }).boundingBox())!));
+  return Math.max(...boxes.map((box) => box.y + box.height));
+}
+
+function overlaps(a: Box, b: Box) {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
 async function expectInsideViewport(page: Page, locator: Locator) {
   await expectInside({ x: 0, y: 0, ...page.viewportSize()! }, locator);
 }
@@ -155,14 +164,7 @@ test.describe("on a phone", () => {
 
     test("Fast-travel and Sound sit on the Handheld as START and SELECT, below the d-pad and A/B", async ({ page }) => {
       const handheld = page.getByTestId("handheld");
-      const lowestFaceButton = Math.max(
-        ...(await Promise.all(
-          ["Walk down", "Shutter", "Inventory"].map(async (name) => {
-            const box = (await page.getByRole("button", { name }).boundingBox())!;
-            return box.y + box.height;
-          }),
-        )),
-      );
+      const lowestFaceButton = await lowestEdge(page, ["Walk down", "Shutter", "Inventory"]);
       for (const name of ["Fast-travel", "Sound"]) {
         const button = page.getByRole("button", { name, exact: true });
         await expectInsideViewport(page, button);
@@ -196,6 +198,37 @@ test.describe("on a phone", () => {
       await expect(sound).toHaveAttribute("aria-pressed", "true");
       await sound.tap();
       await expect(sound).toHaveAttribute("aria-pressed", "false");
+    });
+
+    test("the d-pad and A/B sit just below the logo, with START and SELECT just below them", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 1000 });
+
+      const logo = (await page.getByText("ALEXANDER CARRELS").boundingBox())!;
+      const dpadTop = (await page.getByRole("button", { name: "Walk up" }).boundingBox())!.y;
+      expect(dpadTop - (logo.y + logo.height)).toBeLessThan(80);
+      const pillsTop = Math.min(
+        ...(await Promise.all(["Fast-travel", "Sound"].map(async (name) => (await page.getByRole("button", { name, exact: true }).boundingBox())!.y))),
+      );
+      expect(pillsTop - (await lowestEdge(page, ["Shutter", "Inventory"]))).toBeLessThan(48);
+    });
+
+    test("the speaker slots stay clear of SELECT on a small phone", async ({ page }) => {
+      await page.setViewportSize({ width: 360, height: 640 });
+
+      const speaker = (await page.getByTestId("speaker").boundingBox())!;
+      const select = (await page.getByRole("button", { name: "Sound", exact: true }).boundingBox())!;
+      expect(overlaps(speaker, select)).toBe(false);
+    });
+
+    test("the Handheld fits the smallest phone without scrolling", async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 568 });
+
+      const { scrollWidth, scrollHeight } = await page.evaluate(() => {
+        const { scrollWidth, scrollHeight } = document.documentElement;
+        return { scrollWidth, scrollHeight };
+      });
+      expect(scrollWidth).toBeLessThanOrEqual(320);
+      expect(scrollHeight).toBeLessThanOrEqual(568);
     });
   });
 
