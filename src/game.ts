@@ -1,7 +1,35 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import { zoneById, type Content, type PointOfInterest, type Zone, type ZoneId } from "./content";
-import { LABEL_PADDING, NAME_PLATE_WRAP_WIDTH, NAME_PLATES, namePlateBox, needsWrap, shownNamePlates, ZONE_TITLE_BOTTOM, ZONE_TITLE_Y, type NamePlate } from "./namePlates";
-import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
+import { CATS, chooseCatStep, chooseRest, chooseWalkLength, directionTowards, type CatName, type CatPose } from "./cats";
+import {
+  isInNamePlateRange,
+  LABEL_PADDING,
+  NAME_PLATE_WRAP_WIDTH,
+  NAME_PLATES,
+  namePlateBox,
+  needsWrap,
+  shownNamePlates,
+  ZONE_TITLE_BOTTOM,
+  ZONE_TITLE_Y,
+  type NamePlate,
+} from "./namePlates";
+import {
+  CAT_ANIMS,
+  CAT_FRAME_COUNT,
+  CAT_FRAME_HEIGHT,
+  CAT_SLEEPING_HEIGHT,
+  catAnim,
+  INK,
+  PLAYER_ANIMS,
+  PLAYER_FRAME_COUNT,
+  paintCatSheet,
+  paintFilmRoll,
+  paintHeart,
+  paintOverworld,
+  paintPlayerSheet,
+  playerAnim,
+  type Rgb,
+} from "./art";
 import {
   facedPointOfInterest,
   fastTravelLanding,
@@ -25,6 +53,11 @@ const VIEW_HEIGHT = 180;
 const MAP_WIDTH = MAP_COLUMNS * OVERWORLD_TILE_SIZE;
 const MAP_HEIGHT = MAP_ROWS * OVERWORLD_TILE_SIZE;
 const STEP_TIME = 0.16;
+/** Cats stroll, a little slower than the Player walks. */
+const CAT_STEP_TIME = STEP_TIME * 1.5;
+/** How long a Cat sits facing the Player, showing a heart, after the Shutter. */
+const CAT_REACTION_TIME = 2;
+const HEART_HEIGHT = 6;
 /** A direction held at least this long walks; a shorter tap in a new direction only turns. */
 const HOLD_DELAY = 0.12;
 /** Seconds between bump sounds while the Player keeps walking into a solid tile. */
@@ -34,6 +67,8 @@ const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 const Z_FILM_ROLL = 1;
 /** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
 const Z_FILM_ROLL_COVER = 1.5;
+/** Just below the Player, so a Player standing south of a Cat stands in front of it. */
+const Z_CAT = 1.8;
 const Z_PLAYER = 2;
 const Z_LABEL = 3;
 
@@ -64,10 +99,25 @@ export type GameEvents = {
   onFilmRollCollected(zone: Zone): void;
   onFootstep(): void;
   onBump(): void;
+  /** True while an overlay such as the Viewfinder covers the game, which stills the Cats. */
+  isPaused(): boolean;
 };
 
 type LabelOptions = { wrap?: boolean; fixed?: boolean };
 type Step = { from: Tile; to: Tile; elapsed: number };
+type CatMode = { kind: "walking"; stepsLeft: number } | { kind: "resting"; pose: CatPose; secondsLeft: number };
+type Cat = {
+  name: CatName;
+  sprite: GameObj;
+  plate: GameObj;
+  heart: GameObj;
+  tile: Tile;
+  facing: Direction;
+  step: Step | null;
+  mode: CatMode;
+  heartSecondsLeft: number;
+  shutterPending: boolean;
+};
 
 /** Where a sprite standing on a tile is anchored: the bottom centre of the tile. */
 function tileFoot(tile: Tile): [number, number] {
@@ -103,6 +153,8 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   k.loadSprite("player", paintPlayerSheet(), { sliceX: PLAYER_FRAME_COUNT, anims: PLAYER_ANIMS });
   k.loadSprite("film-roll", paintFilmRoll());
+  k.loadSprite("heart", paintHeart());
+  for (const { name } of CATS) k.loadSprite(`cat-${name}`, paintCatSheet(name), { sliceX: CAT_FRAME_COUNT, anims: CAT_ANIMS });
   k.loadBitmapFont(PIXEL_FONT_NAME, paintPixelFont(), PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CELL_HEIGHT, {
     chars: PIXEL_FONT_CHARS,
   });
@@ -191,6 +243,33 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   const player = k.add([k.sprite("player", { anim: playerAnim("down", false) }), k.pos(...tileFoot(SPAWN)), k.anchor("bot"), k.z(Z_PLAYER)]);
 
+  function restingMode(): CatMode {
+    const rest = chooseRest(Math.random);
+    return { kind: "resting", pose: rest.pose, secondsLeft: rest.seconds };
+  }
+
+  const cats: Cat[] = CATS.map(({ name, start }) => ({
+    name,
+    sprite: k.add([k.sprite(`cat-${name}`), k.pos(...tileFoot(start)), k.anchor("bot"), k.z(Z_CAT)]),
+    plate: addLabel(name, k.vec2(0, 0), "bot").parent!,
+    heart: k.add([k.sprite("heart"), k.pos(0, 0), k.anchor("bot"), k.z(Z_LABEL)]),
+    tile: start,
+    facing: "down",
+    step: null,
+    mode: restingMode(),
+    heartSecondsLeft: 0,
+    shutterPending: false,
+  }));
+
+  /** The tiles a Cat or the Player stands on or is stepping onto. */
+  function occupied(at: { tile: Tile; step: Step | null }): string[] {
+    return at.step ? [tileKey(at.tile), tileKey(at.step.to)] : [tileKey(at.tile)];
+  }
+
+  function catOn(target: Tile): Cat | undefined {
+    return cats.find((cat) => occupied(cat).includes(tileKey(target)));
+  }
+
   let tile: Tile = SPAWN;
   let facing: Direction = "down";
   let step: Step | null = null;
@@ -224,7 +303,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   function tryStep(direction: Direction) {
     turn(direction);
     const next = tileAhead(tile, direction);
-    if (!isWalkable(next)) {
+    if (!isWalkable(next) || catOn(next)) {
       bump();
       return;
     }
@@ -264,6 +343,70 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     if (direction && k.time() - heldSince.get(direction)! >= HOLD_DELAY) tryStep(direction);
   }
 
+  function stepPosition(current: Step, duration: number): Vec2 {
+    return k.vec2(...tileFoot(current.from)).lerp(k.vec2(...tileFoot(current.to)), current.elapsed / duration);
+  }
+
+  function react(cat: Cat) {
+    cat.shutterPending = false;
+    cat.facing = directionTowards(cat.tile, tile);
+    cat.mode = { kind: "resting", pose: "sit", secondsLeft: CAT_REACTION_TIME };
+    cat.heartSecondsLeft = CAT_REACTION_TIME;
+  }
+
+  function moveCat(cat: Cat) {
+    if (cat.step) {
+      cat.step.elapsed += k.dt();
+      if (cat.step.elapsed < CAT_STEP_TIME) return;
+      cat.tile = cat.step.to;
+      cat.step = null;
+    }
+    if (cat.shutterPending) return react(cat);
+    if (cat.mode.kind === "resting") {
+      cat.mode.secondsLeft -= k.dt();
+      if (cat.mode.secondsLeft <= 0) cat.mode = { kind: "walking", stepsLeft: chooseWalkLength(Math.random) };
+      return;
+    }
+    const blocked = new Set([...occupied({ tile, step }), ...cats.filter((other) => other !== cat).flatMap(occupied)]);
+    const direction = cat.mode.stepsLeft > 0 ? chooseCatStep(cat.tile, blocked, Math.random) : undefined;
+    if (!direction) {
+      cat.mode = restingMode();
+      return;
+    }
+    cat.mode.stepsLeft--;
+    cat.facing = direction;
+    cat.step = { from: cat.tile, to: tileAhead(cat.tile, direction), elapsed: 0 };
+  }
+
+  function catPose(cat: Cat) {
+    if (cat.step) return "walk";
+    return cat.mode.kind === "resting" ? cat.mode.pose : "stand";
+  }
+
+  function drawCat(cat: Cat) {
+    cat.sprite.pos = cat.step ? stepPosition(cat.step, CAT_STEP_TIME) : k.vec2(...tileFoot(cat.tile));
+    const pose = catPose(cat);
+    const anim = catAnim(pose, cat.facing);
+    if (cat.sprite.getCurAnim()?.name !== anim) cat.sprite.play(anim);
+    const head = cat.sprite.pos.sub(0, (pose === "sleep" ? CAT_SLEEPING_HEIGHT : CAT_FRAME_HEIGHT) + 1);
+    cat.heart.hidden = cat.heartSecondsLeft <= 0;
+    cat.heart.pos = head;
+    cat.plate.hidden = !isInNamePlateRange(tile, cat.tile);
+    cat.plate.pos = cat.heart.hidden ? head : head.sub(0, HEART_HEIGHT + 1);
+  }
+
+  function updateCats() {
+    const paused = events.isPaused();
+    for (const cat of cats) {
+      cat.sprite.animSpeed = paused ? 0 : 1;
+      if (!paused) {
+        moveCat(cat);
+        cat.heartSecondsLeft -= k.dt();
+      }
+      drawCat(cat);
+    }
+  }
+
   function updateCamera() {
     const x = clamp(player.pos.x, VIEW_WIDTH / 2, MAP_WIDTH - VIEW_WIDTH / 2);
     const y = clamp(player.pos.y - OVERWORLD_TILE_SIZE / 2, VIEW_HEIGHT / 2, MAP_HEIGHT - VIEW_HEIGHT / 2);
@@ -274,21 +417,24 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     if (step) {
       step.elapsed += k.dt();
       if (step.elapsed >= STEP_TIME) arrive();
-      else {
-        const from = k.vec2(...tileFoot(step.from));
-        player.pos = from.lerp(k.vec2(...tileFoot(step.to)), step.elapsed / STEP_TIME);
-      }
+      else player.pos = stepPosition(step, STEP_TIME);
     }
     if (!step) nextMove();
     const anim = playerAnim(facing, step !== null);
     if (player.getCurAnim()?.name !== anim) player.play(anim);
+    updateCats();
     updateCamera();
     keepNamePlatesBelowZoneTitle();
   });
 
   function press(button: GameButton) {
     if (button === "shutter") {
-      if (facedPoi && events.canFireShutter()) events.onShutter(facedPoi);
+      if (!events.canFireShutter()) return;
+      if (facedPoi) events.onShutter(facedPoi);
+      else if (!step) {
+        const cat = catOn(tileAhead(tile, facing));
+        if (cat) cat.shutterPending = true;
+      }
       return;
     }
     if (held.includes(button)) return;

@@ -63,6 +63,12 @@ function offsetToNearestTile(player: Tile, footprint: Footprint): [number, numbe
   return [clamp(player.col, left, right) - player.col, clamp(player.row, top, bottom) - player.row];
 }
 
+/** Whether the Player is near enough to a footprint, or a single tile such as a Cat's, for its name plate to show. */
+export function isInNamePlateRange(player: Tile, at: Footprint): boolean {
+  const [dx, dy] = offsetToNearestTile(player, at);
+  return Math.max(Math.abs(dx), Math.abs(dy)) <= NAME_PLATE_RANGE;
+}
+
 function overlaps(a: PlateBox, b: PlateBox) {
   return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 }
@@ -77,10 +83,7 @@ export function shownNamePlates(player: Tile, facing: Direction): NamePlate[] {
     const [dx, dy] = offsetToNearestTile(player, at);
     return { distance: dx * dx + dy * dy, towards: dx * ahead.col + dy * ahead.row };
   };
-  const nearby = NAME_PLATES.filter(({ at }) => {
-    const [dx, dy] = offsetToNearestTile(player, at);
-    return Math.max(Math.abs(dx), Math.abs(dy)) <= NAME_PLATE_RANGE;
-  });
+  const nearby = NAME_PLATES.filter(({ at }) => isInNamePlateRange(player, at));
   const ordered = nearby
     .map((plate) => ({ plate, ...rank(plate) }))
     .sort((a, b) => a.distance - b.distance || b.towards - a.towards)
