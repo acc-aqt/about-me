@@ -323,6 +323,9 @@ const CAT_SIDE_SITTING = [
   "kffkkkkkkkkkkk..",
 ];
 
+/** A curled-up Cat fills only the bottom rows of its frame. */
+export const CAT_SLEEPING_HEIGHT = 6;
+
 const CAT_SLEEPING = [
   "................",
   "................",
@@ -406,27 +409,21 @@ export function paintCatSheet(name: CatName): HTMLCanvasElement {
   const colors = CAT_COATS[name];
   const pixels = new Pixels(CAT_FRAME_WIDTH * CAT_FRAME_COUNT, CAT_FRAME_HEIGHT);
   const frames = [...CAT_DIRECTIONS.flatMap(catFrames), CAT_SLEEPING];
-  frames.forEach((rows, frame) => {
-    rows.forEach((row, y) => {
-      [...row].forEach((char, x) => colors[char] && pixels.dot(frame * CAT_FRAME_WIDTH + x, y, colors[char]));
-    });
-  });
+  frames.forEach((rows, frame) => paintRows(pixels, { rows, colors }, frame * CAT_FRAME_WIDTH, 0));
   return pixels.canvas;
 }
 
 export function paintHeart(): HTMLCanvasElement {
   const rows = [".kk.kk.", "krrkrrk", "krrrrrk", ".krrrk.", "..krk..", "...k..."];
-  const colors: Record<string, Rgb> = { k: INK, r: hex("#e04a5a") };
   const pixels = new Pixels(7, rows.length);
-  rows.forEach((row, y) => [...row].forEach((char, x) => colors[char] && pixels.dot(x, y, colors[char])));
+  paintRows(pixels, { rows, colors: { k: INK, r: hex("#e04a5a") } }, 0, 0);
   return pixels.canvas;
 }
 
 export function paintFilmRoll(): HTMLCanvasElement {
   const rows = [".ggg..", "kkkkk.", "krrrkk", "krkrk.", "krrrk.", "kkkkk.", ".ggg.."];
-  const colors: Record<string, Rgb> = { g: hex("#c4c8d0"), k: INK, r: hex("#e6b43c") };
   const pixels = new Pixels(6, rows.length);
-  rows.forEach((row, y) => [...row].forEach((char, x) => colors[char] && pixels.dot(x, y, colors[char])));
+  paintRows(pixels, { rows, colors: { g: hex("#c4c8d0"), k: INK, r: hex("#e6b43c") } }, 0, 0);
   return pixels.canvas;
 }
 

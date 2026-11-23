@@ -17,6 +17,7 @@ import {
   CAT_ANIMS,
   CAT_FRAME_COUNT,
   CAT_FRAME_HEIGHT,
+  CAT_SLEEPING_HEIGHT,
   catAnim,
   INK,
   PLAYER_ANIMS,
@@ -114,8 +115,8 @@ type Cat = {
   facing: Direction;
   step: Step | null;
   mode: CatMode;
-  heartLeft: number;
-  wantsToReact: boolean;
+  heartSecondsLeft: number;
+  shutterPending: boolean;
 };
 
 /** Where a sprite standing on a tile is anchored: the bottom centre of the tile. */
@@ -256,8 +257,8 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     facing: "down",
     step: null,
     mode: restingMode(),
-    heartLeft: 0,
-    wantsToReact: false,
+    heartSecondsLeft: 0,
+    shutterPending: false,
   }));
 
   /** The tiles a Cat or the Player stands on or is stepping onto. */
@@ -347,10 +348,10 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
   }
 
   function react(cat: Cat) {
-    cat.wantsToReact = false;
+    cat.shutterPending = false;
     cat.facing = directionTowards(cat.tile, tile);
     cat.mode = { kind: "resting", pose: "sit", secondsLeft: CAT_REACTION_TIME };
-    cat.heartLeft = CAT_REACTION_TIME;
+    cat.heartSecondsLeft = CAT_REACTION_TIME;
   }
 
   function moveCat(cat: Cat) {
@@ -360,7 +361,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       cat.tile = cat.step.to;
       cat.step = null;
     }
-    if (cat.wantsToReact) return react(cat);
+    if (cat.shutterPending) return react(cat);
     if (cat.mode.kind === "resting") {
       cat.mode.secondsLeft -= k.dt();
       if (cat.mode.secondsLeft <= 0) cat.mode = { kind: "walking", stepsLeft: chooseWalkLength(Math.random) };
@@ -384,20 +385,23 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
 
   function drawCat(cat: Cat) {
     cat.sprite.pos = cat.step ? stepPosition(cat.step, CAT_STEP_TIME) : k.vec2(...tileFoot(cat.tile));
-    const anim = catAnim(catPose(cat), cat.facing);
+    const pose = catPose(cat);
+    const anim = catAnim(pose, cat.facing);
     if (cat.sprite.getCurAnim()?.name !== anim) cat.sprite.play(anim);
-    const head = cat.sprite.pos.sub(0, CAT_FRAME_HEIGHT + 1);
-    cat.heart.hidden = cat.heartLeft <= 0;
+    const head = cat.sprite.pos.sub(0, (pose === "sleep" ? CAT_SLEEPING_HEIGHT : CAT_FRAME_HEIGHT) + 1);
+    cat.heart.hidden = cat.heartSecondsLeft <= 0;
     cat.heart.pos = head;
     cat.plate.hidden = !isInNamePlateRange(tile, cat.tile);
     cat.plate.pos = cat.heart.hidden ? head : head.sub(0, HEART_HEIGHT + 1);
   }
 
   function updateCats() {
+    const paused = events.isPaused();
     for (const cat of cats) {
-      if (!events.isPaused()) {
+      cat.sprite.animSpeed = paused ? 0 : 1;
+      if (!paused) {
         moveCat(cat);
-        cat.heartLeft -= k.dt();
+        cat.heartSecondsLeft -= k.dt();
       }
       drawCat(cat);
     }
@@ -429,7 +433,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
       if (facedPoi) events.onShutter(facedPoi);
       else if (!step) {
         const cat = catOn(tileAhead(tile, facing));
-        if (cat) cat.wantsToReact = true;
+        if (cat) cat.shutterPending = true;
       }
       return;
     }
