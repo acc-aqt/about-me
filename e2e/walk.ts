@@ -27,7 +27,14 @@ export function pointOfInterest(id: string) {
   return content.zones.flatMap((zone) => zone.pointsOfInterest).find((poi) => poi.id === id)!;
 }
 
+/**
+ * A fixed low roll curls the Cats up asleep for several seconds, then moves them the same way every run, so they never
+ * wander into a test's walk by chance.
+ */
 export async function openGame(page: Page) {
+  await page.addInitScript(() => {
+    Math.random = () => 0.1;
+  });
   await page.goto("./");
   await expect(page.getByRole("status")).toContainText("Face a sign");
 }

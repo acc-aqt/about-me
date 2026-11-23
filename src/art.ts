@@ -1,6 +1,6 @@
 // Original pixel art, painted in code at start-up so no large image files ship.
 // The Overworld's terrain, buildings, signs and props come from Kenney's CC0 Tiny Town and Tiny Dungeon tiles
-// (see CREDITS.md); the water, the mountain, the parked cars, the Player, the Film roll, the Hub's maypole, the
+// (see CREDITS.md); the water, the mountain, the parked cars, the Player, the Cats, the Film roll, the Hub's maypole, the
 // themed objects Kenney lacks and the stations drawn over whole Footprints (the FIZ, MTU's engine, the tennis court,
 // the pool and the summit cross) are painted here.
 
@@ -19,6 +19,7 @@ import {
   type Tile,
   type TileKind,
 } from "./overworld";
+import type { CatName, CatPose } from "./cats";
 import type { Footprint } from "./content";
 
 export type Rgb = [number, number, number];
@@ -267,6 +268,157 @@ export function paintPlayerSheet(): HTMLCanvasElement {
       });
     }
   });
+  return pixels.canvas;
+}
+
+export const CAT_FRAME_WIDTH = 16;
+export const CAT_FRAME_HEIGHT = 12;
+
+/** `o` marks the patches: Manouche's are orange, Berlioz is black all over. */
+const CAT_COATS: Record<CatName, Record<string, Rgb>> = {
+  Berlioz: { k: INK, f: hex("#34343f"), F: hex("#25252e"), o: hex("#34343f"), e: hex("#e8d44a"), n: hex("#8a5a66") },
+  Manouche: { k: INK, f: hex("#9a9ca6"), F: hex("#74767f"), o: hex("#e08a3c"), e: hex("#8fcf5a"), n: hex("#e89aa8") },
+};
+
+const CAT_SIDE_BODY = [
+  "...........k..k.",
+  "..........kfkkfk",
+  ".kk.......kffffk",
+  "kfk.......kffefk",
+  "kfk.......kfffnk",
+  ".kfkkkkkkkkffffk",
+  "..kffooffffffkk.",
+  "..kfoooffffffk..",
+  "..kFFfffffffFk..",
+];
+
+const CAT_FRONT_BODY = [
+  "....k......k....",
+  "...kfk....kfk...",
+  "...kffkkkkffk...",
+  "...kffffffffk...",
+  "...kfeffffefk...",
+  "...kfffnnfffk...",
+  "....kffffffk.kk.",
+  "...kfffoofffkfk.",
+  "...kFfoooffFkk..",
+];
+
+const CAT_BACK_BODY = CAT_FRONT_BODY.map((row) => row.replace(/[en]/g, "f"));
+
+const CAT_SITTING_LEGS = ["...kffffffffkfk.", "...kfkffffkfkk..", "...kkkkkkkkkk..."];
+
+const CAT_SIDE_SITTING = [
+  "................",
+  "..........k..k..",
+  ".........kfkkfk.",
+  ".........kffffk.",
+  ".........kffefk.",
+  ".........kfffnk.",
+  "......kkkkffffk.",
+  ".....kfoofffffk.",
+  "....kfoooffffk..",
+  "....kffffffffk..",
+  "kkk.kFfffffkfk..",
+  "kffkkkkkkkkkkk..",
+];
+
+const CAT_SLEEPING = [
+  "................",
+  "................",
+  "................",
+  "................",
+  "................",
+  "................",
+  "....kkkkkk......",
+  "..kkffooffkk.k.k",
+  ".kffoooffffkfkfk",
+  "kfffffffffkffffk",
+  "kFFffffffkfkkffk",
+  ".kkkkkkkkkkkkkk.",
+];
+
+type CatLeg = { x: number; lifted?: boolean };
+
+/** The three rows under a standing Cat's body: each leg a column of shaded fur outlined in ink, a lifted one shorter. */
+function catLegRows(legs: CatLeg[]): string[] {
+  const rows = Array.from({ length: 3 }, () => [..."................"]);
+  for (const { x, lifted } of legs) {
+    const foot = lifted ? 1 : 2;
+    for (let y = 0; y < foot; y++) {
+      rows[y][x - 1] = "k";
+      rows[y][x + 1] = "k";
+    }
+    for (let dx = -1; dx <= 1; dx++) rows[foot][x + dx] = "k";
+  }
+  for (const { x, lifted } of legs) for (let y = 0; y < (lifted ? 1 : 2); y++) rows[y][x] = "F";
+  return rows.map((row) => row.join(""));
+}
+
+/** Standing, then the two strides of the walk. */
+const CAT_SIDE_LEGS = [
+  catLegRows([{ x: 4 }, { x: 6 }, { x: 10 }, { x: 12 }]),
+  catLegRows([{ x: 3 }, { x: 7 }, { x: 9 }, { x: 13 }]),
+  catLegRows([{ x: 5 }, { x: 6 }, { x: 10 }, { x: 11 }]),
+];
+
+const CAT_FACING_LEGS = [
+  catLegRows([{ x: 5 }, { x: 10 }]),
+  catLegRows([{ x: 5, lifted: true }, { x: 10 }]),
+  catLegRows([{ x: 5 }, { x: 10, lifted: true }]),
+];
+
+const CAT_DIRECTIONS: Direction[] = ["down", "up", "left", "right"];
+
+/** Per direction: standing, the two strides, then sitting. */
+function catFrames(direction: Direction): string[][] {
+  const side = direction === "left" || direction === "right";
+  const body = side ? CAT_SIDE_BODY : direction === "down" ? CAT_FRONT_BODY : CAT_BACK_BODY;
+  const legs = side ? CAT_SIDE_LEGS : CAT_FACING_LEGS;
+  const frames = [...legs.map((rows) => [...body, ...rows]), side ? CAT_SIDE_SITTING : [...body, ...CAT_SITTING_LEGS]];
+  return direction === "left" ? frames.map(mirror) : frames;
+}
+
+const CAT_FRAMES_PER_DIRECTION = 4;
+const CAT_SLEEP_FRAME = CAT_DIRECTIONS.length * CAT_FRAMES_PER_DIRECTION;
+
+export const CAT_FRAME_COUNT = CAT_SLEEP_FRAME + 1;
+
+export type CatAnimPose = "stand" | "walk" | CatPose;
+
+export function catAnim(pose: CatAnimPose, facing: Direction): string {
+  return pose === "sleep" ? "sleep" : `${pose}-${facing}`;
+}
+
+export const CAT_ANIMS = Object.fromEntries([
+  ...CAT_DIRECTIONS.flatMap((direction, index) => {
+    const first = index * CAT_FRAMES_PER_DIRECTION;
+    return [
+      [catAnim("stand", direction), first],
+      [catAnim("walk", direction), { frames: [first + 1, first, first + 2, first], loop: true, speed: 8 }],
+      [catAnim("sit", direction), first + 3],
+    ];
+  }),
+  [catAnim("sleep", "down"), CAT_SLEEP_FRAME],
+]);
+
+export function paintCatSheet(name: CatName): HTMLCanvasElement {
+  const colors = CAT_COATS[name];
+  const pixels = new Pixels(CAT_FRAME_WIDTH * CAT_FRAME_COUNT, CAT_FRAME_HEIGHT);
+  const frames = [...CAT_DIRECTIONS.flatMap(catFrames), CAT_SLEEPING];
+  frames.forEach((rows, frame) => {
+    rows.forEach((row, y) => {
+      [...row].forEach((char, x) => colors[char] && pixels.dot(frame * CAT_FRAME_WIDTH + x, y, colors[char]));
+    });
+  });
+  return pixels.canvas;
+}
+
+export function paintHeart(): HTMLCanvasElement {
+  const rows = [".kk.kk.", "krrkrrk", "krrrrrk", ".krrrk.", "..krk..", "...k..."];
+  const colors: Record<string, Rgb> = { k: INK, r: hex("#e04a5a") };
+  const pixels = new Pixels(7, rows.length);
+  rows.forEach((row, y) => [...row].forEach((char, x) => colors[char] && pixels.dot(x, y, colors[char])));
   return pixels.canvas;
 }
 

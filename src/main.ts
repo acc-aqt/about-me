@@ -74,6 +74,7 @@ const controls = startGame(canvas, content, {
   },
   onFootstep: () => audio.playFootstep(),
   onBump: () => audio.playBump(),
+  isPaused: () => viewfinder.isOpen() || inventory.isOpen() || fastTravel.isOpen(),
 });
 
 const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
