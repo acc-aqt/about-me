@@ -5,6 +5,7 @@
 - **Hub**: Munich, the central Zone where the Player spawns and from which a path leads to every other Zone; the Contact mailbox stands in the Hub itself.
 - **Zone**: a themed region of the Overworld reached from the Hub (Career road, Maker workshop, Photography trail, Sport, Music & games, Contact).
 - **Point of Interest (POI)**: an in-world object the Player can photograph to reveal content. Avoid: "hotspot", "trigger".
+- **Footprint**: the rectangle of solid tiles a POI covers, sized like the real thing beside the Player (1 tile ≈ 1.2 m); facing any tile of it from outside faces the POI. Small objects have a one-tile Footprint.
 - **Signpost**: a sign beside a path out of the Hub, naming the Zones that path leads to. Not a POI: the Shutter does nothing at it.
 - **Name plate**: the small label above a POI or Signpost naming it, shown only while the Player is near. Avoid: "tooltip".
 - **Shutter**: the action (Space / on-screen button) that photographs a POI.
