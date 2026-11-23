@@ -25,6 +25,23 @@ describe("Name plates", () => {
     expect(namePlateBox({ text: "Darkroom", at: { col: 22, row: 3 } })).toEqual({ left: 334, top: 33, right: 386, bottom: 47 });
   });
 
+  it("sits just above a footprint's top row, centred across the whole footprint", () => {
+    expect(namePlateBox({ text: "Darkroom", at: { col: 40, row: 19, width: 7, height: 4 } })).toEqual({
+      left: 670,
+      top: 289,
+      right: 722,
+      bottom: 303,
+    });
+  });
+
+  it("shows a footprint's plate when the Player is near any of its edges", () => {
+    for (const player of [{ col: 43, row: 23 }, { col: 47, row: 20 }, { col: 82, row: 24 }, { col: 87, row: 21 }]) {
+      const expected = player.col < 48 ? "Technical University of Munich" : "MTU Aero Engines";
+      expect(titles(player, "up"), `${player.col},${player.row}`).toContain(expected);
+    }
+    expect(titles({ col: 43, row: 26 }, "up")).not.toContain("Technical University of Munich");
+  });
+
   it("shows the plates within two tiles of the Player", () => {
     expect(titles({ col: 40, row: 23 }, "up")).toEqual(["Technical University of Munich"]);
     expect(titles({ col: 29, row: 24 }, "down")).toEqual([]);

@@ -6,11 +6,11 @@ import { MAP_COLUMNS, MAP_ROWS, tileKindAt, zoneAt } from "./overworld";
 const themedZones: ZoneId[] = ["maker-workshop", "sport", "music-and-games"];
 
 describe("Overworld art", () => {
-  it("draws every trip on the Photography trail as a camera stand and the Darkroom as its door", () => {
+  it("draws every trip on the Photography trail as a camera stand and the Darkroom as its hut", () => {
     const trail = zoneById("photography-trail").pointsOfInterest;
     const props = trail.map((poi) => themedProp(poi.id));
     expect(props.slice(0, -1).every((prop) => prop === "camera stand")).toBe(true);
-    expect(props.at(-1)).toBe("darkroom door");
+    expect(props.at(-1)).toBe("darkroom hut");
   });
 
   it("draws the intro, the Career road stops and the Contact mailbox as themed objects", () => {
@@ -19,12 +19,12 @@ describe("Overworld art", () => {
       .flatMap((zone) => zone.pointsOfInterest.map((poi) => poi.id));
     expect(Object.fromEntries(ids.map((id) => [id, themedProp(id)]))).toEqual({
       intro: "welcome board",
-      tum: "university",
-      "bmw-group": "office tower",
+      tum: "university hall",
+      "bmw-group": "research center",
       "canberra-detour": "kangaroo sign",
-      "forward-engineering": "composites works",
+      "forward-engineering": "factory shed",
       "arrk-engineering": "office block",
-      mtu: "jet engine",
+      mtu: "engine works",
       "contact-board": "mailbox",
     });
   });
@@ -50,7 +50,7 @@ describe("Overworld art", () => {
       ...SCENERY_PROPS.filter(({ at }) => zoneAt(at) === id).map(({ prop }) => prop),
     ];
     expect(propsIn("maker-workshop")).toEqual(expect.arrayContaining(["workbench", "3D printer", "anvil"]));
-    expect(propsIn("sport")).toEqual(expect.arrayContaining(["archery target", "tennis net", "skis", "life ring"]));
+    expect(propsIn("sport")).toEqual(expect.arrayContaining(["archery target", "tennis court", "swimming pool", "summit cross"]));
     expect(propsIn("music-and-games")).toEqual(expect.arrayContaining(["jukebox", "speaker", "arcade cabinet"]));
   });
 

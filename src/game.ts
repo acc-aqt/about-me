@@ -1,6 +1,6 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import { zoneById, type Content, type PointOfInterest, type Zone, type ZoneId } from "./content";
-import { LABEL_PADDING, NAME_PLATE_WRAP_WIDTH, NAME_PLATES, needsWrap, shownNamePlates, ZONE_TITLE_Y, type NamePlate } from "./namePlates";
+import { LABEL_PADDING, NAME_PLATE_WRAP_WIDTH, NAME_PLATES, namePlateBox, needsWrap, shownNamePlates, ZONE_TITLE_BOTTOM, ZONE_TITLE_Y, type NamePlate } from "./namePlates";
 import { INK, PLAYER_ANIMS, PLAYER_FRAME_COUNT, paintFilmRoll, paintOverworld, paintPlayerSheet, playerAnim, type Rgb } from "./art";
 import {
   facedPointOfInterest,
@@ -158,12 +158,21 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     return label;
   }
 
-  function addNamePlate({ text, at }: NamePlate) {
-    const [x, y] = tileFoot(at);
-    return addLabel(text, k.vec2(x, y - OVERWORLD_TILE_SIZE - 1), "bot", { wrap: true }).parent!;
+  function addNamePlate(namePlate: NamePlate) {
+    const { left, right, bottom } = namePlateBox(namePlate);
+    return addLabel(namePlate.text, k.vec2((left + right) / 2, bottom), "bot", { wrap: true }).parent!;
   }
 
   const namePlates = new Map(NAME_PLATES.map((namePlate) => [namePlate, addNamePlate(namePlate)]));
+
+  /** A tall footprint's plate can rise to the top of the view; there it slides down over the footprint, below the Zone title. */
+  function keepNamePlatesBelowZoneTitle() {
+    const viewTop = k.getCamPos().y - VIEW_HEIGHT / 2;
+    for (const [namePlate, plate] of namePlates) {
+      if (plate.hidden) continue;
+      plate.pos.y = Math.max(namePlateBox(namePlate).bottom, viewTop + ZONE_TITLE_BOTTOM + 1 + plate.height);
+    }
+  }
 
   function showNearbyNamePlates() {
     const shown = new Set(shownNamePlates(tile, facing));
@@ -274,6 +283,7 @@ export function startGame(canvas: HTMLCanvasElement, content: Content, events: G
     const anim = playerAnim(facing, step !== null);
     if (player.getCurAnim()?.name !== anim) player.play(anim);
     updateCamera();
+    keepNamePlatesBelowZoneTitle();
   });
 
   function press(button: GameButton) {

@@ -1,17 +1,17 @@
-import { content, zoneById } from "./content";
-import { HUB_SIGNPOSTS, OVERWORLD_TILE_SIZE, tileAhead, tileToPixels, type Direction, type Tile } from "./overworld";
+import { content, zoneById, type Footprint } from "./content";
+import { footprintRect, HUB_SIGNPOSTS, OVERWORLD_TILE_SIZE, tileAhead, type Direction, type Tile } from "./overworld";
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH } from "./pixel-font";
 
 export const LABEL_PADDING = 2;
 export const NAME_PLATE_WRAP_WIDTH = 120;
-/** Tiles from the Player within which a name plate shows. */
+/** Tiles from the Player to the nearest tile of a footprint within which its name plate shows. */
 const NAME_PLATE_RANGE = 2;
 
 /** The Zone title is fixed to the top of the view, so at the map's top edge it covers this band of the map. */
 export const ZONE_TITLE_Y = 8;
 export const ZONE_TITLE_BOTTOM = ZONE_TITLE_Y + PIXEL_FONT_CELL_HEIGHT + LABEL_PADDING * 2;
 
-export type NamePlate = { text: string; at: Tile };
+export type NamePlate = { text: string; at: Footprint };
 
 /** Pixel bounds on the map; right and bottom are exclusive. */
 export type PlateBox = { left: number; top: number; right: number; bottom: number };
@@ -41,16 +41,26 @@ function lineCount(text: string): number {
   return lines;
 }
 
-/** The plate sits one pixel above its tile, centred on it; a Point of Interest's object fills the tile below it. */
+/**
+ * The plate sits one pixel above its footprint, centred across it, but never rises into the Zone title's band at the
+ * top of the map.
+ */
 export function namePlateBox({ text, at }: NamePlate): PlateBox {
   // Kaplay reports a wrapped text's width as its wrap width.
   const textWidth = needsWrap(text) ? NAME_PLATE_WRAP_WIDTH : text.length * PIXEL_FONT_CELL_WIDTH;
   const width = textWidth + LABEL_PADDING * 2;
   const height = lineCount(text) * PIXEL_FONT_CELL_HEIGHT + LABEL_PADDING * 2;
-  const [x, y] = tileToPixels(at);
-  const centre = x + OVERWORLD_TILE_SIZE / 2;
-  const bottom = y - 1;
+  const { left, right, top } = footprintRect(at);
+  const centre = ((left + right + 1) * OVERWORLD_TILE_SIZE) / 2;
+  const bottom = Math.max(top * OVERWORLD_TILE_SIZE - 1, ZONE_TITLE_BOTTOM + 1 + height);
   return { left: centre - width / 2, top: bottom - height, right: centre + width / 2, bottom };
+}
+
+/** Columns and rows from the Player to the footprint's tile nearest it. */
+function offsetToNearestTile(player: Tile, footprint: Footprint): [number, number] {
+  const { left, top, right, bottom } = footprintRect(footprint);
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+  return [clamp(player.col, left, right) - player.col, clamp(player.row, top, bottom) - player.row];
 }
 
 function overlaps(a: PlateBox, b: PlateBox) {
@@ -64,10 +74,13 @@ function overlaps(a: PlateBox, b: PlateBox) {
 export function shownNamePlates(player: Tile, facing: Direction): NamePlate[] {
   const ahead = tileAhead({ col: 0, row: 0 }, facing);
   const rank = ({ at }: NamePlate) => {
-    const [dx, dy] = [at.col - player.col, at.row - player.row];
+    const [dx, dy] = offsetToNearestTile(player, at);
     return { distance: dx * dx + dy * dy, towards: dx * ahead.col + dy * ahead.row };
   };
-  const nearby = NAME_PLATES.filter(({ at }) => Math.max(Math.abs(at.col - player.col), Math.abs(at.row - player.row)) <= NAME_PLATE_RANGE);
+  const nearby = NAME_PLATES.filter(({ at }) => {
+    const [dx, dy] = offsetToNearestTile(player, at);
+    return Math.max(Math.abs(dx), Math.abs(dy)) <= NAME_PLATE_RANGE;
+  });
   const ordered = nearby
     .map((plate) => ({ plate, ...rank(plate) }))
     .sort((a, b) => a.distance - b.distance || b.towards - a.towards)

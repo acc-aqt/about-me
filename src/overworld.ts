@@ -1,10 +1,26 @@
-import { content, zoneById, type PointOfInterest, type ZoneId } from "./content";
+import { content, zoneById, type Footprint, type PointOfInterest, type ZoneId } from "./content";
 
 export type Tile = { col: number; row: number };
 
 export type Direction = "up" | "down" | "left" | "right";
 
-export type TileKind = "grass" | "path" | "tree" | "water" | "building" | "bush" | "fence" | "maypole" | "well" | "prop";
+export type TileKind =
+  | "grass"
+  | "path"
+  | "tree"
+  | "water"
+  | "building"
+  | "bush"
+  | "fence"
+  | "maypole"
+  | "well"
+  | "prop"
+  | "landmark"
+  | "asphalt"
+  | "car"
+  | "rock"
+  | "snow"
+  | "track";
 
 export const OVERWORLD_TILE_SIZE = 16;
 
@@ -19,60 +35,82 @@ export const LEGEND: Record<string, { kind: TileKind; walkable: boolean }> = {
   Y: { kind: "maypole", walkable: false },
   o: { kind: "well", walkable: false },
   p: { kind: "prop", walkable: false },
+  /** Ground under a Point of Interest drawn whole over its footprint, such as the FIZ or the tennis court. */
+  X: { kind: "landmark", walkable: false },
+  _: { kind: "asphalt", walkable: true },
+  c: { kind: "car", walkable: false },
+  "^": { kind: "rock", walkable: false },
+  S: { kind: "snow", walkable: false },
+  /** The skin track up the mountain. */
+  ":": { kind: "track", walkable: true },
 };
 
 /** One string per row, one character per tile; see LEGEND. Row 0 is the top (north) edge. */
 export const OVERWORLD_MAP: readonly string[] = [
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTBBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT===============BBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT=T............=BBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT=TTTTTTTTTTTTT===TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT================================================TTTTTT",
-  "TTTTTTTT...........................................TT=...TTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~~~~TTTTTT=...TTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=...TTT",
-  "TTTTTT================================================TTTTTT",
-  "TTTTTT=T...........................................TTTTTTTTT",
-  "TTTTTT=TTTTT~~~~~TTTTTTTTTTTTTTTTTTT~~~~~~~~~TTTTTTTTTTTTTTT",
-  "TTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTT=========================TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTT.......TTT.........TTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTT**.....=....**TTTTTTTTTTTTTTTTTTTTTTT",
-  "TT****................T*......=.....*TT*...*...*...*...*..TT",
-  "TT****........pp......T.......=...Y..TT...................TT",
-  "TT....................T.......=...Y..TT...................TT",
-  "TT....................T.......=......TT...................TT",
-  "TT========================================================TT",
-  "TT....................T........=.....TT...................TT",
-  "TT....................T...o....=.....TT...................TT",
-  "TT.BBBBBB...BBBBBB.p..T........=.....TT...................TT",
-  "TT.BBBBBB...BBBBBB....T........=.....TT.........BBBBB.....TT",
-  "TT.BBBBBBp..BBBBBB....T*.......=....*TT.........BBBBB.....TT",
-  "TT....................TTTTTTTTT=TTTTTTT.........BBBBB.....TT",
-  "TT....................TTTTTT***=******T~~~~~~.............TT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TT.................p.p........T=...p.p....................TT",
-  "TT========================================================TT",
-  "TT............................TT..........................TT",
-  "TT.p.p........................TT....................ppp...TT",
-  "TT............~~~~~~~~~.......TT..........................TT",
-  "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
-  "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
-  "TT............~~~~~~~~~.......TT..........BBBBBBBp........TT",
-  "TT............~~~~~~~~~.......TT..........BBBBBBB.........TT",
-  "TTTTTTT.......................TT..........................TT",
-  "TTTTTTTp......................TT..........................TT",
-  "TTTTTTT.......................TT..........................TT",
-  "TTTTTTT.......................TT..........................TT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTBBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT===============BBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=T............=BBBTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=TTTTTTTTTTTTT===TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT================================================TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTT...........................................TT=...TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~~~~TTTTTT=...TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=...TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT================================================TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=T...........................................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=TTTTT~~~~~TTTTTTTTTTTTTTTTTTT~~~~~~~~~TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT=========================TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTT.......TTT.........TTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTT**.....=....**TTT.......TT..........TTT.......T.......T.........TTT",
+  "TT****................T*......=.....*TTTBBBBBBB..XXXXXXXXX..............................TT",
+  "TT****........pp......T.......=...Y..TTTBBBBBBB..XXXXXXXXX.....BBBBBB..BBBBB..BBBBBBXXX.TT",
+  "TT....................T.......=...Y..TTTBBBBBBB..XXXXXXXXX.....BBBBBB..BBBBB..BBBBBBXXX.TT",
+  "TT....................T.......=......TTTBBBBBBB..XXXXXXXXX.....BBBBBB..BBBBB..BBBBBBXXX.TT",
+  "TT======================================================================================TT",
+  "TT....................T........=.....TTT........___________T=*..........................TT",
+  "TT....................T...o....=.....TTT........_c_c___c_c_.=...........................TT",
+  "TT.BBBBBB...BBBBBB.p..T........=.....TTT..*..*.._c_c___c_c_.=...*..*....*..*....*....T..TT",
+  "TT.BBBBBB...BBBBBB....T........=.....TTT........___________.=.......................TT..TT",
+  "TT.BBBBBBp..BBBBBB....T*.......=....*TTT...................*=*........*.................TT",
+  "TT....................TTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTT.TTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT....................TTTTTT***=******TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT***=******TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT............................T=...p.p....................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT========================================================TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT............................TT..........................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT.XXXXXXXXXXXX.XXXXXXXXXXXXX.TT....................ppp...TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT.XXXXXXXXXXXX.XXXXXXXXXXXXX.TT..........................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT.XXXXXXXXXXXX.XXXXXXXXXXXXX.TT..........BBBBBBB.........TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT.XXXXXXXXXXXX.XXXXXXXXXXXXX.TT..........BBBBBBB.........TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT.XXXXXXXXXXXX.XXXXXXXXXXXXX.TT..........BBBBBBBp........TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT..............XXXXXXXXXXXXX.TT..........BBBBBBB.........TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT............................TT..........................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT.p.p.p......................TT..........................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT............................TT..........................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTT*.......................**.TT..........................TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTT^^^^:^^^^^^^^^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTT^^^^S:::::::::S^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTT^^SSSSSSSSSSSSS:SSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTT^SSSSSSSSSSSSSSS:SSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTT^^S:::::::::::::::SSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTT^^SS:SSSSSSSSSSSSSSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTT^^SSSS:SSSSSSSSSSSSSSSSSSS^^S^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTT^^SSSSS:::::::::::::::::SSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT^^SSSSSSSSSSSSSSSSSSSSSS:SSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSSSS^SSSSSSSSSSSSSSSSSSS:SSSSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSSSSSSSSSSSS:::::::::::::SSSSSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSSSSSSSSSSSS:SSSSSSSSSSSSSSSSSSS^^SSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSSSSSSSSSSSS:SSSSSSSSSSSSSSSSSSSSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSS^SSSSSSSSS:XXSSSSSSS^SSSSSSSSSSSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS^SSSSSSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSSSSSS^SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS^^SSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "SSSSSSSSSSSSSSSSSS^SSSSSSSSSSSSSSSSSSSSSSSSSS^^TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
 ];
 
 export const MAP_COLUMNS = OVERWORLD_MAP[0].length;
@@ -90,10 +128,10 @@ export type TileRect = { left: number; top: number; right: number; bottom: numbe
 export const ZONE_RECTS: Record<ZoneId, TileRect> = {
   start: { left: 22, top: 17, right: 37, bottom: 29 },
   "photography-trail": { left: 1, top: 1, right: 58, bottom: 16 },
-  "career-road": { left: 38, top: 17, right: 58, bottom: 33 },
+  "career-road": { left: 38, top: 17, right: 88, bottom: 33 },
   "maker-workshop": { left: 1, top: 17, right: 21, bottom: 33 },
   contact: { left: 23, top: 26, right: 28, bottom: 28 },
-  sport: { left: 1, top: 34, right: 30, bottom: 48 },
+  sport: { left: 1, top: 34, right: 30, bottom: 63 },
   "music-and-games": { left: 31, top: 34, right: 58, bottom: 48 },
 };
 
@@ -129,8 +167,22 @@ export function tileToPixels({ col, row }: Tile): [number, number] {
   return [col * OVERWORLD_TILE_SIZE, row * OVERWORLD_TILE_SIZE];
 }
 
+export function footprintRect({ col, row, width = 1, height = 1 }: Footprint): TileRect {
+  return { left: col, top: row, right: col + width - 1, bottom: row + height - 1 };
+}
+
+export function footprintTiles(footprint: Footprint): Tile[] {
+  const { left, top, right, bottom } = footprintRect(footprint);
+  const tiles: Tile[] = [];
+  for (let row = top; row <= bottom; row++) for (let col = left; col <= right; col++) tiles.push({ col, row });
+  return tiles;
+}
+
+/** Every tile of every footprint, so facing any of them faces its Point of Interest. */
 const pointsOfInterestByTile = new Map(
-  content.zones.flatMap((zone) => zone.pointsOfInterest).map((poi) => [tileKey(poi.placement), poi] as const),
+  content.zones
+    .flatMap((zone) => zone.pointsOfInterest)
+    .flatMap((poi) => footprintTiles(poi.placement).map((tile) => [tileKey(tile), poi] as const)),
 );
 
 function pointOfInterestAt(tile: Tile): PointOfInterest | undefined {
@@ -173,7 +225,7 @@ export function facedPointOfInterest(tile: Tile, facing: Direction): PointOfInte
   return pointOfInterestAt(tileAhead(tile, facing));
 }
 
-const COVER_KINDS: readonly TileKind[] = ["tree", "bush", "building", "fence", "prop"];
+const COVER_KINDS: readonly TileKind[] = ["tree", "bush", "building", "fence", "prop", "landmark", "car"];
 
 /** Cover to the south stands in front of a Film roll, so it is tried first; cover to the north is the last resort. */
 const COVER_DIRECTIONS: Direction[] = ["down", "left", "right", "up"];
@@ -209,7 +261,7 @@ export function isReachableFromSpawn(tile: Tile): boolean {
 
 export type Landing = { tile: Tile; facing: Direction };
 
-/** Where the Player stands to face a Point of Interest, preferring to stand below it. */
+/** The sides the Player may stand on to face a footprint, preferring below it, with the way it then faces. */
 const APPROACHES: { from: Direction; facing: Direction }[] = [
   { from: "down", facing: "up" },
   { from: "left", facing: "right" },
@@ -217,8 +269,21 @@ const APPROACHES: { from: Direction; facing: Direction }[] = [
   { from: "up", facing: "down" },
 ];
 
+/** The tiles just outside one side of a footprint, nearest that side's middle first. */
+function tilesBeside(footprint: Footprint, side: Direction): Tile[] {
+  const { left, top, right, bottom } = footprintRect(footprint);
+  const across = side === "up" || side === "down";
+  const [from, to] = across ? [left, right] : [top, bottom];
+  const middle = (from + to) / 2;
+  const offsets = Array.from({ length: to - from + 1 }, (_, index) => from + index).sort(
+    (a, b) => Math.abs(a - middle) - Math.abs(b - middle) || a - b,
+  );
+  const fixed = { up: top - 1, down: bottom + 1, left: left - 1, right: right + 1 }[side];
+  return offsets.map((offset) => (across ? { col: offset, row: fixed } : { col: fixed, row: offset }));
+}
+
 /**
- * In front of the Zone's `fastTravelTo` Point of Interest, facing it; otherwise the first tile of the
+ * In front of the middle of the Zone's `fastTravelTo` Point of Interest, facing it; otherwise the first tile of the
  * Zone on the shortest walk from the spawn (where its path leaves the Hub), facing onward.
  */
 export function fastTravelLanding(zoneId: ZoneId): Landing {
@@ -226,8 +291,8 @@ export function fastTravelLanding(zoneId: ZoneId): Landing {
   const featured = zone.pointsOfInterest.find((poi) => poi.id === zone.fastTravelTo);
   if (featured) {
     for (const { from, facing } of APPROACHES) {
-      const tile = tileAhead(featured.placement, from);
-      if (isReachableFromSpawn(tile)) return { tile, facing };
+      const tile = tilesBeside(featured.placement, from).find(isReachableFromSpawn);
+      if (tile) return { tile, facing };
     }
     throw new Error(`No reachable tile in front of ${featured.id}`);
   }
