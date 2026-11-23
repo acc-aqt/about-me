@@ -18,6 +18,14 @@ export type Placement = {
   row: number;
 };
 
+/** The rectangle of solid tiles a Point of Interest covers, from its north-west tile; one tile unless sized. */
+export type Footprint = Placement & {
+  /** Tiles across, east from `col`; 1 when left out. */
+  width?: number;
+  /** Tiles down, south from `row`; 1 when left out. */
+  height?: number;
+};
+
 export type PointOfInterest = {
   id: string;
   title: string;
@@ -26,7 +34,7 @@ export type PointOfInterest = {
   body: string;
   photos?: Photo[];
   links?: Link[];
-  placement: Placement;
+  placement: Footprint;
 };
 
 export type ZoneId =
@@ -92,7 +100,7 @@ export const content: Content = {
       id: "career-road",
       title: "Career road",
       fastTravelTo: "mtu",
-      filmRoll: { col: 53, row: 28 },
+      filmRoll: { col: 70, row: 27 },
       pointsOfInterest: [
         {
           id: "tum",
@@ -102,7 +110,7 @@ export const content: Content = {
           body:
             "I studied vehicle and engine technology (BSc, 2010–2014) and mechanical engineering (MSc, 2014–2017, grade 1.3).",
           links: [{ label: "Technical University of Munich", url: "https://www.tum.de/" }],
-          placement: { col: 40, row: 22 },
+          placement: { col: 40, row: 19, width: 7, height: 4 },
         },
         {
           id: "bmw-group",
@@ -112,7 +120,7 @@ export const content: Content = {
           body:
             "I interned in chassis engineering and worked on a research project on CFRP (carbon-fibre-reinforced plastic) technology.",
           links: [{ label: "BMW Group", url: "https://www.bmwgroup.com/" }],
-          placement: { col: 43, row: 24 },
+          placement: { col: 49, row: 19, width: 9, height: 4 },
         },
         {
           id: "canberra-detour",
@@ -121,7 +129,7 @@ export const content: Content = {
           dates: "2014–2015",
           body: "I took a detour to Canberra to do research at the Australian National University.",
           links: [{ label: "Australian National University", url: "https://www.anu.edu.au/" }],
-          placement: { col: 46, row: 22 },
+          placement: { col: 60, row: 29 },
         },
         {
           id: "forward-engineering",
@@ -130,7 +138,7 @@ export const content: Content = {
           dates: "2017–2018",
           body: "I developed structural simulation methods for composite parts in LS-DYNA.",
           links: [{ label: "Forward Engineering", url: "https://www.forward-engineering.com/" }],
-          placement: { col: 49, row: 24 },
+          placement: { col: 63, row: 20, width: 6, height: 3 },
         },
         {
           id: "arrk-engineering",
@@ -139,7 +147,7 @@ export const content: Content = {
           dates: "2018–2020",
           body: "I built tooling that automates simulation pre- and post-processing.",
           links: [{ label: "ARRK Engineering", url: "https://engineering.arrk.com/" }],
-          placement: { col: 52, row: 22 },
+          placement: { col: 71, row: 20, width: 5, height: 3 },
         },
         {
           id: "mtu",
@@ -149,7 +157,7 @@ export const content: Content = {
           body:
             "I build a platform that coordinates engineering design processes and workflows and stores the engineering data behind them.",
           links: [{ label: "MTU Aero Engines", url: "https://www.mtu.de/" }],
-          placement: { col: 55, row: 22 },
+          placement: { col: 78, row: 20, width: 9, height: 3 },
         },
       ],
     },
@@ -465,7 +473,7 @@ export const content: Content = {
             },
           ],
           links: [{ label: "Full gallery on carrels.photography", url: "https://www.carrels.photography/analog/" }],
-          placement: { col: 22, row: 3 },
+          placement: { col: 21, row: 1, width: 3, height: 3 },
         },
       ],
     },
@@ -478,13 +486,13 @@ export const content: Content = {
           id: "swimming-pool",
           title: "Swimming pool",
           body: "Swimming is one of the sports I do for fun.",
-          placement: { col: 27, row: 36 },
+          placement: { col: 16, row: 37, width: 13, height: 6 },
         },
         {
           id: "tennis-court",
           title: "Tennis court",
           body: "I also play tennis.",
-          placement: { col: 20, row: 34 },
+          placement: { col: 3, row: 37, width: 12, height: 5 },
         },
         {
           id: "ski-touring-slope",
@@ -493,7 +501,7 @@ export const content: Content = {
           links: [
             { label: "Norway ski touring gallery", url: "https://www.carrels.photography/norway-skitouring/" },
           ],
-          placement: { col: 10, row: 36 },
+          placement: { col: 15, row: 60, width: 2, height: 1 },
         },
       ],
     },

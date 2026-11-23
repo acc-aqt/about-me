@@ -1,6 +1,17 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { content, zoneById, type ZoneId } from "../src/content.ts";
-import { DIRECTIONS, fastTravelLanding, isWalkable, SPAWN, tileAhead, tileKey as key, type Direction, type Landing, type Tile } from "../src/overworld.ts";
+import { content, zoneById, type Footprint, type ZoneId } from "../src/content.ts";
+import {
+  DIRECTIONS,
+  fastTravelLanding,
+  footprintTiles,
+  isWalkable,
+  SPAWN,
+  tileAhead,
+  tileKey as key,
+  type Direction,
+  type Landing,
+  type Tile,
+} from "../src/overworld.ts";
 
 export const ARROW_KEYS: Record<Direction, string> = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
 export const DPAD_BUTTONS: Record<Direction, string> = { up: "Walk up", down: "Walk down", left: "Walk left", right: "Walk right" };
@@ -54,11 +65,15 @@ function shortestWalk(from: Tile, goals: Tile[]): Direction[] {
 }
 
 /**
- * The direction taps that walk from a landing onto a target tile, or up to a target and then face it.
- * A tap in a new direction only turns the Player; a tap in the direction it faces takes one step.
+ * The direction taps that walk from a landing onto a target tile, or up to the nearest edge of a target's footprint
+ * and then face it. A tap in a new direction only turns the Player; a tap in the direction it faces takes one step.
  */
-export function tapsTo(from: Landing, target: Tile, { face = false } = {}): Direction[] {
-  const goals = face ? DIRECTIONS.map((direction) => tileAhead(target, direction)) : [target];
+export function tapsTo(from: Landing, target: Footprint, { face = false } = {}): Direction[] {
+  const inside = new Set(footprintTiles(target).map(key));
+  const around = footprintTiles(target)
+    .flatMap((tile) => DIRECTIONS.map((direction) => tileAhead(tile, direction)))
+    .filter((tile) => !inside.has(key(tile)));
+  const goals = face ? around : [{ col: target.col, row: target.row }];
   const steps = shortestWalk(from.tile, goals);
   const taps: Direction[] = [];
   let facing = from.facing;
@@ -70,10 +85,15 @@ export function tapsTo(from: Landing, target: Tile, { face = false } = {}): Dire
     tile = tileAhead(tile, direction);
   }
   if (face) {
-    const toTarget = DIRECTIONS.find((direction) => key(tileAhead(tile, direction)) === key(target))!;
+    const toTarget = DIRECTIONS.find((direction) => inside.has(key(tileAhead(tile, direction))))!;
     if (toTarget !== facing) taps.push(toTarget);
   }
   return taps;
+}
+
+/** Long enough to wait for the Player to finish a walk of these taps, each step taking a fraction of a second. */
+export function walkTimeout(taps: Direction[]) {
+  return 5_000 + taps.length * 250;
 }
 
 export async function tapKeys(page: Page, taps: Direction[]) {
