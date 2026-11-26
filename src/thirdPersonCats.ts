@@ -13,9 +13,11 @@ const BODY = { width: 0.2, height: 0.18, length: 0.42 };
 const LEG = { width: 0.06, length: 0.16 };
 const HIP_HEIGHT = LEG.length;
 const HEAD_SIZE = 0.18;
+/** A touch larger than life, so a Cat reads beside the chunky Player. */
+const CAT_SCALE = 1.3;
 /** Where the Name plate (or the heart) floats above a standing Cat. */
-const STANDING_HEIGHT = 0.55;
-const SLEEPING_HEIGHT = 0.3;
+const STANDING_HEIGHT = 0.55 * CAT_SCALE;
+const SLEEPING_HEIGHT = 0.3 * CAT_SCALE;
 const PLATE_GAP = 0.05;
 const HEART_SIZE = 0.2;
 const WALK_STRIDE = 0.6;
@@ -51,6 +53,9 @@ function buildCat(coat: Record<string, Rgb>): CatMeshes {
   const nose = material(coat.n);
 
   const root = new THREE.Group();
+  const figure = new THREE.Group();
+  figure.scale.setScalar(CAT_SCALE);
+  root.add(figure);
   const body = new THREE.Group();
   body.position.y = HIP_HEIGHT;
   body.add(mesh(new THREE.BoxGeometry(BODY.width, BODY.height, BODY.length), fur, 0, BODY.height / 2, 0));
@@ -79,11 +84,11 @@ function buildCat(coat: Record<string, Rgb>): CatMeshes {
       const pivot = new THREE.Group();
       pivot.position.set(side * (BODY.width / 2 - LEG.width / 2), HIP_HEIGHT, ((front ? 1 : -1) * BODY.length) / 2.6);
       pivot.add(mesh(new THREE.BoxGeometry(LEG.width, LEG.length, LEG.width), shade, 0, -LEG.length / 2, 0));
-      root.add(pivot);
+      figure.add(pivot);
       return { pivot, front, side };
     }),
   );
-  root.add(body);
+  figure.add(body);
   return { root, body, head, tail, legs };
 }
 
