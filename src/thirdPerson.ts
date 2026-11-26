@@ -1,12 +1,12 @@
 import * as THREE from "three";
-import { createCats, type Cats } from "./cats";
+import type { Cats } from "./cats";
 import type { Content, PointOfInterest } from "./content";
-import { SPAWN_LANDING, type GameButton, type GameControls, type GameEvents } from "./game";
+import type { GameButton, GameControls, GameEvents } from "./game";
 import { fastTravelLanding, type Landing } from "./overworld";
 import { createThirdPersonCats } from "./thirdPersonCats";
 import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
 import { createPointsOfInterest } from "./thirdPersonPointsOfInterest";
-import { loadPlayerModel } from "./thirdPersonPlayer";
+import { loadPlayerModel, type PlayerModel } from "./thirdPersonPlayer";
 import { createScenery } from "./thirdPersonScenery";
 import {
   directionToHeading,
@@ -126,15 +126,20 @@ function addFlash(container: HTMLElement) {
   };
 }
 
-/** Third-person mode: the same contract as the 2D game, rendering the Overworld in 3D with Three.js. */
-export async function startThirdPerson(
+export { loadPlayerModel };
+
+/**
+ * Third-person mode: the same contract as the 2D game, rendering the Overworld in 3D with Three.js. The Player's model
+ * is loaded beforehand, so a failed load leaves the running renderer untouched.
+ */
+export function startThirdPerson(
   container: HTMLElement,
   content: Content,
   events: GameEvents,
-  start = SPAWN_LANDING,
-  cats: Cats = createCats(Math.random),
-): Promise<GameControls> {
-  const playerModel = await loadPlayerModel();
+  start: Landing,
+  cats: Cats,
+  playerModel: PlayerModel,
+): GameControls {
   const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
   const canvas = addCanvas(container);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });

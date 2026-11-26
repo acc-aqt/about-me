@@ -2,7 +2,7 @@ import { createAudio } from "./audio";
 import { createCats } from "./cats";
 import { content, type PointOfInterest, type ZoneId } from "./content";
 import { createFastTravel } from "./fastTravel";
-import { SPAWN_LANDING, startGame, type GameButton, type GameEvents } from "./game";
+import { SPAWN_LANDING, startGame, type GameButton, type GameControls, type GameEvents } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
 import type { Landing } from "./overworld";
 import { createCheatDetector } from "./cheat";
@@ -84,29 +84,42 @@ const events: GameEvents = {
   isPaused: () => viewfinder.isOpen() || inventory.isOpen() || fastTravel.isOpen(),
 };
 
-async function startThirdPersonMode(start: Landing) {
+type StartRenderer = (start: Landing) => GameControls;
+
+const start2D: StartRenderer = (start) => startGame(screenWindow, content, events, start, collectedFilmRolls, cats);
+
+/** Fetches Third-person mode's code and models behind the loading screen, ready to start at once. */
+async function loadThirdPersonMode(): Promise<StartRenderer> {
   loadingScreen.hidden = false;
   try {
-    const { startThirdPerson } = await import("./thirdPerson");
-    return await startThirdPerson(screenWindow, content, events, start, cats);
+    const { loadPlayerModel, startThirdPerson } = await import("./thirdPerson");
+    const playerModel = await loadPlayerModel();
+    return (start) => startThirdPerson(screenWindow, content, events, start, cats, playerModel);
   } finally {
     loadingScreen.hidden = true;
   }
 }
 
 let inThirdPerson = startsInThirdPerson;
-let controls = inThirdPerson ? await startThirdPersonMode(SPAWN_LANDING) : startGame(screenWindow, content, events, SPAWN_LANDING, collectedFilmRolls, cats);
+let controls = (inThirdPerson ? await loadThirdPersonMode() : start2D)(SPAWN_LANDING);
 let switching = false;
 
-/** Hands the Player's spot over to the other renderer; Third-person mode snaps it to a tile and a direction. */
+/**
+ * Hands the Player's spot over to the other renderer; Third-person mode snaps it to a tile and a direction. The other
+ * renderer loads before this one stops, so a failed load leaves the Player where they were.
+ */
 async function switchMode(landing: Landing) {
   switching = true;
-  controls.stop();
-  events.onFacingChange(null);
-  inThirdPerson = !inThirdPerson;
-  controls = inThirdPerson ? await startThirdPersonMode(landing) : startGame(screenWindow, content, events, landing, collectedFilmRolls, cats);
-  controls.focus();
-  switching = false;
+  try {
+    const startNext = inThirdPerson ? start2D : await loadThirdPersonMode();
+    controls.stop();
+    events.onFacingChange(null);
+    inThirdPerson = !inThirdPerson;
+    controls = startNext(landing);
+    controls.focus();
+  } finally {
+    switching = false;
+  }
 }
 
 /** Each key notes where the Player stood before it, so the switch lands where the cheat began, not where its arrows led. */

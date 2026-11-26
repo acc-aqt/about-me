@@ -246,6 +246,21 @@ test("a reload without the URL flag brings back the 2D game", async ({ page }) =
   await expect(thirdPersonWorld(page)).toHaveCount(0);
 });
 
+test("when the Third-person world fails to load, the 2D game carries on and the cheat can be tried again", async ({ page }) => {
+  await openGameWithKeyboard(page);
+  await page.route(/\.glb$/, (route) => route.abort());
+
+  await typeCheatOutsideTheGame(page);
+
+  await expect(page.getByText("Loading…")).toBeHidden({ timeout: 20_000 });
+  await expect(game2d(page)).toBeVisible();
+  await expect(thirdPersonWorld(page)).toHaveCount(0);
+
+  await page.unroute(/\.glb$/);
+  await typeCheatOutsideTheGame(page);
+  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
+});
+
 test("a Handheld loading screen shows until the Third-person world is ready", async ({ page }) => {
   let releaseScripts = () => {};
   const scriptsHeld = new Promise<void>((resolve) => (releaseScripts = resolve));
