@@ -85,7 +85,7 @@ async function startThirdPersonMode(start: Landing) {
   loadingScreen.hidden = false;
   try {
     const { startThirdPerson } = await import("./thirdPerson");
-    return startThirdPerson(screenWindow, content, events, start);
+    return await startThirdPerson(screenWindow, content, events, start);
   } finally {
     loadingScreen.hidden = true;
   }

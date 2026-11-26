@@ -20,6 +20,16 @@ It provides workshop and sport props such as the workbench, the anvil and the ki
 License: [Creative Commons Zero (CC0 1.0)](https://creativecommons.org/publicdomain/zero/1.0/).
 Attribution is not required; it is given here with thanks.
 
+## Mini Characters — Kenney
+
+`public/models/player.glb`, the Third-person mode's Player, is `character-male-c` from
+[Mini Characters](https://kenney.nl/assets/mini-characters) (v2.0) by Kenney (www.kenney.nl),
+downloaded from kenney.nl. It is trimmed to the idle, walk, sprint and holding-both animations, and its colours are
+repainted to the Player's beanie, hair, skin, jacket, trousers and shoes. The camera in its hand is built in code.
+
+License: [Creative Commons Zero (CC0 1.0)](https://creativecommons.org/publicdomain/zero/1.0/).
+Attribution is not required; it is given here with thanks.
+
 ## Original art
 
 The Player (photographer) sprite, the Film roll, the water, the Hub maypole and the themed Points of Interest
