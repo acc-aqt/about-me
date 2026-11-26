@@ -116,8 +116,9 @@ test("walking with the keyboard moves the view", async ({ page }) => {
   await openThirdPerson(page);
   const before = await view(page);
 
+  // Software WebGL may draw only a frame or two a second, and movement happens per frame, so hold long enough for one.
   await page.keyboard.down("s");
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(1_000);
   await page.keyboard.up("s");
 
   await expect.poll(() => view(page)).not.toBe(before);
