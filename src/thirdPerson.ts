@@ -294,12 +294,13 @@ export function startThirdPerson(
   });
 
   canvas.addEventListener("pointerdown", (event) => {
+    if (events.isPaused()) return;
     dragging = { x: event.clientX, y: event.clientY };
     canvas.setPointerCapture(event.pointerId);
     canvas.focus();
   });
   canvas.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
+    if (!dragging || events.isPaused()) return;
     orbit.yaw -= (event.clientX - dragging.x) * ORBIT_SPEED;
     orbit.pitch = clamp(orbit.pitch + (event.clientY - dragging.y) * ORBIT_SPEED, MIN_PITCH, MAX_PITCH);
     dragging = { x: event.clientX, y: event.clientY };
@@ -309,6 +310,7 @@ export function startThirdPerson(
     "wheel",
     (event) => {
       event.preventDefault();
+      if (events.isPaused()) return;
       orbit.distance = clamp(orbit.distance * Math.exp(event.deltaY * ZOOM_SPEED), MIN_ZOOM, MAX_ZOOM);
     },
     { passive: false },

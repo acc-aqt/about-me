@@ -113,6 +113,26 @@ test("dragging the mouse orbits the camera and the scroll wheel zooms it", async
   await expect.poll(() => view(page)).not.toBe(orbited);
 });
 
+test("while the Fast-travel menu is open, dragging and the scroll wheel leave the camera be", async ({ page }) => {
+  await openThirdPerson(page);
+  const box = (await thirdPersonWorld(page).boundingBox())!;
+  const centre = { x: box.width / 2, y: box.height / 2 };
+  await page.getByRole("button", { name: "Fast-travel" }).click();
+  // A press on the world focuses it, so focus it first; only the camera should be able to change the view.
+  await thirdPersonWorld(page).focus();
+  await page.mouse.move(centre.x, centre.y);
+  await page.waitForTimeout(500);
+  const before = await view(page);
+
+  await page.mouse.down();
+  await page.mouse.move(centre.x + 200, centre.y + 100, { steps: 5 });
+  await page.mouse.up();
+  await page.mouse.wheel(0, -400);
+  await page.waitForTimeout(1_000);
+
+  expect(await view(page)).toBe(before);
+});
+
 for (const zone of content.zones.filter((z) => z.fastTravelTo)) {
   test(`Fast-travel to ${zone.title}, then Space, opens the Viewfinder at ${zone.fastTravelTo}`, async ({ page }) => {
     const landingPoi = pointOfInterest(zone.fastTravelTo!);
