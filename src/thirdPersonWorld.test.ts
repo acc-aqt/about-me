@@ -16,8 +16,11 @@ import {
 } from "./overworld";
 import {
   directionToHeading,
+  FLOATING_NAME_PLATES,
+  isNamePlateShown,
   isSolid,
   PLAYER_RADIUS,
+  pointOfInterestModel,
   snapToLanding,
   stepPlayer,
   targetedPointOfInterest,
@@ -259,6 +262,48 @@ describe("Third-person world", () => {
         const player = standingOn(fastTravelLanding(zone.id).tile, fastTravelLanding(zone.id).facing);
         expect(targetedPointOfInterest(pointsOfInterest, player)?.id, zone.id).toBe(zone.fastTravelTo);
       }
+    });
+  });
+
+  describe("Point of Interest models", () => {
+    const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
+    const byId = (id: string) => pointsOfInterest.find((poi) => poi.id === id)!;
+
+    it("gives every Point of Interest in the Content file a 3D model standing above the ground", () => {
+      for (const poi of pointsOfInterest) expect(pointOfInterestModel(poi).height, poi.id).toBeGreaterThan(0);
+    });
+
+    it("stands a model on its whole Footprint", () => {
+      expect(pointOfInterestModel(byId("tum")).base).toEqual({ left: 40, top: 19, right: 47, bottom: 23 });
+      expect(pointOfInterestModel(byId("intro")).base).toEqual({ left: 26, top: 21, right: 27, bottom: 22 });
+    });
+  });
+
+  describe("Name plates", () => {
+    const plate = (text: string) => FLOATING_NAME_PLATES.find((p) => p.text === text)!;
+    const tum = plate("Technical University of Munich");
+
+    it("names every Point of Interest and every Hub Signpost", () => {
+      const texts = FLOATING_NAME_PLATES.map((p) => p.text);
+      expect(texts).toHaveLength(content.zones.flatMap((zone) => zone.pointsOfInterest).length + HUB_SIGNPOSTS.length);
+      expect(texts).toEqual(expect.arrayContaining(["framewise", "Darkroom", "Maker workshop", "Sport / Music & games"]));
+    });
+
+    it("floats centred above the top of its Point of Interest's model", () => {
+      expect(tum.anchor).toMatchObject({ x: 43.5, z: 21 });
+      expect(tum.anchor.y).toBeGreaterThan(7);
+    });
+
+    it("floats above a Signpost's tile", () => {
+      expect(plate("Career road").anchor).toMatchObject({ x: 36.5, z: 22.5 });
+      expect(plate("Career road").anchor.y).toBeGreaterThan(1);
+    });
+
+    it("shows while the Player is near any edge of the Footprint, and hides once the Player walks away", () => {
+      expect(isNamePlateShown(tum.at, { x: 43.5, z: 23.5 })).toBe(true);
+      expect(isNamePlateShown(tum.at, { x: 48.9, z: 20.5 })).toBe(true);
+      expect(isNamePlateShown(tum.at, { x: 43.5, z: 26.5 })).toBe(false);
+      expect(isNamePlateShown(tum.at, tileToWorld(SPAWN))).toBe(false);
     });
   });
 });
