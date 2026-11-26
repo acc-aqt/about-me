@@ -38,16 +38,22 @@ async function typeCheatOutsideTheGame(page: Page) {
   await typeCheat(page);
 }
 
-/** The scripts and 3D models a page requests while `open` runs. */
-async function codeAndModelsRequestedBy(page: Page, open: () => Promise<void>) {
-  const requested = new Set<string>();
-  page.on("request", (request) => {
-    const path = new URL(request.url()).pathname;
-    if (request.resourceType() === "script" || path.endsWith(".glb")) requested.add(path);
+/** The scripts (by path, with their code) and 3D models a page loads while `open` runs. */
+async function codeAndModelsLoadedBy(page: Page, open: () => Promise<void>) {
+  const scripts = new Map<string, Promise<string>>();
+  const models = new Set<string>();
+  page.on("response", (response) => {
+    const path = new URL(response.url()).pathname;
+    if (response.request().resourceType() === "script") scripts.set(path, response.text());
+    else if (path.endsWith(".glb")) models.add(path);
   });
   await open();
-  return requested;
+  const code = await Promise.all(scripts.values());
+  return { scripts: new Set(scripts.keys()), code, models };
 }
+
+/** A message only Three.js's renderer carries, so it marks Three.js's code in a bundle. */
+const THREE_MARKER = "THREE.WebGLRenderer";
 
 const HEART_RED = [0xe0, 0x4a, 0x5a];
 
@@ -78,14 +84,15 @@ test("?view=third-person shows the full-window Third-person world instead of the
 
 test("a normal page load requests none of the Third-person mode's code or models", async ({ browser }) => {
   const normalPage = await browser.newPage();
-  const normal = await codeAndModelsRequestedBy(normalPage, () => openGame(normalPage));
+  const normal = await codeAndModelsLoadedBy(normalPage, () => openGame(normalPage));
   const thirdPersonPage = await browser.newPage();
-  const thirdPerson = await codeAndModelsRequestedBy(thirdPersonPage, () => openThirdPerson(thirdPersonPage));
+  const thirdPerson = await codeAndModelsLoadedBy(thirdPersonPage, () => openThirdPerson(thirdPersonPage));
 
-  const thirdPersonOnly = [...thirdPerson].filter((path) => !normal.has(path));
-  expect(thirdPersonOnly.some((path) => path.endsWith(".js"))).toBe(true);
-  expect(thirdPersonOnly.some((path) => path.endsWith(".glb"))).toBe(true);
-  expect([...normal].some((path) => path.endsWith(".glb"))).toBe(false);
+  expect(thirdPerson.code.some((code) => code.includes(THREE_MARKER))).toBe(true);
+  expect(normal.code.some((code) => code.includes(THREE_MARKER))).toBe(false);
+  expect([...thirdPerson.scripts].some((path) => !normal.scripts.has(path))).toBe(true);
+  expect(thirdPerson.models.size).toBeGreaterThan(0);
+  expect(normal.models.size).toBe(0);
   await expect(normalPage.getByRole("application", { name: "Third-person world" })).toHaveCount(0);
 });
 
