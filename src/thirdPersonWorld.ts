@@ -123,8 +123,8 @@ function moveCircle(from: WorldPosition, dx: number, dz: number): WorldPosition 
 }
 
 export type GroundKind = "grass" | "path" | "asphalt" | "track" | "snow" | "water";
-/** What stands on a tile; a placeholder is a Point of Interest or Signpost, drawn as such elsewhere. */
-export type SceneryKind = "tree" | "bush" | "building" | "fence" | "rock" | "car" | "placeholder";
+/** What stands on a tile; a model is a Point of Interest, Signpost or set piece, built in `thirdPersonPointsOfInterest.ts`. */
+export type SceneryKind = "tree" | "bush" | "building" | "fence" | "rock" | "car" | "model";
 export type TileLayout = { ground: GroundKind; scenery: SceneryKind | null };
 
 export const TILE_LAYOUTS: Record<TileKind, TileLayout> = {
@@ -137,24 +137,24 @@ export const TILE_LAYOUTS: Record<TileKind, TileLayout> = {
   water: { ground: "water", scenery: null },
   building: { ground: "grass", scenery: "building" },
   fence: { ground: "grass", scenery: "fence" },
-  maypole: { ground: "grass", scenery: "placeholder" },
-  well: { ground: "grass", scenery: "placeholder" },
-  prop: { ground: "grass", scenery: "placeholder" },
-  landmark: { ground: "grass", scenery: "placeholder" },
+  maypole: { ground: "grass", scenery: "model" },
+  well: { ground: "grass", scenery: "model" },
+  prop: { ground: "grass", scenery: "model" },
+  landmark: { ground: "grass", scenery: "model" },
   car: { ground: "asphalt", scenery: "car" },
   rock: { ground: "snow", scenery: "rock" },
   snow: { ground: "snow", scenery: null },
 };
 
-const placeholderTiles = new Set([
+const modelTiles = new Set([
   ...content.zones.flatMap((zone) => zone.pointsOfInterest).flatMap((poi) => footprintTiles(poi.placement)),
   ...HUB_SIGNPOSTS.map(({ tile }) => tile),
 ].map(tileKey));
 
-/** What a tile becomes in the Third-person world; Points of Interest and Signposts stay placeholders. */
+/** What a tile becomes in the Third-person world; Points of Interest and Signposts are models. */
 export function layoutAt(tile: Tile): TileLayout {
   const { ground, scenery } = TILE_LAYOUTS[tileKindAt(tile) ?? "tree"];
-  return placeholderTiles.has(tileKey(tile)) ? { ground, scenery: "placeholder" } : { ground, scenery };
+  return modelTiles.has(tileKey(tile)) ? { ground, scenery: "model" } : { ground, scenery };
 }
 
 const isTree = (tile: Tile) => layoutAt(tile).scenery === "tree";
@@ -382,10 +382,11 @@ function heightUnder({ at }: NamePlate) {
   return poi ? pointOfInterestModel(poi).height : SIGNPOST_HEIGHT;
 }
 
-/** The 2D Name plates, each floating centred above its Point of Interest's model or Signpost. */
+/** The 2D Name plates, each floating centred above its Point of Interest's model or Signpost, on the ground beneath. */
 export const FLOATING_NAME_PLATES: readonly FloatingNamePlate[] = NAME_PLATES.map((plate) => {
   const { left, top, right, bottom } = footprintWorldRect(plate.at);
-  return { ...plate, anchor: { x: (left + right) / 2, y: heightUnder(plate) + NAME_PLATE_GAP, z: (top + bottom) / 2 } };
+  const centre = { x: (left + right) / 2, z: (top + bottom) / 2 };
+  return { ...plate, anchor: { ...centre, y: groundHeight(centre) + heightUnder(plate) + NAME_PLATE_GAP } };
 });
 
 /** Whether a Name plate over a Footprint, or over a single tile such as a Cat's, shows: the 2D range rule. */

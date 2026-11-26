@@ -3,7 +3,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { SCENERY_PROPS } from "./art";
 import type { PointOfInterest } from "./content";
 import { HUB_SIGNPOSTS, MAP_COLUMNS, MAP_ROWS, tileKindAt, type Tile } from "./overworld";
-import { pointOfInterestModel, SIGNPOST_HEIGHT, type PoiShape, type WorldRect } from "./thirdPersonWorld";
+import { groundHeight, pointOfInterestModel, SIGNPOST_HEIGHT, type PoiShape, type WorldRect } from "./thirdPersonWorld";
 
 /**
  * Points of Interest, Signposts and the Hub's set pieces, built in code from Three.js primitives. Each model is laid
@@ -399,7 +399,9 @@ const signpost: Builder = ({ height }) => [
 /** Moves a model's parts from its local layout onto the ground at a rectangle's centre. */
 function placedOn({ left, top, right, bottom }: WorldRect, height: number, build: Builder): Part[] {
   const parts = build({ width: right - left, depth: bottom - top, height });
-  for (const { geometry } of parts) geometry.translate((left + right) / 2, 0, (top + bottom) / 2);
+  const centre = { x: (left + right) / 2, z: (top + bottom) / 2 };
+  const ground = groundHeight(centre);
+  for (const { geometry } of parts) geometry.translate(centre.x, ground, centre.z);
   return parts;
 }
 

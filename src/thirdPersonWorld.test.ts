@@ -308,6 +308,14 @@ describe("Third-person world", () => {
       expect(plate("Career road").anchor.y).toBeGreaterThan(1);
     });
 
+    it("rises with the mountain under the summit cross", () => {
+      const summit = content.zones.flatMap((zone) => zone.pointsOfInterest).find((poi) => poi.id === "ski-touring-slope")!;
+      const anchor = FLOATING_NAME_PLATES.find((p) => p.at === summit.placement)!.anchor;
+      const ground = groundHeight(anchor);
+      expect(ground).toBeGreaterThan(6);
+      expect(anchor.y).toBeCloseTo(ground + pointOfInterestModel(summit).height + 0.3);
+    });
+
     it("shows while the Player is near any edge of the Footprint, and hides once the Player walks away", () => {
       expect(isNamePlateShown(tum.at, { x: 43.5, z: 23.5 })).toBe(true);
       expect(isNamePlateShown(tum.at, { x: 48.9, z: 20.5 })).toBe(true);
@@ -366,12 +374,12 @@ describe("scene layout", () => {
     }
   });
 
-  it("leaves Points of Interest and Signposts as placeholders, even where they stand on building ground", () => {
+  it("leaves Points of Interest and Signposts to their models, even where they stand on building ground", () => {
     const pois = content.zones.flatMap((zone) => zone.pointsOfInterest).flatMap((poi) => footprintTiles(poi.placement));
     for (const tile of [...pois, ...HUB_SIGNPOSTS.map(({ tile }) => tile)]) {
-      expect(layoutAt(tile).scenery, tileKey(tile)).toBe("placeholder");
+      expect(layoutAt(tile).scenery, tileKey(tile)).toBe("model");
     }
-    expect(layoutAt({ col: 40, row: 19 }).scenery).toBe("placeholder");
+    expect(layoutAt({ col: 40, row: 19 }).scenery).toBe("model");
     expect(layoutAt({ col: 3, row: 26 }).scenery).toBe("building");
   });
 

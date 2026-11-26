@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { LEGEND, mapCharAt, MAP_COLUMNS, MAP_ROWS, tileKindAt, type Tile, type TileKind, type TileRect } from "./overworld";
+import { MAP_COLUMNS, MAP_ROWS, type Tile, type TileRect } from "./overworld";
 import {
   buildingBlocks,
   forestDepth,
@@ -26,16 +26,6 @@ const FOREST_FLOOR = 0x3f7a35;
 const FOREST_EDGE_DEPTH = 3;
 const DEEP_FOREST = 0x2a5530;
 const OUTER_GROUND = 0x356b30;
-
-/** Points of Interest and Signposts stay simple boxes until the POI ticket gives them shapes. */
-const PLACEHOLDER_LOOKS: Partial<Record<TileKind, { color: number; height: number }>> = {
-  maypole: { color: 0x4a7fd0, height: 6 },
-  well: { color: 0x8d8d96, height: 0.8 },
-  prop: { color: 0x9b6b43, height: 0.9 },
-  landmark: { color: 0xb0b4bc, height: 2 },
-  building: { color: 0xc9a27a, height: 3.5 },
-};
-const POI_LOOK = { color: 0xe6b43c, height: 1.2 };
 
 const WALL_COLORS = [0xf1e3c8, 0xe8c9a6, 0xd9e2e8, 0xf3d2c1];
 const ROOF_COLORS = [0xb5483a, 0x8a4b3c, 0x5a6f8c, 0x9c5b3b];
@@ -274,22 +264,6 @@ function createHouse(block: TileRect) {
   return house;
 }
 
-function placeholderLook(tile: Tile) {
-  const char = mapCharAt(tile)!;
-  return LEGEND[char].walkable ? POI_LOOK : (PLACEHOLDER_LOOKS[tileKindAt(tile)!] ?? POI_LOOK);
-}
-
-/** Points of Interest and Signposts as plain boxes, tile by tile. */
-function createPlaceholders() {
-  return instanced(
-    new THREE.BoxGeometry(1, 1, 1),
-    tilesWith("placeholder").map((tile) => {
-      const { color, height } = placeholderLook(tile);
-      return { matrix: placed(tile, { dy: height / 2, scale: new THREE.Vector3(1, height, 1) }), color };
-    }),
-  );
-}
-
 /** The whole Overworld as low-poly scenery on its terrain. */
 export function createScenery() {
   const scenery = new THREE.Group();
@@ -303,7 +277,6 @@ export function createScenery() {
     ...createCars(),
     ...createFences(),
     ...buildingBlocks().map(createHouse),
-    createPlaceholders(),
   );
   return scenery;
 }
