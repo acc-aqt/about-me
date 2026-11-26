@@ -17,6 +17,7 @@ import {
 import {
   directionToHeading,
   isSolid,
+  playerAnimation,
   PLAYER_RADIUS,
   snapToLanding,
   stepPlayer,
@@ -259,6 +260,24 @@ describe("Third-person world", () => {
         const player = standingOn(fastTravelLanding(zone.id).tile, fastTravelLanding(zone.id).facing);
         expect(targetedPointOfInterest(pointsOfInterest, player)?.id, zone.id).toBe(zone.fastTravelTo);
       }
+    });
+  });
+
+  describe("Player animation", () => {
+    it("idles while no direction is held, even with Shift down", () => {
+      expect(playerAnimation(NO_INPUT)).toBe("idle");
+      expect(playerAnimation({ ...NO_INPUT, running: true })).toBe("idle");
+    });
+
+    it("walks while any direction is held", () => {
+      expect(playerAnimation(FORWARD)).toBe("walk");
+      expect(playerAnimation({ forward: -1, right: 0, running: false })).toBe("walk");
+      expect(playerAnimation({ forward: 0, right: 1, running: false })).toBe("walk");
+    });
+
+    it("runs while a direction and Shift are held", () => {
+      expect(playerAnimation({ ...FORWARD, running: true })).toBe("run");
+      expect(playerAnimation({ forward: 0, right: -1, running: true })).toBe("run");
     });
   });
 });
