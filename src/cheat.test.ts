@@ -5,8 +5,8 @@ const CHEAT = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "Arr
 
 /** Feeds keys to a fresh detector and returns the indices of the keys that completed the cheat. */
 function completions(keys: string[]) {
-  const cheat = createCheatDetector();
-  return keys.flatMap((key, index) => (cheat.type(key) ? [index] : []));
+  const cheat = createCheatDetector<number>();
+  return keys.flatMap((key, index) => (cheat.type(key, index) === undefined ? [] : [index]));
 }
 
 describe("cheat detection", () => {
@@ -33,5 +33,12 @@ describe("cheat detection", () => {
 
   it("recognises the cheat again each time it is typed", () => {
     expect(completions([...CHEAT, ...CHEAT])).toEqual([CHEAT.length - 1, 2 * CHEAT.length - 1]);
+  });
+
+  it("hands back what was noted as the sequence's first key was typed, such as where the Player stood", () => {
+    const cheat = createCheatDetector<string>();
+    const keys = ["w", "ArrowUp", ...CHEAT];
+    const results = keys.map((key, index) => cheat.type(key, `before key ${index}`));
+    expect(results.at(-1)).toBe("before key 2");
   });
 });

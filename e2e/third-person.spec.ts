@@ -173,15 +173,16 @@ test("typing the cheat in the 2D game switches to the Third-person world", async
   await expect(game2d(page)).toHaveCount(0);
 });
 
-test("typing the cheat again returns to the 2D game at the same spot and facing", async ({ page }) => {
+test("the cheat's own arrow keys don't move the spot handed over, there or back", async ({ page }) => {
   await openGameWithKeyboard(page);
   const landing = await fastTravel(page, "career-road");
   const faced = facedPointOfInterest(landing.tile, landing.facing)!;
   await expect(page.getByRole("status")).toHaveText(facingStatus(faced.title));
 
-  await typeCheatOutsideTheGame(page);
-  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
-  await typeCheatOutsideTheGame(page);
+  await typeCheat(page);
+  await expect(thirdPersonWorld(page)).toBeFocused({ timeout: 20_000 });
+  await expect(page.getByRole("status")).toHaveText(facingStatus(faced.title));
+  await typeCheat(page);
 
   await expect(game2d(page)).toBeFocused();
   await expect(thirdPersonWorld(page)).toHaveCount(0);

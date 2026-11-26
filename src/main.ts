@@ -99,9 +99,8 @@ let controls = inThirdPerson ? await startThirdPersonMode(SPAWN_LANDING) : start
 let switching = false;
 
 /** Hands the Player's spot over to the other renderer; Third-person mode snaps it to a tile and a direction. */
-async function switchMode() {
+async function switchMode(landing: Landing) {
   switching = true;
-  const landing = controls.position();
   controls.stop();
   events.onFacingChange(null);
   inThirdPerson = !inThirdPerson;
@@ -110,15 +109,18 @@ async function switchMode() {
   switching = false;
 }
 
-const cheat = createCheatDetector();
+/** Each key notes where the Player stood before it, so the switch lands where the cheat began, not where its arrows led. */
+const cheat = createCheatDetector<Landing>();
 if (!isTouch) {
   document.addEventListener(
     "keydown",
     (event) => {
-      if (event.repeat || !cheat.type(event.key) || switching || events.isPaused()) return;
+      if (event.repeat) return;
+      const landing = cheat.type(event.key, controls.position());
+      if (!landing || switching || events.isPaused()) return;
       event.preventDefault();
       event.stopPropagation();
-      void switchMode();
+      void switchMode(landing);
     },
     { capture: true },
   );
