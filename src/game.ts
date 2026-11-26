@@ -60,7 +60,7 @@ const CAT_STEP_TIME = STEP_TIME * 1.5;
 const CAT_REACTION_TIME = 2;
 const HEART_HEIGHT = 6;
 const BACKGROUND: Rgb = [20, 20, 30];
-const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
+export const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 const Z_FILM_ROLL = 1;
 /** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
 const Z_FILM_ROLL_COVER = 1.5;

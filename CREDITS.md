@@ -28,3 +28,7 @@ the speakers, the arcade cabinets and the tennis net) are original pixel art pai
 in `src/art.ts`. The Third-person mode's low-poly scenery (terrain and the Sport mountain, trees, bushes, rocks,
 houses, fences, cars and water) is original too, built in code from Three.js primitives in `src/thirdPersonScenery.ts`.
 The pixel font used for in-world labels is an original 5×9 font drawn in `src/pixel-font.ts`.
+
+In Third-person mode, every Point of Interest (including the hero landmarks that hint at the TUM main building,
+BMW's Four-Cylinder tower and the Hub's maypole), the Signposts and the scenery props are original low-poly models
+built in code from Three.js primitives in `src/thirdPersonPointsOfInterest.ts`; no 3D model files are used for them.

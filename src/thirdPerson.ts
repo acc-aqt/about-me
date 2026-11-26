@@ -2,10 +2,14 @@ import * as THREE from "three";
 import type { Content, PointOfInterest } from "./content";
 import { SPAWN_LANDING, type GameButton, type GameControls, type GameEvents } from "./game";
 import { fastTravelLanding, type Landing } from "./overworld";
+import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
+import { createPointsOfInterest } from "./thirdPersonPointsOfInterest";
 import { createScenery } from "./thirdPersonScenery";
 import {
   directionToHeading,
+  FLOATING_NAME_PLATES,
   groundHeight,
+  isNamePlateShown,
   snapToLanding,
   stepPlayer,
   targetedPointOfInterest,
@@ -122,6 +126,18 @@ export function startThirdPerson(
   scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x5d7a3a, 1.3));
   const sun = createSun();
   scene.add(sun, sun.target, createScenery());
+  scene.add(createPointsOfInterest(pointsOfInterest));
+
+  const namePlates = FLOATING_NAME_PLATES.map((namePlate) => {
+    const sprite = createNamePlate(namePlate.text);
+    sprite.position.set(namePlate.anchor.x, namePlate.anchor.y, namePlate.anchor.z);
+    scene.add(sprite);
+    return { namePlate, sprite };
+  });
+
+  function showNearbyNamePlates() {
+    for (const { namePlate, sprite } of namePlates) sprite.visible = isNamePlateShown(namePlate.at, player.position);
+  }
 
   const capsule = createCapsule();
   scene.add(capsule);
@@ -179,6 +195,7 @@ export function startThirdPerson(
       }
       updateTarget();
     }
+    showNearbyNamePlates();
     const ground = groundHeight(player.position);
     capsule.position.set(player.position.x, ground, player.position.z);
     capsule.rotation.y = player.heading;
@@ -254,6 +271,7 @@ export function startThirdPerson(
     stop() {
       renderer.setAnimationLoop(null);
       resizeObserver.disconnect();
+      for (const { sprite } of namePlates) disposeNamePlate(sprite);
       renderer.dispose();
       renderer.forceContextLoss();
       canvas.remove();

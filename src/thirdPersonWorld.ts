@@ -1,4 +1,5 @@
-import { content, type PointOfInterest } from "./content";
+import { content, type Footprint, type PointOfInterest } from "./content";
+import { isInNamePlateRange, NAME_PLATES, type NamePlate } from "./namePlates";
 import {
   DIRECTIONS,
   footprintRect,
@@ -244,10 +245,17 @@ function headingTowards(from: WorldPosition, to: WorldPosition) {
   return Math.atan2(to.x - from.x, to.z - from.z);
 }
 
-type Rect = { left: number; top: number; right: number; bottom: number };
+/** Bounds on the ground: x from left to right, z from top to bottom. */
+export type WorldRect = { left: number; top: number; right: number; bottom: number };
+
+/** The ground a Footprint covers, edge to edge. */
+export function footprintWorldRect(footprint: Footprint): WorldRect {
+  const { left, top, right, bottom } = footprintRect(footprint);
+  return { left, top, right: right + 1, bottom: bottom + 1 };
+}
 
 /** How far along a ray from a point it first meets a rectangle, or null when it misses. */
-function rayEntry(from: WorldPosition, heading: number, rect: Rect): number | null {
+function rayEntry(from: WorldPosition, heading: number, rect: WorldRect): number | null {
   let near = 0;
   let far = Infinity;
   const slabs = [
@@ -272,8 +280,7 @@ function rayEntry(from: WorldPosition, heading: number, rect: Rect): number | nu
  * cone first meets it.
  */
 function distanceInCone(poi: PointOfInterest, { position, heading }: PlayerState): number | null {
-  const footprint = footprintRect(poi.placement);
-  const rect = { ...footprint, right: footprint.right + 1, bottom: footprint.bottom + 1 };
+  const rect = footprintWorldRect(poi.placement);
   const closest = {
     x: Math.min(Math.max(position.x, rect.left), rect.right),
     z: Math.min(Math.max(position.z, rect.top), rect.bottom),
@@ -299,6 +306,91 @@ export function targetedPointOfInterest(
     if (distance !== null && (!best || distance < best.distance)) best = { poi, distance };
   }
   return best?.poi;
+}
+
+/** What a Point of Interest is built as in the Third-person world. */
+export type PoiShape =
+  | "camera stand"
+  | "darkroom hut"
+  | "welcome board"
+  | "university hall"
+  | "four-cylinder tower"
+  | "kangaroo sign"
+  | "factory shed"
+  | "office block"
+  | "engine works"
+  | "mailbox"
+  | "computer"
+  | "3D printer"
+  | "workbench"
+  | "swimming pool"
+  | "tennis court"
+  | "summit cross"
+  | "jukebox";
+
+/** The height is the model's top in world units, above which its Name plate floats. */
+export type PoiModel = { shape: PoiShape; height: number };
+
+/** The 3D details of each Point of Interest, by id. */
+const POI_MODELS: Readonly<Record<string, PoiModel>> = {
+  intro: { shape: "welcome board", height: 1.6 },
+  tum: { shape: "university hall", height: 7 },
+  "bmw-group": { shape: "four-cylinder tower", height: 9 },
+  "canberra-detour": { shape: "kangaroo sign", height: 1.9 },
+  "forward-engineering": { shape: "factory shed", height: 3.6 },
+  "arrk-engineering": { shape: "office block", height: 5 },
+  mtu: { shape: "engine works", height: 4 },
+  framewise: { shape: "computer", height: 1.3 },
+  "lens-caps": { shape: "3D printer", height: 1.3 },
+  reelmaker: { shape: "workbench", height: 1.1 },
+  "preset-fitting": { shape: "computer", height: 1.3 },
+  jordan: { shape: "camera stand", height: 1.5 },
+  norway: { shape: "camera stand", height: 1.5 },
+  "new-york": { shape: "camera stand", height: 1.5 },
+  nepal: { shape: "camera stand", height: 1.5 },
+  lisbon: { shape: "camera stand", height: 1.5 },
+  "eastern-adriatic": { shape: "camera stand", height: 1.5 },
+  peru: { shape: "camera stand", height: 1.5 },
+  darkroom: { shape: "darkroom hut", height: 3.2 },
+  "swimming-pool": { shape: "swimming pool", height: 0.5 },
+  "tennis-court": { shape: "tennis court", height: 1 },
+  "ski-touring-slope": { shape: "summit cross", height: 2.6 },
+  "track-back": { shape: "jukebox", height: 1.7 },
+  "contact-board": { shape: "mailbox", height: 1.4 },
+};
+
+/** A Point of Interest's model, standing on its whole Footprint. */
+export function pointOfInterestModel(poi: PointOfInterest): PoiModel & { base: WorldRect } {
+  const model = POI_MODELS[poi.id];
+  if (!model) throw new Error(`No 3D model for the Point of Interest "${poi.id}"`);
+  return { ...model, base: footprintWorldRect(poi.placement) };
+}
+
+export const SIGNPOST_HEIGHT = 1.5;
+/** The gap between the top of a model and the bottom of its Name plate. */
+const NAME_PLATE_GAP = 0.3;
+
+/** A Name plate's bottom centre, in world units with y up. */
+export type NamePlateAnchor = WorldPosition & { y: number };
+
+export type FloatingNamePlate = NamePlate & { anchor: NamePlateAnchor };
+
+const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
+
+function heightUnder({ at }: NamePlate) {
+  const poi = pointsOfInterest.find((candidate) => candidate.placement === at);
+  return poi ? pointOfInterestModel(poi).height : SIGNPOST_HEIGHT;
+}
+
+/** The 2D Name plates, each floating centred above its Point of Interest's model or Signpost. */
+export const FLOATING_NAME_PLATES: readonly FloatingNamePlate[] = NAME_PLATES.map((plate) => {
+  const { left, top, right, bottom } = footprintWorldRect(plate.at);
+  return { ...plate, anchor: { x: (left + right) / 2, y: heightUnder(plate) + NAME_PLATE_GAP, z: (top + bottom) / 2 } };
+});
+
+/** Whether a Name plate over a Footprint, or over a single tile such as a Cat's, shows: the 2D range rule. */
+export function isNamePlateShown(at: Footprint, player: WorldPosition): boolean {
+  return isInNamePlateRange({ col: Math.floor(player.x), row: Math.floor(player.z) }, at);
 }
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A, as KeyboardEvent keys. */
