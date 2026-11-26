@@ -6,12 +6,14 @@ import { fastTravelLanding, type Landing } from "./overworld";
 import { createThirdPersonCats } from "./thirdPersonCats";
 import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
 import { createPointsOfInterest } from "./thirdPersonPointsOfInterest";
+import { loadPlayerModel } from "./thirdPersonPlayer";
 import { createScenery } from "./thirdPersonScenery";
 import {
   directionToHeading,
   FLOATING_NAME_PLATES,
   groundHeight,
   isNamePlateShown,
+  playerAnimation,
   snapToLanding,
   stepPlayer,
   targetedCat,
@@ -29,7 +31,6 @@ const FOG_FAR = 75;
 /** Where the sun shines from, relative to the Player it follows so shadows stay sharp nearby. */
 const SUN_OFFSET = new THREE.Vector3(-14, 24, 10);
 const SHADOW_REACH = 22;
-const PLAYER_HEIGHT = 1.5;
 const CAMERA_TARGET_HEIGHT = 1.2;
 /** The camera never dips closer than this to the mountain's slope. */
 const CAMERA_CLEARANCE = 0.5;
@@ -41,6 +42,11 @@ const ORBIT_SPEED = 0.006;
 const ZOOM_SPEED = 0.0015;
 /** How quickly the camera swings back behind the walking Player, per second. */
 const EASE_BACK_RATE = 2;
+/** The Shutter raises the camera, flashes, then opens the Viewfinder. */
+const RAISE_SECONDS = 0.35;
+const FLASH_SECONDS = 0.15;
+/** The flash keeps fading as the Viewfinder opens. */
+const FLASH_FADE_MS = 500;
 
 const KEY_BUTTONS: Record<string, GameButton> = {
   arrowup: "up",
@@ -53,21 +59,6 @@ const KEY_BUTTONS: Record<string, GameButton> = {
   d: "right",
   " ": "shutter",
 };
-
-function createCapsule() {
-  const capsule = new THREE.Group();
-  const radius = 0.3;
-  const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(radius, PLAYER_HEIGHT - 2 * radius),
-    new THREE.MeshLambertMaterial({ color: 0x2a2f86 }),
-  );
-  body.position.y = PLAYER_HEIGHT / 2;
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.3), new THREE.MeshLambertMaterial({ color: 0xe6b43c }));
-  nose.position.set(0, PLAYER_HEIGHT * 0.75, radius);
-  body.castShadow = true;
-  capsule.add(body, nose);
-  return capsule;
-}
 
 /** Sunny daytime light casting soft shadows around the Player. */
 function createSun() {
@@ -123,14 +114,27 @@ function addCanvas(container: HTMLElement) {
   return canvas;
 }
 
+/** A white full-window flash, as the photo is taken. */
+function addFlash(container: HTMLElement) {
+  const flash = document.createElement("div");
+  flash.className = "shutter-flash";
+  flash.setAttribute("aria-hidden", "true");
+  container.append(flash);
+  return {
+    fire: () => flash.animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: FLASH_FADE_MS, easing: "ease-out" }),
+    remove: () => flash.remove(),
+  };
+}
+
 /** Third-person mode: the same contract as the 2D game, rendering the Overworld in 3D with Three.js. */
-export function startThirdPerson(
+export async function startThirdPerson(
   container: HTMLElement,
   content: Content,
   events: GameEvents,
   start = SPAWN_LANDING,
   cats: Cats = createCats(Math.random),
-): GameControls {
+): Promise<GameControls> {
+  const playerModel = await loadPlayerModel();
   const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
   const canvas = addCanvas(container);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -160,17 +164,20 @@ export function startThirdPerson(
   const catModels = createThirdPersonCats(cats.all);
   scene.add(catModels.group);
 
-  const capsule = createCapsule();
-  scene.add(capsule);
+  scene.add(playerModel.object);
+  const flash = addFlash(container);
 
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, FOG_FAR + 10);
   let player = standingAt(start);
+  playerModel.face(player.heading);
   const orbit = { yaw: player.heading, pitch: 0.45, distance: 7 };
 
   const held = new Set<GameButton>();
   let running = false;
   let dragging: { x: number; y: number } | null = null;
   let target: PointOfInterest | undefined;
+  /** While the Shutter plays: the photographed Point of Interest and the seconds since Space. */
+  let shot: { poi: PointOfInterest; seconds: number } | null = null;
 
   function updateTarget() {
     const next = targetedPointOfInterest(pointsOfInterest, player);
@@ -208,31 +215,51 @@ export function startThirdPerson(
   function frame() {
     const seconds = Math.min(clock.getDelta(), 0.1);
     if (!events.isPaused()) {
-      const move = input();
-      player = stepPlayer(player, move, orbit.yaw, seconds);
-      const walking = move.forward !== 0 || move.right !== 0;
-      if (walking && move.forward >= 0 && !dragging) {
-        orbit.yaw += angleDifference(player.heading, orbit.yaw) * (1 - Math.exp(-EASE_BACK_RATE * seconds));
-      }
-      updateTarget();
+      if (shot) advanceShot(seconds);
+      else walk(seconds);
+      playerModel.update(player.heading, seconds);
       cats.update(seconds, tilesUnder(player.position));
     }
     catModels.update(events.isPaused() ? 0 : seconds, player.position);
     showNearbyNamePlates();
     const ground = groundHeight(player.position);
-    capsule.position.set(player.position.x, ground, player.position.z);
-    capsule.rotation.y = player.heading;
-    sun.target.position.copy(capsule.position);
-    sun.position.copy(capsule.position).add(SUN_OFFSET);
+    playerModel.object.position.set(player.position.x, ground, player.position.z);
+    sun.target.position.copy(playerModel.object.position);
+    sun.position.copy(playerModel.object.position).add(SUN_OFFSET);
     placeCamera(ground);
     renderer.render(scene, camera);
   }
 
+  function walk(seconds: number) {
+    const move = input();
+    player = stepPlayer(player, move, orbit.yaw, seconds);
+    playerModel.pose(playerAnimation(move));
+    const walking = move.forward !== 0 || move.right !== 0;
+    if (walking && move.forward >= 0 && !dragging) {
+      orbit.yaw += angleDifference(player.heading, orbit.yaw) * (1 - Math.exp(-EASE_BACK_RATE * seconds));
+    }
+    updateTarget();
+  }
+
+  function advanceShot(seconds: number) {
+    const { poi, seconds: before } = shot!;
+    const now = before + seconds;
+    if (before < RAISE_SECONDS && now >= RAISE_SECONDS) flash.fire();
+    if (now < RAISE_SECONDS + FLASH_SECONDS) {
+      shot = { poi, seconds: now };
+      return;
+    }
+    shot = null;
+    if (events.canFireShutter()) events.onShutter(poi);
+  }
+
   function press(button: GameButton) {
     if (button !== "shutter") held.add(button);
-    else if (!events.canFireShutter()) return;
-    else if (target) events.onShutter(target);
-    else petTargetedCat();
+    else if (shot || !events.canFireShutter()) return;
+    else if (target) {
+      shot = { poi: target, seconds: 0 };
+      playerModel.pose("raise");
+    } else petTargetedCat();
   }
 
   function petTargetedCat() {
@@ -293,6 +320,8 @@ export function startThirdPerson(
     release,
     travelTo(zoneId) {
       player = standingAt(fastTravelLanding(zoneId));
+      shot = null;
+      playerModel.face(player.heading);
       orbit.yaw = player.heading;
       updateTarget();
     },
@@ -306,6 +335,7 @@ export function startThirdPerson(
       renderer.dispose();
       renderer.forceContextLoss();
       canvas.remove();
+      flash.remove();
     },
   };
 }

@@ -38,13 +38,15 @@ async function typeCheatOutsideTheGame(page: Page) {
   await typeCheat(page);
 }
 
-async function scriptsRequestedBy(page: Page, open: () => Promise<void>) {
-  const scripts = new Set<string>();
+/** The scripts and 3D models a page requests while `open` runs. */
+async function codeAndModelsRequestedBy(page: Page, open: () => Promise<void>) {
+  const requested = new Set<string>();
   page.on("request", (request) => {
-    if (request.resourceType() === "script") scripts.add(new URL(request.url()).pathname);
+    const path = new URL(request.url()).pathname;
+    if (request.resourceType() === "script" || path.endsWith(".glb")) requested.add(path);
   });
   await open();
-  return scripts;
+  return requested;
 }
 
 const HEART_RED = [0xe0, 0x4a, 0x5a];
@@ -74,14 +76,16 @@ test("?view=third-person shows the full-window Third-person world instead of the
   expect(box).toEqual({ x: 0, y: 0, ...page.viewportSize()! });
 });
 
-test("a normal page load requests none of the Third-person mode's code", async ({ browser }) => {
+test("a normal page load requests none of the Third-person mode's code or models", async ({ browser }) => {
   const normalPage = await browser.newPage();
-  const normal = await scriptsRequestedBy(normalPage, () => openGame(normalPage));
+  const normal = await codeAndModelsRequestedBy(normalPage, () => openGame(normalPage));
   const thirdPersonPage = await browser.newPage();
-  const thirdPerson = await scriptsRequestedBy(thirdPersonPage, () => openThirdPerson(thirdPersonPage));
+  const thirdPerson = await codeAndModelsRequestedBy(thirdPersonPage, () => openThirdPerson(thirdPersonPage));
 
-  const thirdPersonOnly = [...thirdPerson].filter((script) => !normal.has(script));
-  expect(thirdPersonOnly.length).toBeGreaterThan(0);
+  const thirdPersonOnly = [...thirdPerson].filter((path) => !normal.has(path));
+  expect(thirdPersonOnly.some((path) => path.endsWith(".js"))).toBe(true);
+  expect(thirdPersonOnly.some((path) => path.endsWith(".glb"))).toBe(true);
+  expect([...normal].some((path) => path.endsWith(".glb"))).toBe(false);
   await expect(normalPage.getByRole("application", { name: "Third-person world" })).toHaveCount(0);
 });
 

@@ -237,6 +237,14 @@ export function stepPlayer(player: PlayerState, input: MoveInput, cameraYaw: num
   };
 }
 
+export type PlayerAnimation = "idle" | "walk" | "run";
+
+/** Which of the Player's animations plays for the held movement keys and Shift. */
+export function playerAnimation(input: MoveInput): PlayerAnimation {
+  if (input.forward === 0 && input.right === 0) return "idle";
+  return input.running ? "run" : "walk";
+}
+
 /** How far in front of the Player a Footprint can be and still be targeted, in tiles from the Player's centre. */
 export const TARGET_REACH = 1.5;
 /** Half the width of the forward cone; narrow enough that a one-tile Footprint right beside the Player is missed. */

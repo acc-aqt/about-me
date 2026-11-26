@@ -28,6 +28,7 @@ import {
   isNamePlateShown,
   isSolid,
   layoutAt,
+  playerAnimation,
   PLAYER_RADIUS,
   pointOfInterestModel,
   snapToLanding,
@@ -341,6 +342,24 @@ describe("Third-person world", () => {
       expect(isNamePlateShown(tum.at, { x: 48.9, z: 20.5 })).toBe(true);
       expect(isNamePlateShown(tum.at, { x: 43.5, z: 26.5 })).toBe(false);
       expect(isNamePlateShown(tum.at, tileToWorld(SPAWN))).toBe(false);
+    });
+  });
+
+  describe("Player animation", () => {
+    it("idles while no direction is held, even with Shift down", () => {
+      expect(playerAnimation(NO_INPUT)).toBe("idle");
+      expect(playerAnimation({ ...NO_INPUT, running: true })).toBe("idle");
+    });
+
+    it("walks while any direction is held", () => {
+      expect(playerAnimation(FORWARD)).toBe("walk");
+      expect(playerAnimation({ forward: -1, right: 0, running: false })).toBe("walk");
+      expect(playerAnimation({ forward: 0, right: 1, running: false })).toBe("walk");
+    });
+
+    it("runs while a direction and Shift are held", () => {
+      expect(playerAnimation({ ...FORWARD, running: true })).toBe("run");
+      expect(playerAnimation({ forward: 0, right: -1, running: true })).toBe("run");
     });
   });
 });
