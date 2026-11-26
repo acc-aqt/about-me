@@ -72,6 +72,18 @@ test.describe("on a phone", () => {
     await expect(page.getByRole("status")).not.toHaveText(facingStatus("MTU Aero Engines"));
   });
 
+  test("a keyboard cheat leaves the 2D game in place", async ({ page }) => {
+    await openGameWithKeyboard(page);
+
+    for (const key of ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"]) {
+      await page.keyboard.press(key);
+    }
+    await page.waitForTimeout(1_000);
+
+    await expect(page.getByRole("application", { name: "Portfolio game" })).toBeVisible();
+    await expect(page.getByRole("application", { name: "Third-person world" })).toHaveCount(0);
+  });
+
   test.describe("in portrait", () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize(PORTRAIT);

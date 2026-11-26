@@ -1,10 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
-import { content } from "../src/content";
-import { facingStatus, fastTravel, openGame, pointOfInterest } from "./walk";
+import { content, zoneById } from "../src/content.ts";
+import { facedPointOfInterest, type Direction } from "../src/overworld.ts";
+import { facingStatus, fastTravel, openGame, openGameWithKeyboard, pointOfInterest, tapKeys, tapsTo } from "./walk";
+
+const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
+const OPPOSITE: Record<Direction, Direction> = { up: "down", down: "up", left: "right", right: "left" };
 
 test.skip(({ isMobile }) => isMobile, "Third-person mode is for desktop only");
 // Headless Chromium renders WebGL in software, so frames and screenshots are slow, more so beside other suites.
 test.slow();
+
+const CHEAT = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
 
 function thirdPersonWorld(page: Page) {
   return page.getByRole("application", { name: "Third-person world" });
@@ -14,6 +20,20 @@ async function openThirdPerson(page: Page) {
   await page.goto("./?view=third-person");
   await expect(page.getByRole("status")).toContainText("Face a sign", { timeout: 20_000 });
   await thirdPersonWorld(page).focus();
+}
+
+function game2d(page: Page) {
+  return page.getByRole("application", { name: "Portfolio game" });
+}
+
+async function typeCheat(page: Page) {
+  for (const key of CHEAT) await page.keyboard.press(key);
+}
+
+/** With nothing focused, so the cheat's arrow keys don't walk the Player. */
+async function typeCheatOutsideTheGame(page: Page) {
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await typeCheat(page);
 }
 
 /** The scripts and 3D models a page requests while `open` runs. */
@@ -125,4 +145,87 @@ test("walking with the keyboard moves the view", async ({ page }) => {
   await page.keyboard.up("s");
 
   await expect.poll(() => view(page)).not.toBe(before);
+});
+
+test("typing the cheat in the 2D game switches to the Third-person world", async ({ page }) => {
+  await openGameWithKeyboard(page);
+
+  await typeCheat(page);
+
+  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
+  await expect(thirdPersonWorld(page)).toBeFocused();
+  await expect(game2d(page)).toHaveCount(0);
+});
+
+test("typing the cheat again returns to the 2D game at the same spot and facing", async ({ page }) => {
+  await openGameWithKeyboard(page);
+  const landing = await fastTravel(page, "career-road");
+  const faced = facedPointOfInterest(landing.tile, landing.facing)!;
+  await expect(page.getByRole("status")).toHaveText(facingStatus(faced.title));
+
+  await typeCheatOutsideTheGame(page);
+  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
+  await typeCheatOutsideTheGame(page);
+
+  await expect(game2d(page)).toBeFocused();
+  await expect(thirdPersonWorld(page)).toHaveCount(0);
+  await expect(page.getByRole("status")).toHaveText(facingStatus(faced.title));
+});
+
+test("a Film roll picked up before a round trip through the Third-person world stays picked up", async ({ page }) => {
+  await openGameWithKeyboard(page);
+  const landing = await fastTravel(page, "contact");
+  const taps = tapsTo(landing, zoneById("contact").filmRoll!);
+  await tapKeys(page, taps);
+  await expect(page.getByText(`Film rolls: 1/${totalFilmRolls}`)).toBeVisible();
+
+  await typeCheatOutsideTheGame(page);
+  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
+  await typeCheatOutsideTheGame(page);
+  await expect(game2d(page)).toBeVisible();
+  await game2d(page).focus();
+  const away = OPPOSITE[taps.at(-1)!];
+  await tapKeys(page, [away, away, taps.at(-1)!, taps.at(-1)!]);
+  await page.waitForTimeout(1_000);
+
+  await expect(page.getByText(`Film rolls: 1/${totalFilmRolls}`)).toBeVisible();
+});
+
+test("typing the cheat in the Third-person world switches back to the 2D game", async ({ page }) => {
+  await openThirdPerson(page);
+
+  await typeCheat(page);
+
+  await expect(game2d(page)).toBeFocused();
+  await expect(thirdPersonWorld(page)).toHaveCount(0);
+});
+
+test("a reload without the URL flag brings back the 2D game", async ({ page }) => {
+  await openGameWithKeyboard(page);
+  await typeCheat(page);
+  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
+
+  await page.reload();
+
+  await expect(game2d(page)).toBeVisible();
+  await expect(thirdPersonWorld(page)).toHaveCount(0);
+});
+
+test("a Handheld loading screen shows until the Third-person world is ready", async ({ page }) => {
+  let releaseScripts = () => {};
+  const scriptsHeld = new Promise<void>((resolve) => (releaseScripts = resolve));
+  await openGameWithKeyboard(page);
+  await page.route(/\.js$/, async (route) => {
+    await scriptsHeld;
+    await route.continue();
+  });
+
+  await typeCheat(page);
+
+  const loading = page.getByText("Loading…");
+  await expect(loading).toBeVisible();
+  await expect(thirdPersonWorld(page)).toHaveCount(0);
+  releaseScripts();
+  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
+  await expect(loading).toBeHidden();
 });

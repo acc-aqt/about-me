@@ -1,8 +1,10 @@
 import { createAudio } from "./audio";
-import { content, type PointOfInterest } from "./content";
+import { content, type PointOfInterest, type ZoneId } from "./content";
 import { createFastTravel } from "./fastTravel";
-import { startGame, type GameButton, type GameControls, type GameEvents } from "./game";
+import { SPAWN_LANDING, startGame, type GameButton, type GameEvents } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
+import type { Landing } from "./overworld";
+import { createCheatDetector } from "./thirdPersonWorld";
 import { createViewfinder } from "./viewfinder";
 import { query } from "./dom";
 
@@ -25,6 +27,7 @@ const screenWindow = query<HTMLElement>(document, ".screen-window");
 const hint = query<HTMLElement>(document, "#hint");
 const dialog = query<HTMLDialogElement>(document, "#viewfinder");
 const filmRollCounter = query<HTMLElement>(document, "#film-rolls");
+const loadingScreen = query<HTMLElement>(document, ".loading-screen");
 
 let facing: PointOfInterest | null = null;
 
@@ -35,10 +38,10 @@ function showHint() {
 portrait.addEventListener("change", showHint);
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
-let collectedFilmRolls = 0;
+const collectedFilmRolls = new Set<ZoneId>();
 
 function showFilmRollCount() {
-  filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls}/${totalFilmRolls}`;
+  filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls.size}/${totalFilmRolls}`;
 }
 
 const fastTravelToggle = query<HTMLButtonElement>(document, ".fast-travel-toggle");
@@ -68,22 +71,55 @@ const events: GameEvents = {
     viewfinder.open(poi);
   },
   canFireShutter: () => !viewfinder.isOpen() && !inventory.isOpen(),
-  onFilmRollCollected() {
-    collectedFilmRolls++;
+  onFilmRollCollected(zone) {
+    collectedFilmRolls.add(zone.id);
     showFilmRollCount();
-    if (collectedFilmRolls === totalFilmRolls) viewfinder.open(content.filmRollBonus);
+    if (collectedFilmRolls.size === totalFilmRolls) viewfinder.open(content.filmRollBonus);
   },
   onFootstep: () => audio.playFootstep(),
   onBump: () => audio.playBump(),
   isPaused: () => viewfinder.isOpen() || inventory.isOpen() || fastTravel.isOpen(),
 };
 
-async function startThirdPersonMode() {
-  const { startThirdPerson } = await import("./thirdPerson");
-  return startThirdPerson(screenWindow, content, events);
+async function startThirdPersonMode(start: Landing) {
+  loadingScreen.hidden = false;
+  try {
+    const { startThirdPerson } = await import("./thirdPerson");
+    return startThirdPerson(screenWindow, content, events, start);
+  } finally {
+    loadingScreen.hidden = true;
+  }
 }
 
-const controls = startsInThirdPerson ? await startThirdPersonMode() : startGame(screenWindow, content, events);
+let inThirdPerson = startsInThirdPerson;
+let controls = inThirdPerson ? await startThirdPersonMode(SPAWN_LANDING) : startGame(screenWindow, content, events);
+let switching = false;
+
+/** Hands the Player's spot over to the other renderer; Third-person mode snaps it to a tile and a direction. */
+async function switchMode() {
+  switching = true;
+  const landing = controls.position();
+  controls.stop();
+  events.onFacingChange(null);
+  inThirdPerson = !inThirdPerson;
+  controls = inThirdPerson ? await startThirdPersonMode(landing) : startGame(screenWindow, content, events, landing, collectedFilmRolls);
+  controls.focus();
+  switching = false;
+}
+
+const cheat = createCheatDetector();
+if (!isTouch) {
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.repeat || !cheat.type(event.key) || switching || events.isPaused()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void switchMode();
+    },
+    { capture: true },
+  );
+}
 
 const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   controls.travelTo(zoneId);
@@ -96,7 +132,7 @@ function pressInFastTravel(button: GameButton) {
   else if (button === "shutter") fastTravel.chooseSelection();
 }
 
-function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
+function bindTouchButton(element: HTMLButtonElement) {
   const button = element.dataset.gameButton as GameButton;
   element.addEventListener("pointerdown", (event) => {
     event.preventDefault();
@@ -111,7 +147,7 @@ function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
 
 document
   .querySelectorAll<HTMLButtonElement>("[data-game-button]")
-  .forEach((element) => bindTouchButton(element, controls));
+  .forEach(bindTouchButton);
 
 query<HTMLButtonElement>(document, ".touch-button-inventory").addEventListener("click", () => {
   if (fastTravel.isOpen()) {
