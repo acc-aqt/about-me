@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { content, zoneById } from "../src/content.ts";
 import { facedPointOfInterest, type Direction } from "../src/overworld.ts";
-import { facingStatus, fastTravel, openGame, openGameWithKeyboard, tapKeys, tapsTo, zoneTitle } from "./walk";
+import { facingStatus, fastTravel, openGame, openGameWithKeyboard, pointOfInterest, tapKeys, tapsTo } from "./walk";
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
 const OPPOSITE: Record<Direction, Direction> = { up: "down", down: "up", left: "right", right: "left" };
@@ -87,14 +87,48 @@ test("dragging the mouse orbits the camera and the scroll wheel zooms it", async
   await expect.poll(() => view(page)).not.toBe(orbited);
 });
 
-test("Fast-travel moves the Player to the chosen Zone, and the world keeps the keyboard", async ({ page }) => {
+for (const zone of content.zones.filter((z) => z.fastTravelTo)) {
+  test(`Fast-travel to ${zone.title}, then Space, opens the Viewfinder at ${zone.fastTravelTo}`, async ({ page }) => {
+    const landingPoi = pointOfInterest(zone.fastTravelTo!);
+    await openThirdPerson(page);
+
+    await fastTravel(page, zone.id);
+    await expect(thirdPersonWorld(page)).toBeFocused();
+    await expect(page.getByRole("status")).toHaveText(facingStatus(landingPoi.title));
+
+    await page.keyboard.press("Space");
+    await expect(page.getByRole("dialog", { name: landingPoi.title })).toBeVisible();
+  });
+}
+
+test("turning away from the targeted Point of Interest brings back the controls hint", async ({ page }) => {
   await openThirdPerson(page);
-  const hub = await view(page);
+  await fastTravel(page, "career-road");
+  await expect(page.getByRole("status")).toHaveText(facingStatus(pointOfInterest("mtu").title));
 
-  await page.getByRole("button", { name: "Fast-travel" }).click();
-  await page.getByRole("navigation", { name: "Fast-travel" }).getByRole("button", { name: zoneTitle("career-road") }).click();
+  await page.keyboard.down("s");
+  await expect(page.getByRole("status")).toContainText("Face a sign");
+  await page.keyboard.up("s");
+});
 
-  await expect.poll(() => view(page)).not.toBe(hub);
+test("Space with no Point of Interest in front of the Player doesn't open the Viewfinder", async ({ page }) => {
+  await openThirdPerson(page);
+
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(500);
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText("Face a sign");
+});
+
+test("I opens the Inventory and closes it again", async ({ page }) => {
+  await openThirdPerson(page);
+  const inventory = page.getByRole("dialog", { name: "Inventory" });
+
+  await page.keyboard.press("i");
+  await expect(inventory).toBeVisible();
+  await page.keyboard.press("i");
+  await expect(inventory).toBeHidden();
   await expect(thirdPersonWorld(page)).toBeFocused();
 });
 
