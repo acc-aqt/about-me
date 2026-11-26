@@ -24,6 +24,7 @@ import {
   FLOATING_NAME_PLATES,
   forestDepth,
   groundHeight,
+  HUB_SET_PIECES,
   isNamePlateShown,
   isSolid,
   layoutAt,
@@ -326,6 +327,11 @@ describe("Third-person world", () => {
     it("stands a model on its whole Footprint", () => {
       expect(pointOfInterestModel(byId("tum")).base).toEqual({ left: 40, top: 19, right: 47, bottom: 23 });
       expect(pointOfInterestModel(byId("intro")).base).toEqual({ left: 26, top: 21, right: 27, bottom: 22 });
+    });
+
+    it("stands the Hub's maypole on both its tiles, towering over the well", () => {
+      expect(HUB_SET_PIECES.maypole).toEqual({ base: { left: 34, top: 20, right: 35, bottom: 22 }, height: 8 });
+      expect(HUB_SET_PIECES.wells).toEqual([{ base: { left: 26, top: 25, right: 27, bottom: 26 }, height: 1.7 }]);
     });
   });
 

@@ -2,8 +2,17 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { SCENERY_PROPS } from "./art";
 import type { PointOfInterest } from "./content";
-import { HUB_SIGNPOSTS, MAP_COLUMNS, MAP_ROWS, tileKindAt, type Tile } from "./overworld";
-import { groundHeight, pointOfInterestModel, SIGNPOST_HEIGHT, type PoiShape, type WorldRect } from "./thirdPersonWorld";
+import { HUB_SIGNPOSTS } from "./overworld";
+import {
+  footprintWorldRect,
+  groundHeight,
+  HUB_SET_PIECES,
+  pointOfInterestModel,
+  SCENERY_PROP_HEIGHT,
+  SIGNPOST_HEIGHT,
+  type PoiShape,
+  type WorldRect,
+} from "./thirdPersonWorld";
 
 /**
  * Points of Interest, Signposts and the Hub's set pieces, built in code from Three.js primitives. Each model is laid
@@ -365,8 +374,7 @@ const SCENERY_PROP_BUILDERS: Record<string, Builder> = {
 };
 
 /** Munich's blue-and-white maypole, with crossbars of guild boards and a green crown. */
-const maypole: Builder = () => {
-  const height = 8;
+const maypole: Builder = ({ height }) => {
   const bands = 16;
   return [
     cylinder(0.3, 0.3, STONE),
@@ -405,24 +413,6 @@ function placedOn({ left, top, right, bottom }: WorldRect, height: number, build
   return parts;
 }
 
-const tileRect = ({ col, row }: Tile, width = 1, depth = 1): WorldRect => ({ left: col, top: row, right: col + width, bottom: row + depth });
-
-function maypoleRect(): WorldRect {
-  const tiles: Tile[] = [];
-  for (let row = 0; row < MAP_ROWS; row++)
-    for (let col = 0; col < MAP_COLUMNS; col++) if (tileKindAt({ col, row }) === "maypole") tiles.push({ col, row });
-  const cols = tiles.map((t) => t.col);
-  const rows = tiles.map((t) => t.row);
-  return { left: Math.min(...cols), top: Math.min(...rows), right: Math.max(...cols) + 1, bottom: Math.max(...rows) + 1 };
-}
-
-function wellTiles(): Tile[] {
-  const tiles: Tile[] = [];
-  for (let row = 0; row < MAP_ROWS; row++)
-    for (let col = 0; col < MAP_COLUMNS; col++) if (tileKindAt({ col, row }) === "well") tiles.push({ col, row });
-  return tiles;
-}
-
 function withVertexColor({ geometry, color }: Part) {
   const plain = geometry.index ? geometry.toNonIndexed() : geometry;
   plain.deleteAttribute("uv");
@@ -440,10 +430,12 @@ export function createPointsOfInterest(pointsOfInterest: readonly PointOfInteres
       const { shape, height, base } = pointOfInterestModel(poi);
       return placedOn(base, height, SHAPE_BUILDERS[shape]);
     }),
-    ...HUB_SIGNPOSTS.flatMap(({ tile }) => placedOn(tileRect(tile), SIGNPOST_HEIGHT, signpost)),
-    ...SCENERY_PROPS.flatMap(({ at, prop }) => placedOn(tileRect(at), 1, SCENERY_PROP_BUILDERS[prop] ?? SCENERY_PROP_BUILDERS["kit chest"])),
-    ...placedOn(maypoleRect(), 8, maypole),
-    ...wellTiles().flatMap((tile) => placedOn(tileRect(tile), 1.7, well)),
+    ...HUB_SIGNPOSTS.flatMap(({ tile }) => placedOn(footprintWorldRect(tile), SIGNPOST_HEIGHT, signpost)),
+    ...SCENERY_PROPS.flatMap(({ at, prop }) =>
+      placedOn(footprintWorldRect(at), SCENERY_PROP_HEIGHT, SCENERY_PROP_BUILDERS[prop] ?? SCENERY_PROP_BUILDERS["kit chest"]),
+    ),
+    ...placedOn(HUB_SET_PIECES.maypole.base, HUB_SET_PIECES.maypole.height, maypole),
+    ...HUB_SET_PIECES.wells.flatMap(({ base, height }) => placedOn(base, height, well)),
   ];
   const geometries = parts.map(withVertexColor);
   const merged = mergeGeometries(geometries);

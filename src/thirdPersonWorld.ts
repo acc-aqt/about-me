@@ -395,6 +395,26 @@ export function pointOfInterestModel(poi: PointOfInterest): PoiModel & { base: W
 }
 
 export const SIGNPOST_HEIGHT = 1.5;
+export const SCENERY_PROP_HEIGHT = 1;
+
+/** A model standing on the ground: what it covers and how tall it stands, in world units. */
+export type SetPiece = { base: WorldRect; height: number };
+
+function tilesOfKind(kind: TileKind): Tile[] {
+  return MAP_TILES.filter((tile) => tileKindAt(tile) === kind);
+}
+
+function boundsOf(tiles: readonly Tile[]): WorldRect {
+  const cols = tiles.map((tile) => tile.col);
+  const rows = tiles.map((tile) => tile.row);
+  return { left: Math.min(...cols), top: Math.min(...rows), right: Math.max(...cols) + 1, bottom: Math.max(...rows) + 1 };
+}
+
+/** The Hub's maypole, across all its tiles, and its wells, one per tile. */
+export const HUB_SET_PIECES: { maypole: SetPiece; wells: SetPiece[] } = {
+  maypole: { base: boundsOf(tilesOfKind("maypole")), height: 8 },
+  wells: tilesOfKind("well").map((tile) => ({ base: footprintWorldRect(tile), height: 1.7 })),
+};
 /** The gap between the top of a model and the bottom of its Name plate. */
 const NAME_PLATE_GAP = 0.3;
 
