@@ -1,5 +1,7 @@
+import type { PointOfInterest } from "./content";
 import {
   DIRECTIONS,
+  footprintRect,
   isReachableFromSpawn,
   isWalkable,
   MAP_COLUMNS,
@@ -122,4 +124,70 @@ export function stepPlayer(player: PlayerState, input: MoveInput, cameraYaw: num
     position: moveCircle(player.position, (dx / length) * distance, (dz / length) * distance),
     heading: Math.atan2(dx, dz),
   };
+}
+
+/** How far in front of the Player a Footprint can be and still be targeted, in tiles from the Player's centre. */
+export const TARGET_REACH = 1.5;
+/** Half the width of the forward cone; narrow enough that a one-tile Footprint right beside the Player is missed. */
+export const TARGET_HALF_ANGLE = 0.6;
+
+function headingTowards(from: WorldPosition, to: WorldPosition) {
+  return Math.atan2(to.x - from.x, to.z - from.z);
+}
+
+type Rect = { left: number; top: number; right: number; bottom: number };
+
+/** How far along a ray from a point it first meets a rectangle, or null when it misses. */
+function rayEntry(from: WorldPosition, heading: number, rect: Rect): number | null {
+  let near = 0;
+  let far = Infinity;
+  const slabs = [
+    { origin: from.x, direction: Math.sin(heading), min: rect.left, max: rect.right },
+    { origin: from.z, direction: Math.cos(heading), min: rect.top, max: rect.bottom },
+  ];
+  for (const { origin, direction, min, max } of slabs) {
+    if (Math.abs(direction) < 1e-12) {
+      if (origin < min || origin > max) return null;
+      continue;
+    }
+    const [t1, t2] = [(min - origin) / direction, (max - origin) / direction];
+    near = Math.max(near, Math.min(t1, t2));
+    far = Math.min(far, Math.max(t1, t2));
+  }
+  return near <= far ? near : null;
+}
+
+/**
+ * How near a Footprint comes to the Player inside the forward cone, or null when no part of it lies in the cone within
+ * reach. The nearest part is the Footprint's closest point when that lies in the cone, otherwise where an edge of the
+ * cone first meets it.
+ */
+function distanceInCone(poi: PointOfInterest, { position, heading }: PlayerState): number | null {
+  const footprint = footprintRect(poi.placement);
+  const rect = { ...footprint, right: footprint.right + 1, bottom: footprint.bottom + 1 };
+  const closest = {
+    x: Math.min(Math.max(position.x, rect.left), rect.right),
+    z: Math.min(Math.max(position.z, rect.top), rect.bottom),
+  };
+  const closestDistance = Math.hypot(closest.x - position.x, closest.z - position.z);
+  const inCone = closestDistance === 0 || angleBetween(headingTowards(position, closest), heading) <= TARGET_HALF_ANGLE;
+  const candidates = inCone
+    ? [closestDistance]
+    : [heading - TARGET_HALF_ANGLE, heading + TARGET_HALF_ANGLE].map((edge) => rayEntry(position, edge, rect));
+  const distances = candidates.filter((distance) => distance !== null);
+  const distance = distances.length ? Math.min(...distances) : Infinity;
+  return distance <= TARGET_REACH ? distance : null;
+}
+
+/** The Point of Interest the Shutter would photograph: the nearest whose Footprint lies in the forward cone, within reach. */
+export function targetedPointOfInterest(
+  pointsOfInterest: readonly PointOfInterest[],
+  player: PlayerState,
+): PointOfInterest | undefined {
+  let best: { poi: PointOfInterest; distance: number } | undefined;
+  for (const poi of pointsOfInterest) {
+    const distance = distanceInCone(poi, player);
+    if (distance !== null && (!best || distance < best.distance)) best = { poi, distance };
+  }
+  return best?.poi;
 }
