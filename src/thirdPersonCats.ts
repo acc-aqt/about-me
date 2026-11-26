@@ -2,7 +2,15 @@ import * as THREE from "three";
 import { CAT_COATS, paintHeart, type Rgb } from "./art";
 import { catPose, isHeartShown, type Cat, type CatAnimPose } from "./cats";
 import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
-import { catWorldPosition, directionToHeading, groundHeight, isNamePlateShown, type WorldPosition } from "./thirdPersonWorld";
+import {
+  angleDifference,
+  catWorldPosition,
+  directionToHeading,
+  groundHeight,
+  isNamePlateShown,
+  worldToTile,
+  type WorldPosition,
+} from "./thirdPersonWorld";
 
 /**
  * Berlioz and Manouche as low-poly cats built in code from Three.js primitives, posed by code for walking, standing,
@@ -127,9 +135,6 @@ function pose(cat: CatMeshes, current: CatAnimPose, time: number) {
   }
 }
 
-function angleDifference(to: number, from: number) {
-  return ((((to - from) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
-}
 
 function createHeart() {
   const texture = new THREE.CanvasTexture(paintHeart());
@@ -173,7 +178,7 @@ export function createThirdPersonCats(cats: readonly Cat[]) {
         heart.visible = isHeartShown(cat);
         heart.position.y = top;
         plate.position.y = heart.visible ? top + HEART_SIZE + PLATE_GAP : top;
-        plate.visible = isNamePlateShown({ col: Math.floor(position.x), row: Math.floor(position.z) }, player);
+        plate.visible = isNamePlateShown(worldToTile(position), player);
       }
     },
     dispose() {

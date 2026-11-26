@@ -19,6 +19,7 @@ import {
   type Tile,
 } from "./overworld";
 import {
+  angleDifference,
   buildingBlocks,
   directionToHeading,
   FLOATING_NAME_PLATES,
@@ -36,6 +37,7 @@ import {
   shutterTarget,
   TILE_LAYOUTS,
   tileToWorld,
+  worldToTile,
   type MoveInput,
   type PlayerState,
   type WorldPosition,
@@ -106,6 +108,19 @@ describe("Third-person world", () => {
       expect(snapToLanding({ x: x + 0.4, z: z - 0.4 }, directionToHeading("right") - 0.6)).toEqual({ tile: SPAWN, facing: "right" });
       expect(snapToLanding({ x, z }, directionToHeading("up") + 0.7)).toEqual({ tile: SPAWN, facing: "up" });
       expect(snapToLanding({ x, z }, directionToHeading("down") + 4 * Math.PI)).toEqual({ tile: SPAWN, facing: "down" });
+    });
+
+    it("finds the tile under a position, edges belonging to the tile east and south", () => {
+      expect(worldToTile({ x: 29.99, z: 24.01 })).toEqual({ col: 29, row: 24 });
+      expect(worldToTile({ x: 30, z: 25 })).toEqual({ col: 30, row: 25 });
+      expect(worldToTile({ x: -0.2, z: 0.2 })).toEqual({ col: -1, row: 0 });
+    });
+
+    it("measures the signed shorter turn from one heading to another", () => {
+      expect(angleDifference(0.5, 0.2)).toBeCloseTo(0.3);
+      expect(angleDifference(0.2, 0.5)).toBeCloseTo(-0.3);
+      expect(angleDifference(0.1, 2 * Math.PI - 0.1)).toBeCloseTo(0.2);
+      expect(angleDifference(directionToHeading("left"), directionToHeading("up"))).toBeCloseTo(Math.PI / 2);
     });
 
     it("always snaps to a walkable tile reachable from the spawn, even from inside solid tiles or off the map", () => {

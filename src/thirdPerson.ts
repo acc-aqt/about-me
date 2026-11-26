@@ -9,6 +9,7 @@ import { createPointsOfInterest } from "./thirdPersonPointsOfInterest";
 import { loadPlayerModel, type PlayerModel } from "./thirdPersonPlayer";
 import { createScenery } from "./thirdPersonScenery";
 import {
+  angleDifference,
   directionToHeading,
   FLOATING_NAME_PLATES,
   groundHeight,
@@ -21,6 +22,7 @@ import {
   type MoveInput,
   PLAYER_RADIUS,
   type PlayerState,
+  worldToTile,
   type WorldPosition,
 } from "./thirdPersonWorld";
 
@@ -78,9 +80,6 @@ function createSun() {
   return sun;
 }
 
-function angleDifference(to: number, from: number) {
-  return ((((to - from) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
-}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -91,9 +90,9 @@ function standingAt({ tile, facing }: Landing): PlayerState {
 }
 
 /** The tiles the Player's circle covers, its centre's tile first, so a Cat never walks into it. */
-function tilesUnder({ x, z }: WorldPosition) {
-  const centre = { col: Math.floor(x), row: Math.floor(z) };
-  const tiles = [centre];
+function tilesUnder(position: WorldPosition) {
+  const { x, z } = position;
+  const tiles = [worldToTile(position)];
   for (const col of [Math.floor(x - PLAYER_RADIUS), Math.floor(x + PLAYER_RADIUS)]) {
     for (const row of [Math.floor(z - PLAYER_RADIUS), Math.floor(z + PLAYER_RADIUS)]) {
       if (!tiles.some((tile) => tile.col === col && tile.row === row)) tiles.push({ col, row });

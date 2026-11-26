@@ -48,9 +48,13 @@ export function directionToHeading(direction: Direction): number {
   return HEADINGS[direction];
 }
 
+/** The signed shorter turn from one heading to another, in (-π, π]. */
+export function angleDifference(to: number, from: number): number {
+  return ((((to - from) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+}
+
 function angleBetween(a: number, b: number) {
-  const difference = (((a - b) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
-  return Math.abs(difference);
+  return Math.abs(angleDifference(a, b));
 }
 
 function nearestDirection(heading: number): Direction {
@@ -62,6 +66,11 @@ function nearestDirection(heading: number): Direction {
 /** The centre of a tile. */
 export function tileToWorld({ col, row }: Tile): WorldPosition {
   return { x: col + 0.5, z: row + 0.5 };
+}
+
+/** The tile a position lies in. */
+export function worldToTile({ x, z }: WorldPosition): Tile {
+  return { col: Math.floor(x), row: Math.floor(z) };
 }
 
 export function isSolid(tile: Tile): boolean {
@@ -77,7 +86,7 @@ const reachableTiles = MAP_TILES.filter(isReachableFromSpawn);
 
 /** The reachable tile nearest a position, with the nearest of the four directions to a heading. */
 export function snapToLanding(position: WorldPosition, heading: number): Landing {
-  const under = { col: Math.floor(position.x), row: Math.floor(position.z) };
+  const under = worldToTile(position);
   const distance = (tile: Tile) => {
     const centre = tileToWorld(tile);
     return Math.hypot(centre.x - position.x, centre.z - position.z);
@@ -314,8 +323,7 @@ function nearestInCone<T>(items: readonly T[], rectOf: (item: T) => WorldRect, p
 
 /** Where a Cat stands in the world: the centre of its tile, or part way along its step. */
 export function catWorldPosition(cat: Cat): WorldPosition {
-  const { col, row } = catPlace(cat);
-  return { x: col + 0.5, z: row + 0.5 };
+  return tileToWorld(catPlace(cat));
 }
 
 function catWorldRect(cat: Cat): WorldRect {
@@ -439,5 +447,5 @@ export const FLOATING_NAME_PLATES: readonly FloatingNamePlate[] = NAME_PLATES.ma
 
 /** Whether a Name plate over a Footprint, or over a single tile such as a Cat's, shows: the 2D range rule. */
 export function isNamePlateShown(at: Footprint, player: WorldPosition): boolean {
-  return isInNamePlateRange({ col: Math.floor(player.x), row: Math.floor(player.z) }, at);
+  return isInNamePlateRange(worldToTile(player), at);
 }
