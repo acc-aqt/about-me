@@ -1,12 +1,14 @@
 import { createAudio } from "./audio";
 import { content, type PointOfInterest } from "./content";
 import { createFastTravel } from "./fastTravel";
-import { startGame, type GameButton, type GameControls } from "./game";
+import { startGame, type GameButton, type GameControls, type GameEvents } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
 import { createViewfinder } from "./viewfinder";
 import { query } from "./dom";
+import { SPAWN } from "./overworld";
 
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
+const startsInThirdPerson = !isTouch && new URLSearchParams(location.search).get("view") === "third-person";
 const portrait = window.matchMedia("(orientation: portrait)");
 
 function controlsHint() {
@@ -20,7 +22,20 @@ function shutterPrompt() {
   return portrait.matches ? "press A" : "tap the Shutter";
 }
 
-const canvas = query<HTMLCanvasElement>(document, "#game");
+const gameCanvas = query<HTMLCanvasElement>(document, "#game");
+const canvas = startsInThirdPerson ? createThirdPersonCanvas() : gameCanvas;
+
+function createThirdPersonCanvas() {
+  const thirdPersonCanvas = document.createElement("canvas");
+  thirdPersonCanvas.id = "third-person";
+  thirdPersonCanvas.tabIndex = 0;
+  thirdPersonCanvas.setAttribute("role", "application");
+  thirdPersonCanvas.setAttribute("aria-label", "Third-person world");
+  thirdPersonCanvas.setAttribute("aria-describedby", "hint");
+  gameCanvas.hidden = true;
+  gameCanvas.after(thirdPersonCanvas);
+  return thirdPersonCanvas;
+}
 const hint = query<HTMLElement>(document, "#hint");
 const dialog = query<HTMLDialogElement>(document, "#viewfinder");
 const filmRollCounter = query<HTMLElement>(document, "#film-rolls");
@@ -57,7 +72,7 @@ canvas.addEventListener("keydown", (event) => {
   }
 });
 
-const controls = startGame(canvas, content, {
+const events: GameEvents = {
   onFacingChange(poi) {
     facing = poi;
     showHint();
@@ -75,7 +90,14 @@ const controls = startGame(canvas, content, {
   onFootstep: () => audio.playFootstep(),
   onBump: () => audio.playBump(),
   isPaused: () => viewfinder.isOpen() || inventory.isOpen() || fastTravel.isOpen(),
-});
+};
+
+async function startThirdPersonMode() {
+  const { startThirdPerson } = await import("./thirdPerson");
+  return startThirdPerson(canvas, events, { tile: SPAWN, facing: "down" });
+}
+
+const controls = startsInThirdPerson ? await startThirdPersonMode() : startGame(canvas, content, events);
 
 const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   controls.travelTo(zoneId);

@@ -15,11 +15,13 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "kaplay": "3001.0.19"
+    "kaplay": "3001.0.19",
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",
     "@types/node": "26.6.6",
+    "@types/three": "0.187.0",
     "sharp": "0.35.5",
     "typescript": "7.0.2",
     "vite": "8.3.8",
