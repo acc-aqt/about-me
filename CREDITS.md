@@ -20,9 +20,27 @@ It provides workshop and sport props such as the workbench, the anvil and the ki
 License: [Creative Commons Zero (CC0 1.0)](https://creativecommons.org/publicdomain/zero/1.0/).
 Attribution is not required; it is given here with thanks.
 
+## Mini Characters — Kenney
+
+`public/models/player.glb`, the Third-person mode's Player, is `character-male-c` from
+[Mini Characters](https://kenney.nl/assets/mini-characters) (v2.0) by Kenney (www.kenney.nl),
+downloaded from kenney.nl. It is trimmed to the idle, walk, sprint and holding-both animations, and its colours are
+repainted to the Player's beanie, hair, skin, jacket, trousers and shoes. The camera in its hand is built in code.
+
+License: [Creative Commons Zero (CC0 1.0)](https://creativecommons.org/publicdomain/zero/1.0/).
+Attribution is not required; it is given here with thanks.
+
 ## Original art
 
 The Player (photographer) sprite, the Film roll, the water, the Hub maypole and the themed Points of Interest
 and scenery Kenney's packs lack (such as the Contact mailbox, the Career road buildings, the 3D printer, the jukebox,
 the speakers, the arcade cabinets and the tennis net) are original pixel art painted in code
-in `src/art.ts`. The pixel font used for in-world labels is an original 5×9 font drawn in `src/pixel-font.ts`.
+in `src/art.ts`. The Third-person mode's low-poly scenery (terrain and the Sport mountain, trees, bushes, rocks,
+houses, fences, cars and water) is original too, built in code from Three.js primitives in `src/thirdPersonScenery.ts`.
+The pixel font used for in-world labels is an original 5×9 font drawn in `src/pixel-font.ts`.
+
+In Third-person mode, every Point of Interest (including the hero landmarks that hint at the TUM main building,
+BMW's Four-Cylinder tower and the Hub's maypole), the Signposts and the scenery props are original low-poly models
+built in code from Three.js primitives in `src/thirdPersonPointsOfInterest.ts`; no 3D model files are used for them.
+Berlioz and Manouche are original low-poly cats built in code from Three.js primitives, with code-driven walking,
+sitting and sleeping poses, in `src/thirdPersonCats.ts`; no 3D model file is used for them either.

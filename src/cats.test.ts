@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { CATS, chooseCatStep, chooseRest, chooseWalkLength, directionTowards, isCatGround, type Random } from "./cats";
+import {
+  CAT_STEP_TIME,
+  CATS,
+  catPose,
+  chooseCatStep,
+  chooseRest,
+  chooseWalkLength,
+  createCats,
+  directionTowards,
+  isCatGround,
+  isHeartShown,
+  type Random,
+} from "./cats";
 import { DIRECTIONS, fastTravelLanding, SPAWN, tileAhead, tileKey, tileKindAt, ZONE_RECTS, type Tile } from "./overworld";
 
 const hub = ZONE_RECTS.start;
@@ -88,5 +100,89 @@ describe("Cats", () => {
 
   it("gives each Cat a patch of grass to roam, not a single tile", () => {
     for (const cat of CATS) expect(roamFrom(cat.start).size, cat.name).toBeGreaterThanOrEqual(15);
+  });
+});
+
+describe("the Cats' wander", () => {
+  /** Always 0: every rest is an eight-second sleep and every walk a single step, the first open way in `DIRECTIONS`. */
+  const lowest: Random = () => 0;
+
+  it("starts Berlioz and Manouche asleep or sitting on their start tiles", () => {
+    const cats = createCats(lowest);
+    expect(cats.all.map(({ name, tile }) => ({ name, tile }))).toEqual(CATS.map(({ name, start }) => ({ name, tile: start })));
+    for (const cat of cats.all) expect(catPose(cat)).toBe("sleep");
+  });
+
+  const nobody: Tile[] = [];
+
+  function berlioz(cats: ReturnType<typeof createCats>) {
+    return cats.all.find((cat) => cat.name === "Berlioz")!;
+  }
+
+  it("wakes a Cat after its rest and walks it, step by step, onto neighbouring Cat ground", () => {
+    const cats = createCats(lowest);
+    const start = berlioz(cats).tile;
+
+    cats.update(7.9, nobody);
+    expect(catPose(berlioz(cats))).toBe("sleep");
+    cats.update(0.2, nobody);
+    cats.update(0.01, nobody);
+    expect(catPose(berlioz(cats))).toBe("walk");
+    cats.update(CAT_STEP_TIME, nobody);
+
+    const { tile } = berlioz(cats);
+    expect(Math.abs(tile.col - start.col) + Math.abs(tile.row - start.row)).toBe(1);
+    expect(isCatGround(tile)).toBe(true);
+  });
+
+  it("never walks a Cat onto the Player", () => {
+    const cats = createCats(lowest);
+    const start = berlioz(cats).tile;
+    const around = DIRECTIONS.map((direction) => tileAhead(start, direction));
+
+    for (let second = 0; second < 60; second++) cats.update(1, around);
+
+    expect(berlioz(cats).tile).toEqual(start);
+  });
+
+  it("turns a petted Cat to the Player, sits it down and shows a heart for two seconds", () => {
+    const cats = createCats(lowest);
+    const cat = berlioz(cats);
+    const player = { col: cat.tile.col, row: cat.tile.row - 1 };
+
+    cats.pet(cat, player);
+    cats.update(0.01, [player]);
+    expect(cat.facing).toBe("up");
+    expect(catPose(cat)).toBe("sit");
+    expect(isHeartShown(cat)).toBe(true);
+
+    cats.update(2, [player]);
+    expect(isHeartShown(cat)).toBe(false);
+  });
+
+  it("lets a Cat finish its step before it reacts to the Shutter", () => {
+    const cats = createCats(lowest);
+    const cat = berlioz(cats);
+    cats.update(8, nobody);
+    cats.update(0.01, nobody);
+    const to = cat.step!.to;
+
+    cats.pet(cat, SPAWN);
+    cats.update(0.01, nobody);
+    expect(isHeartShown(cat)).toBe(false);
+    cats.update(CAT_STEP_TIME, nobody);
+
+    expect(cat.tile).toEqual(to);
+    expect(isHeartShown(cat)).toBe(true);
+  });
+
+  it("finds the Cat on a tile, including the one it is stepping onto", () => {
+    const cats = createCats(lowest);
+    const cat = berlioz(cats);
+    expect(cats.catOn(cat.tile)).toBe(cat);
+    cats.update(8, nobody);
+    cats.update(0.01, nobody);
+    expect(cats.catOn(cat.step!.to)).toBe(cat);
+    expect(cats.catOn(SPAWN)).toBeUndefined();
   });
 });

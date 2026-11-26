@@ -37,14 +37,31 @@ body {
   background: var(--bg);
 }
 
-#game {
+#game,
+#third-person {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+#game {
   image-rendering: pixelated;
 }
 
-#game:focus-visible {
+#third-person {
+  touch-action: none;
+}
+
+.shutter-flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#game:focus-visible,
+#third-person:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
@@ -52,6 +69,22 @@ body {
 .hint,
 .film-rolls {
   margin: 0;
+}
+
+.loading-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  background: var(--screen);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 
 .skip-link:focus-visible {

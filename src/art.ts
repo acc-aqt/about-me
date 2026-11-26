@@ -19,7 +19,7 @@ import {
   type Tile,
   type TileKind,
 } from "./overworld";
-import type { CatName, CatPose } from "./cats";
+import type { CatAnimPose, CatName } from "./cats";
 import type { Footprint } from "./content";
 
 export type Rgb = [number, number, number];
@@ -62,6 +62,7 @@ function hex(value: string): Rgb {
 }
 
 export const INK = hex("#1d1d24");
+export const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 
 function hash(n: number): number {
   let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b);
@@ -275,7 +276,7 @@ export const CAT_FRAME_WIDTH = 16;
 export const CAT_FRAME_HEIGHT = 12;
 
 /** `o` marks the patches: Manouche's are orange, Berlioz is black all over. */
-const CAT_COATS: Record<CatName, Record<string, Rgb>> = {
+export const CAT_COATS: Record<CatName, Record<string, Rgb>> = {
   Berlioz: { k: INK, f: hex("#34343f"), F: hex("#25252e"), o: hex("#34343f"), e: hex("#e8d44a"), n: hex("#8a5a66") },
   Manouche: { k: INK, f: hex("#9a9ca6"), F: hex("#74767f"), o: hex("#e08a3c"), e: hex("#8fcf5a"), n: hex("#e89aa8") },
 };
@@ -386,8 +387,6 @@ const CAT_FRAMES_PER_DIRECTION = 4;
 const CAT_SLEEP_FRAME = CAT_DIRECTIONS.length * CAT_FRAMES_PER_DIRECTION;
 
 export const CAT_FRAME_COUNT = CAT_SLEEP_FRAME + 1;
-
-export type CatAnimPose = "stand" | "walk" | CatPose;
 
 export function catAnim(pose: CatAnimPose, facing: Direction): string {
   return pose === "sleep" ? "sleep" : `${pose}-${facing}`;

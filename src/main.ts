@@ -1,12 +1,17 @@
 import { createAudio } from "./audio";
-import { content, type PointOfInterest } from "./content";
+import { createCats } from "./cats";
+import { content, type PointOfInterest, type ZoneId } from "./content";
 import { createFastTravel } from "./fastTravel";
-import { startGame, type GameButton, type GameControls } from "./game";
+import { startGame } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
+import { SPAWN_LANDING, type Landing } from "./overworld";
+import type { GameButton, GameControls, GameEvents } from "./renderer";
+import { createCheatDetector } from "./cheat";
 import { createViewfinder } from "./viewfinder";
 import { query } from "./dom";
 
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
+const startsInThirdPerson = !isTouch && new URLSearchParams(location.search).get("view") === "third-person";
 const portrait = window.matchMedia("(orientation: portrait)");
 
 function controlsHint() {
@@ -20,10 +25,11 @@ function shutterPrompt() {
   return portrait.matches ? "press A" : "tap the Shutter";
 }
 
-const canvas = query<HTMLCanvasElement>(document, "#game");
+const screenWindow = query<HTMLElement>(document, ".screen-window");
 const hint = query<HTMLElement>(document, "#hint");
 const dialog = query<HTMLDialogElement>(document, "#viewfinder");
 const filmRollCounter = query<HTMLElement>(document, "#film-rolls");
+const loadingScreen = query<HTMLElement>(document, ".loading-screen");
 
 let facing: PointOfInterest | null = null;
 
@@ -34,10 +40,12 @@ function showHint() {
 portrait.addEventListener("change", showHint);
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
-let collectedFilmRolls = 0;
+const collectedFilmRolls = new Set<ZoneId>();
+/** Shared by both renderers, so the Cats carry on where they were after a switch. */
+const cats = createCats(Math.random);
 
 function showFilmRollCount() {
-  filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls}/${totalFilmRolls}`;
+  filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls.size}/${totalFilmRolls}`;
 }
 
 const fastTravelToggle = query<HTMLButtonElement>(document, ".fast-travel-toggle");
@@ -47,17 +55,17 @@ const audio = createAudio();
 
 const inventoryDialog = query<HTMLDialogElement>(document, "#inventory");
 
-const viewfinder = createViewfinder(dialog, () => canvas.focus());
-const inventory = createInventory(inventoryDialog, content.inventory, () => canvas.focus());
+const viewfinder = createViewfinder(dialog, () => controls.focus());
+const inventory = createInventory(inventoryDialog, content.inventory, () => controls.focus());
 
-canvas.addEventListener("keydown", (event) => {
-  if (isInventoryKey(event) && !viewfinder.isOpen()) {
+screenWindow.addEventListener("keydown", (event) => {
+  if (event.target instanceof HTMLCanvasElement && isInventoryKey(event) && !viewfinder.isOpen()) {
     event.preventDefault();
     inventory.toggle();
   }
 });
 
-const controls = startGame(canvas, content, {
+const events: GameEvents = {
   onFacingChange(poi) {
     facing = poi;
     showHint();
@@ -67,19 +75,74 @@ const controls = startGame(canvas, content, {
     viewfinder.open(poi);
   },
   canFireShutter: () => !viewfinder.isOpen() && !inventory.isOpen(),
-  onFilmRollCollected() {
-    collectedFilmRolls++;
+  onFilmRollCollected(zone) {
+    collectedFilmRolls.add(zone.id);
     showFilmRollCount();
-    if (collectedFilmRolls === totalFilmRolls) viewfinder.open(content.filmRollBonus);
+    if (collectedFilmRolls.size === totalFilmRolls) viewfinder.open(content.filmRollBonus);
   },
   onFootstep: () => audio.playFootstep(),
   onBump: () => audio.playBump(),
   isPaused: () => viewfinder.isOpen() || inventory.isOpen() || fastTravel.isOpen(),
-});
+};
+
+type StartRenderer = (start: Landing) => GameControls;
+
+const start2D: StartRenderer = (start) => startGame(screenWindow, content, events, start, collectedFilmRolls, cats);
+
+/** Fetches Third-person mode's code and models behind the loading screen, ready to start at once. */
+async function loadThirdPersonMode(): Promise<StartRenderer> {
+  loadingScreen.hidden = false;
+  try {
+    const { loadPlayerModel, startThirdPerson } = await import("./thirdPerson");
+    const playerModel = await loadPlayerModel();
+    return (start) => startThirdPerson(screenWindow, content, events, start, cats, playerModel);
+  } finally {
+    loadingScreen.hidden = true;
+  }
+}
+
+let inThirdPerson = startsInThirdPerson;
+let controls = (inThirdPerson ? await loadThirdPersonMode() : start2D)(SPAWN_LANDING);
+let switching = false;
+
+/**
+ * Hands the Player's spot over to the other renderer; Third-person mode snaps it to a tile and a direction. The other
+ * renderer loads before this one stops, so a failed load leaves the Player where they were.
+ */
+async function switchMode(landing: Landing) {
+  switching = true;
+  try {
+    const startNext = inThirdPerson ? start2D : await loadThirdPersonMode();
+    controls.stop();
+    events.onFacingChange(null);
+    inThirdPerson = !inThirdPerson;
+    controls = startNext(landing);
+    controls.focus();
+  } finally {
+    switching = false;
+  }
+}
+
+/** Each key notes where the Player stood before it, so the switch lands where the cheat began, not where its arrows led. */
+const cheat = createCheatDetector<Landing>();
+if (!isTouch) {
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.repeat) return;
+      const landing = cheat.type(event.key, controls.position());
+      if (!landing || switching || events.isPaused()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void switchMode(landing);
+    },
+    { capture: true },
+  );
+}
 
 const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   controls.travelTo(zoneId);
-  canvas.focus();
+  controls.focus();
 });
 
 function pressInFastTravel(button: GameButton) {
@@ -88,7 +151,7 @@ function pressInFastTravel(button: GameButton) {
   else if (button === "shutter") fastTravel.chooseSelection();
 }
 
-function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
+function bindTouchButton(element: HTMLButtonElement) {
   const button = element.dataset.gameButton as GameButton;
   element.addEventListener("pointerdown", (event) => {
     event.preventDefault();
@@ -103,12 +166,12 @@ function bindTouchButton(element: HTMLButtonElement, controls: GameControls) {
 
 document
   .querySelectorAll<HTMLButtonElement>("[data-game-button]")
-  .forEach((element) => bindTouchButton(element, controls));
+  .forEach(bindTouchButton);
 
 query<HTMLButtonElement>(document, ".touch-button-inventory").addEventListener("click", () => {
   if (fastTravel.isOpen()) {
     fastTravel.close();
-    canvas.focus();
+    controls.focus();
   } else if (!viewfinder.isOpen()) inventory.toggle();
 });
 

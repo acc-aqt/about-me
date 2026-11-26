@@ -5,7 +5,6 @@ import {
   fastTravelLanding,
   footprintTiles,
   isWalkable,
-  SPAWN,
   tileAhead,
   tileKey as key,
   type Direction,
@@ -16,8 +15,7 @@ import {
 export const ARROW_KEYS: Record<Direction, string> = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
 export const DPAD_BUTTONS: Record<Direction, string> = { up: "Walk up", down: "Walk down", left: "Walk left", right: "Walk right" };
 
-/** The Player spawns in the Hub facing down. */
-export const SPAWN_LANDING: Landing = { tile: SPAWN, facing: "down" };
+export { SPAWN_LANDING } from "../src/overworld.ts";
 
 export function zoneTitle(zoneId: ZoneId) {
   return zoneById(zoneId).title;

@@ -25,20 +25,24 @@ export function needsWrap(text: string): boolean {
   return text.length * PIXEL_FONT_CELL_WIDTH > NAME_PLATE_WRAP_WIDTH;
 }
 
-/** Lines the text wraps onto, breaking between words like Kaplay does. */
-function lineCount(text: string): number {
-  if (!needsWrap(text)) return 1;
+/** The lines a plate's text wraps onto, breaking between words like Kaplay does. */
+export function namePlateLines(text: string): string[] {
+  if (!needsWrap(text)) return [text];
   const maxChars = Math.floor(NAME_PLATE_WRAP_WIDTH / PIXEL_FONT_CELL_WIDTH);
-  let lines = 1;
-  let length = 0;
+  const lines: string[] = [];
+  let line = "";
   for (const word of text.split(" ")) {
-    const next = length === 0 ? word.length : length + 1 + word.length;
-    if (next > maxChars && length > 0) {
-      lines++;
-      length = word.length;
-    } else length = next;
+    const next = line === "" ? word : `${line} ${word}`;
+    if (next.length > maxChars && line !== "") {
+      lines.push(line);
+      line = word;
+    } else line = next;
   }
-  return lines;
+  return [...lines, line];
+}
+
+function lineCount(text: string): number {
+  return namePlateLines(text).length;
 }
 
 /**
