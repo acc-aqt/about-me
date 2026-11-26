@@ -1,4 +1,5 @@
 import { createAudio } from "./audio";
+import { createCats } from "./cats";
 import { content, type PointOfInterest, type ZoneId } from "./content";
 import { createFastTravel } from "./fastTravel";
 import { SPAWN_LANDING, startGame, type GameButton, type GameEvents } from "./game";
@@ -39,6 +40,8 @@ portrait.addEventListener("change", showHint);
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
 const collectedFilmRolls = new Set<ZoneId>();
+/** Shared by both renderers, so the Cats carry on where they were after a switch. */
+const cats = createCats(Math.random);
 
 function showFilmRollCount() {
   filmRollCounter.textContent = `Film rolls: ${collectedFilmRolls.size}/${totalFilmRolls}`;
@@ -85,14 +88,14 @@ async function startThirdPersonMode(start: Landing) {
   loadingScreen.hidden = false;
   try {
     const { startThirdPerson } = await import("./thirdPerson");
-    return startThirdPerson(screenWindow, content, events, start);
+    return startThirdPerson(screenWindow, content, events, start, cats);
   } finally {
     loadingScreen.hidden = true;
   }
 }
 
 let inThirdPerson = startsInThirdPerson;
-let controls = inThirdPerson ? await startThirdPersonMode(SPAWN_LANDING) : startGame(screenWindow, content, events);
+let controls = inThirdPerson ? await startThirdPersonMode(SPAWN_LANDING) : startGame(screenWindow, content, events, SPAWN_LANDING, collectedFilmRolls, cats);
 let switching = false;
 
 /** Hands the Player's spot over to the other renderer; Third-person mode snaps it to a tile and a direction. */
@@ -102,7 +105,7 @@ async function switchMode() {
   controls.stop();
   events.onFacingChange(null);
   inThirdPerson = !inThirdPerson;
-  controls = inThirdPerson ? await startThirdPersonMode(landing) : startGame(screenWindow, content, events, landing, collectedFilmRolls);
+  controls = inThirdPerson ? await startThirdPersonMode(landing) : startGame(screenWindow, content, events, landing, collectedFilmRolls, cats);
   controls.focus();
   switching = false;
 }

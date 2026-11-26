@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CAT_STEP_TIME, createCats } from "./cats";
 import { content, type Footprint, type PointOfInterest } from "./content";
 import {
   DIRECTIONS,
@@ -31,6 +32,7 @@ import {
   pointOfInterestModel,
   snapToLanding,
   stepPlayer,
+  targetedCat,
   targetedPointOfInterest,
   TILE_LAYOUTS,
   tileToWorld,
@@ -271,6 +273,24 @@ describe("Third-person world", () => {
         const player = standingOn(fastTravelLanding(zone.id).tile, fastTravelLanding(zone.id).facing);
         expect(targetedPointOfInterest(pointsOfInterest, player)?.id, zone.id).toBe(zone.fastTravelTo);
       }
+    });
+
+    it("targets a Cat in front of the Player, wherever it is along its step", () => {
+      const cats = createCats(() => 0);
+      const [berlioz] = cats.all;
+      const { col, row } = berlioz.tile;
+      expect(targetedCat(cats.all, at(col + 0.5, row + 1.5, "up"))).toBe(berlioz);
+      expect(targetedCat(cats.all, at(col + 0.5, row + 1.5, "down"))).toBeUndefined();
+      expect(targetedCat(cats.all, at(col + 0.5, row + 2.6, "up"))).toBeUndefined();
+
+      cats.update(8, []);
+      cats.update(0.01, []);
+      cats.update(CAT_STEP_TIME / 2, []);
+      const { to } = berlioz.step!;
+      const halfway = { x: (col + to.col) / 2 + 0.5, z: (row + to.row) / 2 + 0.5 };
+      const heading = directionToHeading(berlioz.facing);
+      const behind = { x: halfway.x - Math.sin(heading) * 1.2, z: halfway.z - Math.cos(heading) * 1.2 };
+      expect(targetedCat(cats.all, { position: behind, heading })).toBe(berlioz);
     });
   });
 

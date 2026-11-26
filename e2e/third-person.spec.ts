@@ -1,7 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
+import sharp from "sharp";
+import { CATS } from "../src/cats.ts";
 import { content, zoneById } from "../src/content.ts";
 import { facedPointOfInterest, type Direction } from "../src/overworld.ts";
-import { facingStatus, fastTravel, openGame, openGameWithKeyboard, pointOfInterest, tapKeys, tapsTo } from "./walk";
+import { facingStatus, fastTravel, openGame, openGameWithKeyboard, pointOfInterest, SPAWN_LANDING, tapKeys, tapsTo } from "./walk";
 
 const totalFilmRolls = content.zones.filter((zone) => zone.filmRoll).length;
 const OPPOSITE: Record<Direction, Direction> = { up: "down", down: "up", left: "right", right: "left" };
@@ -43,6 +45,19 @@ async function scriptsRequestedBy(page: Page, open: () => Promise<void>) {
   });
   await open();
   return scripts;
+}
+
+const HEART_RED = [0xe0, 0x4a, 0x5a];
+
+/** Pixels of the world in (about) the heart's red; the heart is drawn unlit, so it keeps its colour. */
+async function heartPixels(page: Page) {
+  const png = await thirdPersonWorld(page).screenshot();
+  const { data } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let count = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (HEART_RED.every((channel, offset) => Math.abs(data[i + offset] - channel) <= 3)) count++;
+  }
+  return count;
 }
 
 /** A snapshot of what the camera shows, to tell whether the view changed; the world fills the window. */
@@ -186,6 +201,24 @@ test("a Film roll picked up before a round trip through the Third-person world s
   await page.waitForTimeout(1_000);
 
   await expect(page.getByText(`Film rolls: 1/${totalFilmRolls}`)).toBeVisible();
+});
+
+test("the Shutter at a Cat in the Third-person world shows a heart instead of opening the Viewfinder", async ({ page }) => {
+  const manouche = CATS.find((cat) => cat.name === "Manouche")!;
+  await openGameWithKeyboard(page);
+  await tapKeys(page, tapsTo(SPAWN_LANDING, manouche.start, { face: true }));
+  await page.waitForTimeout(1_000);
+
+  // openGame's fixed roll keeps Manouche asleep where she started, so she is still in front after the switch.
+  await typeCheatOutsideTheGame(page);
+  await expect(thirdPersonWorld(page)).toBeFocused({ timeout: 20_000 });
+  await expect.poll(() => heartPixels(page)).toBe(0);
+
+  await expect(async () => {
+    await page.keyboard.press("Space");
+    expect(await heartPixels(page)).toBeGreaterThan(0);
+  }).toPass({ timeout: 20_000 });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("typing the cheat in the Third-person world switches back to the 2D game", async ({ page }) => {
