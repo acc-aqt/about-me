@@ -80,7 +80,7 @@ const events: GameEvents = {
 
 async function startThirdPersonMode() {
   const { startThirdPerson } = await import("./thirdPerson");
-  return startThirdPerson(screenWindow, events);
+  return startThirdPerson(screenWindow, content, events);
 }
 
 const controls = startsInThirdPerson ? await startThirdPersonMode() : startGame(screenWindow, content, events);

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { Content, PointOfInterest } from "./content";
 import { SPAWN_LANDING, type GameButton, type GameControls, type GameEvents } from "./game";
 import { fastTravelLanding, type Landing } from "./overworld";
 import { createScenery } from "./thirdPersonScenery";
@@ -7,6 +8,7 @@ import {
   groundHeight,
   snapToLanding,
   stepPlayer,
+  targetedPointOfInterest,
   tileToWorld,
   type MoveInput,
   type PlayerState,
@@ -101,7 +103,13 @@ function addCanvas(container: HTMLElement) {
 }
 
 /** Third-person mode: the same contract as the 2D game, rendering the Overworld in 3D with Three.js. */
-export function startThirdPerson(container: HTMLElement, events: GameEvents, start = SPAWN_LANDING): GameControls {
+export function startThirdPerson(
+  container: HTMLElement,
+  content: Content,
+  events: GameEvents,
+  start = SPAWN_LANDING,
+): GameControls {
+  const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
   const canvas = addCanvas(container);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -125,6 +133,14 @@ export function startThirdPerson(container: HTMLElement, events: GameEvents, sta
   const held = new Set<GameButton>();
   let running = false;
   let dragging: { x: number; y: number } | null = null;
+  let target: PointOfInterest | undefined;
+
+  function updateTarget() {
+    const next = targetedPointOfInterest(pointsOfInterest, player);
+    if (next === target) return;
+    target = next;
+    events.onFacingChange(target ?? null);
+  }
 
   function input(): MoveInput {
     return {
@@ -161,6 +177,7 @@ export function startThirdPerson(container: HTMLElement, events: GameEvents, sta
       if (walking && move.forward >= 0 && !dragging) {
         orbit.yaw += angleDifference(player.heading, orbit.yaw) * (1 - Math.exp(-EASE_BACK_RATE * seconds));
       }
+      updateTarget();
     }
     const ground = groundHeight(player.position);
     capsule.position.set(player.position.x, ground, player.position.z);
@@ -173,6 +190,7 @@ export function startThirdPerson(container: HTMLElement, events: GameEvents, sta
 
   function press(button: GameButton) {
     if (button !== "shutter") held.add(button);
+    else if (target && events.canFireShutter()) events.onShutter(target);
   }
 
   function release(button: GameButton) {
@@ -184,7 +202,7 @@ export function startThirdPerson(container: HTMLElement, events: GameEvents, sta
     const button = KEY_BUTTONS[event.key.toLowerCase()];
     if (!button) return;
     event.preventDefault();
-    press(button);
+    if (button !== "shutter" || !event.repeat) press(button);
   });
   canvas.addEventListener("keyup", (event) => {
     running = event.shiftKey;
@@ -221,6 +239,7 @@ export function startThirdPerson(container: HTMLElement, events: GameEvents, sta
   resizeObserver.observe(canvas);
   resize();
   renderer.setAnimationLoop(frame);
+  updateTarget();
 
   return {
     press,
@@ -228,6 +247,7 @@ export function startThirdPerson(container: HTMLElement, events: GameEvents, sta
     travelTo(zoneId) {
       player = standingAt(fastTravelLanding(zoneId));
       orbit.yaw = player.heading;
+      updateTarget();
     },
     position: () => snapToLanding(player.position, player.heading),
     focus: () => canvas.focus(),
