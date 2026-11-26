@@ -20,7 +20,7 @@ function shutterPrompt() {
   return portrait.matches ? "press A" : "tap the Shutter";
 }
 
-const canvas = query<HTMLCanvasElement>(document, "#game");
+const screenWindow = query<HTMLElement>(document, ".screen-window");
 const hint = query<HTMLElement>(document, "#hint");
 const dialog = query<HTMLDialogElement>(document, "#viewfinder");
 const filmRollCounter = query<HTMLElement>(document, "#film-rolls");
@@ -47,17 +47,17 @@ const audio = createAudio();
 
 const inventoryDialog = query<HTMLDialogElement>(document, "#inventory");
 
-const viewfinder = createViewfinder(dialog, () => canvas.focus());
-const inventory = createInventory(inventoryDialog, content.inventory, () => canvas.focus());
+const viewfinder = createViewfinder(dialog, () => controls.focus());
+const inventory = createInventory(inventoryDialog, content.inventory, () => controls.focus());
 
-canvas.addEventListener("keydown", (event) => {
-  if (isInventoryKey(event) && !viewfinder.isOpen()) {
+screenWindow.addEventListener("keydown", (event) => {
+  if (event.target instanceof HTMLCanvasElement && isInventoryKey(event) && !viewfinder.isOpen()) {
     event.preventDefault();
     inventory.toggle();
   }
 });
 
-const controls = startGame(canvas, content, {
+const controls = startGame(screenWindow, content, {
   onFacingChange(poi) {
     facing = poi;
     showHint();
@@ -79,7 +79,7 @@ const controls = startGame(canvas, content, {
 
 const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   controls.travelTo(zoneId);
-  canvas.focus();
+  controls.focus();
 });
 
 function pressInFastTravel(button: GameButton) {
@@ -108,7 +108,7 @@ document
 query<HTMLButtonElement>(document, ".touch-button-inventory").addEventListener("click", () => {
   if (fastTravel.isOpen()) {
     fastTravel.close();
-    canvas.focus();
+    controls.focus();
   } else if (!viewfinder.isOpen()) inventory.toggle();
 });
 
