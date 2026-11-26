@@ -34,18 +34,32 @@ function paintPlate(text: string) {
  */
 export function createNamePlate(text: string): THREE.Sprite {
   const { canvas, width, height } = paintPlate(text);
+  return createPixelSprite(canvas, { width: width * WORLD_UNITS_PER_PIXEL, height: height * WORLD_UNITS_PER_PIXEL }, { opacity: 0.9 });
+}
+
+type PixelSpriteOptions = { opacity?: number; minFilter?: THREE.MinificationTextureFilter };
+
+/**
+ * A camera-facing sprite of pixel art, sized in world units, with its bottom centre at its position. It draws over the
+ * scenery and ignores the fog, like the 2D game's labels.
+ */
+export function createPixelSprite(
+  canvas: HTMLCanvasElement,
+  { width, height }: { width: number; height: number },
+  { opacity = 1, minFilter }: PixelSpriteOptions = {},
+): THREE.Sprite {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.magFilter = THREE.NearestFilter;
-  const material = new THREE.SpriteMaterial({ map: texture, opacity: 0.9, transparent: true, depthTest: false, fog: false });
-  const plate = new THREE.Sprite(material);
-  plate.center.set(0.5, 0);
-  plate.scale.set(width * WORLD_UNITS_PER_PIXEL, height * WORLD_UNITS_PER_PIXEL, 1);
-  plate.renderOrder = 1;
-  return plate;
+  if (minFilter) texture.minFilter = minFilter;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, opacity, transparent: true, depthTest: false, fog: false }));
+  sprite.center.set(0.5, 0);
+  sprite.scale.set(width, height, 1);
+  sprite.renderOrder = 1;
+  return sprite;
 }
 
-export function disposeNamePlate(plate: THREE.Sprite) {
-  plate.material.map?.dispose();
-  plate.material.dispose();
+export function disposePixelSprite(sprite: THREE.Sprite) {
+  sprite.material.map?.dispose();
+  sprite.material.dispose();
 }

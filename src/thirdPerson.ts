@@ -4,7 +4,7 @@ import type { Content, PointOfInterest } from "./content";
 import { addCanvas, clamp, KEY_BUTTONS, type GameButton, type GameControls, type GameEvents } from "./renderer";
 import { fastTravelLanding, type Landing } from "./overworld";
 import { createThirdPersonCats } from "./thirdPersonCats";
-import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
+import { createNamePlate, disposePixelSprite } from "./thirdPersonNamePlates";
 import { createPointsOfInterest } from "./thirdPersonPointsOfInterest";
 import { loadPlayerModel, type PlayerModel } from "./thirdPersonPlayer";
 import { createScenery } from "./thirdPersonScenery";
@@ -309,7 +309,7 @@ export function startThirdPerson(
     stop() {
       renderer.setAnimationLoop(null);
       resizeObserver.disconnect();
-      for (const { sprite } of namePlates) disposeNamePlate(sprite);
+      for (const { sprite } of namePlates) disposePixelSprite(sprite);
       catModels.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
