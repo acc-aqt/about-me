@@ -89,16 +89,20 @@ const GLYPHS: Record<string, string> = {
 
 export const PIXEL_FONT_CHARS = Object.keys(GLYPHS).join("");
 
-/** Paints the font in white (tint it with `color`) as one row of cells for Kaplay's `loadBitmapFont`. */
-export function paintPixelFont(): string {
-  const chars = [...PIXEL_FONT_CHARS];
-  const pixels = new Pixels(chars.length * PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CELL_HEIGHT);
-  chars.forEach((char, index) => {
-    GLYPHS[char].split(" ").forEach((row, y) => {
-      [...row].forEach((bit, x) => {
-        if (bit === "#") pixels.dot(index * PIXEL_FONT_CELL_WIDTH + x, y, WHITE);
+/** Paints a line of text with its top-left corner at a pixel, one cell per character. */
+export function paintPixelText(pixels: Pixels, text: string, x: number, y: number, color: Rgb) {
+  [...text].forEach((char, index) => {
+    (GLYPHS[char] ?? "").split(" ").forEach((row, dy) => {
+      [...row].forEach((bit, dx) => {
+        if (bit === "#") pixels.dot(x + index * PIXEL_FONT_CELL_WIDTH + dx, y + dy, color);
       });
     });
   });
+}
+
+/** Paints the font in white (tint it with `color`) as one row of cells for Kaplay's `loadBitmapFont`. */
+export function paintPixelFont(): string {
+  const pixels = new Pixels(PIXEL_FONT_CHARS.length * PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CELL_HEIGHT);
+  paintPixelText(pixels, PIXEL_FONT_CHARS, 0, 0, WHITE);
   return pixels.canvas.toDataURL();
 }

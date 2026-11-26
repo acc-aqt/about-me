@@ -26,3 +26,7 @@ The Player (photographer) sprite, the Film roll, the water, the Hub maypole and 
 and scenery Kenney's packs lack (such as the Contact mailbox, the Career road buildings, the 3D printer, the jukebox,
 the speakers, the arcade cabinets and the tennis net) are original pixel art painted in code
 in `src/art.ts`. The pixel font used for in-world labels is an original 5×9 font drawn in `src/pixel-font.ts`.
+
+In Third-person mode, every Point of Interest (including the hero landmarks that hint at the TUM main building,
+BMW's Four-Cylinder tower and the Hub's maypole), the Signposts and the scenery props are original low-poly models
+built in code from Three.js primitives in `src/thirdPersonPointsOfInterest.ts`; no 3D model files are used for them.

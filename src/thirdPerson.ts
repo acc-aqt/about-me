@@ -3,6 +3,8 @@ import type { Content, PointOfInterest } from "./content";
 import { SPAWN_LANDING, type GameButton, type GameControls, type GameEvents } from "./game";
 import {
   fastTravelLanding,
+  footprintTiles,
+  tileKey,
   LEGEND,
   mapCharAt,
   MAP_COLUMNS,
@@ -11,8 +13,12 @@ import {
   type Tile,
   type TileKind,
 } from "./overworld";
+import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
+import { createPointsOfInterest, MODELLED_TILE_KINDS } from "./thirdPersonPointsOfInterest";
 import {
   directionToHeading,
+  FLOATING_NAME_PLATES,
+  isNamePlateShown,
   isSolid,
   snapToLanding,
   stepPlayer,
@@ -41,8 +47,6 @@ const TILE_LOOKS: Record<TileKind, { color: number; height: number }> = {
   rock: { color: 0x7d7a74, height: 1.5 },
   snow: { color: 0xf4f7fb, height: 1.5 },
 };
-/** A Point of Interest or Signpost standing on walkable ground. */
-const POI_LOOK = { color: 0xe6b43c, height: 1.2 };
 
 const SKY = 0x9fd3f2;
 const PLAYER_HEIGHT = 1.5;
@@ -69,9 +73,13 @@ const KEY_BUTTONS: Record<string, GameButton> = {
 };
 
 function lookOf(tile: Tile) {
-  const char = mapCharAt(tile)!;
-  const { kind, walkable } = LEGEND[char];
-  return walkable ? POI_LOOK : TILE_LOOKS[kind];
+  return TILE_LOOKS[LEGEND[mapCharAt(tile)!].kind];
+}
+
+/** Whether a solid tile has a Point of Interest, Signpost or set piece model standing on it, rather than a box. */
+function isModelled(tile: Tile, footprints: ReadonlySet<string>) {
+  const { kind, walkable } = LEGEND[mapCharAt(tile)!];
+  return walkable || MODELLED_TILE_KINDS.has(kind) || footprints.has(tileKey(tile));
 }
 
 function allTiles(): Tile[] {
@@ -98,9 +106,10 @@ function createGround() {
   return ground;
 }
 
-/** A box on every solid tile, so the layout matches the 2D map tile for tile. */
-function createSolidBoxes() {
-  const solids = allTiles().filter(isSolid);
+/** A box on every solid tile without a model, so the layout matches the 2D map tile for tile. */
+function createSolidBoxes(pointsOfInterest: readonly PointOfInterest[]) {
+  const footprints = new Set(pointsOfInterest.flatMap((poi) => footprintTiles(poi.placement)).map(tileKey));
+  const solids = allTiles().filter((tile) => isSolid(tile) && !isModelled(tile, footprints));
   const boxes = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial(), solids.length);
   const matrix = new THREE.Matrix4();
   const color = new THREE.Color();
@@ -168,7 +177,18 @@ export function startThirdPerson(
   scene.add(new THREE.HemisphereLight(0xffffff, 0x4a6b3a, 1.6));
   const sun = new THREE.DirectionalLight(0xffffff, 1.8);
   sun.position.set(-0.6, 1, 0.4);
-  scene.add(sun, createGround(), createSolidBoxes());
+  scene.add(sun, createGround(), createSolidBoxes(pointsOfInterest), createPointsOfInterest(pointsOfInterest));
+
+  const namePlates = FLOATING_NAME_PLATES.map((namePlate) => {
+    const sprite = createNamePlate(namePlate.text);
+    sprite.position.set(namePlate.anchor.x, namePlate.anchor.y, namePlate.anchor.z);
+    scene.add(sprite);
+    return { namePlate, sprite };
+  });
+
+  function showNearbyNamePlates() {
+    for (const { namePlate, sprite } of namePlates) sprite.visible = isNamePlateShown(namePlate.at, player.position);
+  }
 
   const capsule = createCapsule();
   scene.add(capsule);
@@ -227,6 +247,7 @@ export function startThirdPerson(
       }
       updateTarget();
     }
+    showNearbyNamePlates();
     capsule.position.set(player.position.x, 0, player.position.z);
     capsule.rotation.y = player.heading;
     placeCamera();
@@ -299,6 +320,7 @@ export function startThirdPerson(
     stop() {
       renderer.setAnimationLoop(null);
       resizeObserver.disconnect();
+      for (const { sprite } of namePlates) disposeNamePlate(sprite);
       renderer.dispose();
       renderer.forceContextLoss();
       canvas.remove();
