@@ -42,3 +42,5 @@ The pixel font used for in-world labels is an original 5×9 font drawn in `src/p
 In Third-person mode, every Point of Interest (including the hero landmarks that hint at the TUM main building,
 BMW's Four-Cylinder tower and the Hub's maypole), the Signposts and the scenery props are original low-poly models
 built in code from Three.js primitives in `src/thirdPersonPointsOfInterest.ts`; no 3D model files are used for them.
+Berlioz and Manouche are original low-poly cats built in code from Three.js primitives, with code-driven walking,
+sitting and sleeping poses, in `src/thirdPersonCats.ts`; no 3D model file is used for them either.

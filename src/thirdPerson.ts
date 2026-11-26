@@ -1,7 +1,9 @@
 import * as THREE from "three";
+import { createCats, type Cats } from "./cats";
 import type { Content, PointOfInterest } from "./content";
 import { SPAWN_LANDING, type GameButton, type GameControls, type GameEvents } from "./game";
 import { fastTravelLanding, type Landing } from "./overworld";
+import { createThirdPersonCats } from "./thirdPersonCats";
 import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
 import { createPointsOfInterest } from "./thirdPersonPointsOfInterest";
 import { loadPlayerModel } from "./thirdPersonPlayer";
@@ -14,10 +16,13 @@ import {
   playerAnimation,
   snapToLanding,
   stepPlayer,
+  targetedCat,
   targetedPointOfInterest,
   tileToWorld,
   type MoveInput,
+  PLAYER_RADIUS,
   type PlayerState,
+  type WorldPosition,
 } from "./thirdPersonWorld";
 
 const SKY = 0x9fd3f2;
@@ -86,6 +91,18 @@ function standingAt({ tile, facing }: Landing): PlayerState {
   return { position: tileToWorld(tile), heading: directionToHeading(facing) };
 }
 
+/** The tiles the Player's circle covers, its centre's tile first, so a Cat never walks into it. */
+function tilesUnder({ x, z }: WorldPosition) {
+  const centre = { col: Math.floor(x), row: Math.floor(z) };
+  const tiles = [centre];
+  for (const col of [Math.floor(x - PLAYER_RADIUS), Math.floor(x + PLAYER_RADIUS)]) {
+    for (const row of [Math.floor(z - PLAYER_RADIUS), Math.floor(z + PLAYER_RADIUS)]) {
+      if (!tiles.some((tile) => tile.col === col && tile.row === row)) tiles.push({ col, row });
+    }
+  }
+  return tiles;
+}
+
 function addCanvas(container: HTMLElement) {
   const canvas = document.createElement("canvas");
   canvas.id = "third-person";
@@ -115,6 +132,7 @@ export async function startThirdPerson(
   content: Content,
   events: GameEvents,
   start = SPAWN_LANDING,
+  cats: Cats = createCats(Math.random),
 ): Promise<GameControls> {
   const playerModel = await loadPlayerModel();
   const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
@@ -142,6 +160,9 @@ export async function startThirdPerson(
   function showNearbyNamePlates() {
     for (const { namePlate, sprite } of namePlates) sprite.visible = isNamePlateShown(namePlate.at, player.position);
   }
+
+  const catModels = createThirdPersonCats(cats.all);
+  scene.add(catModels.group);
 
   scene.add(playerModel.object);
   const flash = addFlash(container);
@@ -197,7 +218,9 @@ export async function startThirdPerson(
       if (shot) advanceShot(seconds);
       else walk(seconds);
       playerModel.update(player.heading, seconds);
+      cats.update(seconds, tilesUnder(player.position));
     }
+    catModels.update(events.isPaused() ? 0 : seconds, player.position);
     showNearbyNamePlates();
     const ground = groundHeight(player.position);
     playerModel.object.position.set(player.position.x, ground, player.position.z);
@@ -232,10 +255,16 @@ export async function startThirdPerson(
 
   function press(button: GameButton) {
     if (button !== "shutter") held.add(button);
-    else if (target && !shot && events.canFireShutter()) {
+    else if (shot || !events.canFireShutter()) return;
+    else if (target) {
       shot = { poi: target, seconds: 0 };
       playerModel.pose("raise");
-    }
+    } else petTargetedCat();
+  }
+
+  function petTargetedCat() {
+    const cat = targetedCat(cats.all, player);
+    if (cat) cats.pet(cat, tilesUnder(player.position)[0]);
   }
 
   function release(button: GameButton) {
@@ -302,6 +331,7 @@ export async function startThirdPerson(
       renderer.setAnimationLoop(null);
       resizeObserver.disconnect();
       for (const { sprite } of namePlates) disposeNamePlate(sprite);
+      catModels.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
       canvas.remove();

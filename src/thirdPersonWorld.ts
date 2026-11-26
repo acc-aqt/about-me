@@ -1,3 +1,4 @@
+import { catPlace, type Cat } from "./cats";
 import { content, type Footprint, type PointOfInterest } from "./content";
 import { isInNamePlateRange, NAME_PLATES, type NamePlate } from "./namePlates";
 import {
@@ -283,12 +284,11 @@ function rayEntry(from: WorldPosition, heading: number, rect: WorldRect): number
 }
 
 /**
- * How near a Footprint comes to the Player inside the forward cone, or null when no part of it lies in the cone within
- * reach. The nearest part is the Footprint's closest point when that lies in the cone, otherwise where an edge of the
- * cone first meets it.
+ * How near a rectangle (a Footprint, a Cat) comes to the Player inside the forward cone, or null when no part of it lies
+ * in the cone within reach. The nearest part is its closest point when that lies in the cone, otherwise where an edge
+ * of the cone first meets it.
  */
-function distanceInCone(poi: PointOfInterest, { position, heading }: PlayerState): number | null {
-  const rect = footprintWorldRect(poi.placement);
+function distanceInCone(rect: WorldRect, { position, heading }: PlayerState): number | null {
   const closest = {
     x: Math.min(Math.max(position.x, rect.left), rect.right),
     z: Math.min(Math.max(position.z, rect.top), rect.bottom),
@@ -308,12 +308,34 @@ export function targetedPointOfInterest(
   pointsOfInterest: readonly PointOfInterest[],
   player: PlayerState,
 ): PointOfInterest | undefined {
-  let best: { poi: PointOfInterest; distance: number } | undefined;
-  for (const poi of pointsOfInterest) {
-    const distance = distanceInCone(poi, player);
-    if (distance !== null && (!best || distance < best.distance)) best = { poi, distance };
+  return nearestInCone(pointsOfInterest, (poi) => footprintWorldRect(poi.placement), player);
+}
+
+function nearestInCone<T>(items: readonly T[], rectOf: (item: T) => WorldRect, player: PlayerState): T | undefined {
+  let best: { item: T; distance: number } | undefined;
+  for (const item of items) {
+    const distance = distanceInCone(rectOf(item), player);
+    if (distance !== null && (!best || distance < best.distance)) best = { item, distance };
   }
-  return best?.poi;
+  return best?.item;
+}
+
+/** Where a Cat stands in the world: the centre of its tile, or part way along its step. */
+export function catWorldPosition(cat: Cat): WorldPosition {
+  const { col, row } = catPlace(cat);
+  return { x: col + 0.5, z: row + 0.5 };
+}
+
+/** The Cat the Shutter would reach, as for a Point of Interest: the nearest one-tile Cat in the forward cone. */
+export function targetedCat(cats: readonly Cat[], player: PlayerState): Cat | undefined {
+  return nearestInCone(
+    cats,
+    (cat) => {
+      const { x, z } = catWorldPosition(cat);
+      return { left: x - 0.5, top: z - 0.5, right: x + 0.5, bottom: z + 0.5 };
+    },
+    player,
+  );
 }
 
 /** What a Point of Interest is built as in the Third-person world. */
