@@ -37,14 +37,23 @@ body {
   background: var(--bg);
 }
 
-#game {
+#game,
+#third-person {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+#game {
   image-rendering: pixelated;
 }
 
-#game:focus-visible {
+#third-person {
+  touch-action: none;
+}
+
+#game:focus-visible,
+#third-person:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }

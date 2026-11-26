@@ -12,6 +12,7 @@
 - **Shutter**: the action (Space / on-screen button) that photographs a POI, or makes a faced Cat react.
 - **Viewfinder**: the overlay opened by the Shutter that shows a POI's content and full-resolution photos. Avoid: "modal", "popup".
 - **Fast-travel**: menu to jump the Player to any Zone.
+- **Third-person mode**: the hidden desktop-only 3D rendering of the same Overworld, seen from behind the Player with a chase camera. Avoid: "3D mode", "secret mode".
 - **Plain view**: the non-game scrolling version of the site. Avoid: "fallback", "lite mode".
 - **Content file**: the single typed source of all Zone/POI content, read by both the game and the Plain view.
 - **Inventory**: the skills screen (key `I`).

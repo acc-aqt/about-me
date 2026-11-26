@@ -1,12 +1,13 @@
 import { createAudio } from "./audio";
 import { content, type PointOfInterest } from "./content";
 import { createFastTravel } from "./fastTravel";
-import { startGame, type GameButton, type GameControls } from "./game";
+import { startGame, type GameButton, type GameControls, type GameEvents } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
 import { createViewfinder } from "./viewfinder";
 import { query } from "./dom";
 
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
+const startsInThirdPerson = !isTouch && new URLSearchParams(location.search).get("view") === "third-person";
 const portrait = window.matchMedia("(orientation: portrait)");
 
 function controlsHint() {
@@ -57,7 +58,7 @@ screenWindow.addEventListener("keydown", (event) => {
   }
 });
 
-const controls = startGame(screenWindow, content, {
+const events: GameEvents = {
   onFacingChange(poi) {
     facing = poi;
     showHint();
@@ -75,7 +76,14 @@ const controls = startGame(screenWindow, content, {
   onFootstep: () => audio.playFootstep(),
   onBump: () => audio.playBump(),
   isPaused: () => viewfinder.isOpen() || inventory.isOpen() || fastTravel.isOpen(),
-});
+};
+
+async function startThirdPersonMode() {
+  const { startThirdPerson } = await import("./thirdPerson");
+  return startThirdPerson(screenWindow, events);
+}
+
+const controls = startsInThirdPerson ? await startThirdPersonMode() : startGame(screenWindow, content, events);
 
 const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   controls.travelTo(zoneId);
