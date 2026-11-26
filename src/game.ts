@@ -151,7 +151,13 @@ function addCanvas(container: HTMLElement) {
   return canvas;
 }
 
-export function startGame(container: HTMLElement, content: Content, events: GameEvents, start = SPAWN_LANDING): GameControls {
+export function startGame(
+  container: HTMLElement,
+  content: Content,
+  events: GameEvents,
+  start = SPAWN_LANDING,
+  collectedFilmRolls: ReadonlySet<ZoneId> = new Set(),
+): GameControls {
   const canvas = addCanvas(container);
   let stopped = false;
   const k = kaplay({
@@ -253,7 +259,7 @@ export function startGame(container: HTMLElement, content: Content, events: Game
 
   const filmRolls = new Map<string, { zone: Zone; sprite: GameObj }>();
   for (const zone of content.zones) {
-    if (!zone.filmRoll) continue;
+    if (!zone.filmRoll || collectedFilmRolls.has(zone.id)) continue;
     const sprite = k.add([k.sprite("film-roll"), k.pos(filmRollCentre(zone.filmRoll)), k.anchor("center"), k.z(Z_FILM_ROLL)]);
     filmRolls.set(tileKey(zone.filmRoll), { zone, sprite });
   }
