@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAT_STEP_TIME, createCats } from "./cats";
+import { CAT_STEP_TIME, createCats, type Cat } from "./cats";
 import { content, type Footprint, type PointOfInterest } from "./content";
 import {
   DIRECTIONS,
@@ -32,8 +32,7 @@ import {
   pointOfInterestModel,
   snapToLanding,
   stepPlayer,
-  targetedCat,
-  targetedPointOfInterest,
+  shutterTarget,
   TILE_LAYOUTS,
   tileToWorld,
   type MoveInput,
@@ -218,6 +217,16 @@ describe("Third-person world", () => {
   });
 
   describe("targeting", () => {
+    function targetedPointOfInterest(pointsOfInterest: PointOfInterest[], player: PlayerState) {
+      const target = shutterTarget(pointsOfInterest, [], player);
+      return target && "poi" in target ? target.poi : undefined;
+    }
+
+    function targetedCat(cats: readonly Cat[], player: PlayerState) {
+      const target = shutterTarget([], cats, player);
+      return target && "cat" in target ? target.cat : undefined;
+    }
+
     function poi(id: string, placement: Footprint): PointOfInterest {
       return { id, title: id, body: "", placement };
     }
@@ -291,6 +300,18 @@ describe("Third-person world", () => {
       const heading = directionToHeading(berlioz.facing);
       const behind = { x: halfway.x - Math.sin(heading) * 1.2, z: halfway.z - Math.cos(heading) * 1.2 };
       expect(targetedCat(cats.all, { position: behind, heading })).toBe(berlioz);
+    });
+
+    it("aims the Shutter at whichever is nearer in the cone, a Cat or a Point of Interest", () => {
+      const cats = createCats(() => 0);
+      const [berlioz] = cats.all;
+      const { col, row } = berlioz.tile;
+      const beyondTheCat = poi("beyond", { col, row: row - 1 });
+      const beforeTheCat = poi("before", { col, row: row + 1 });
+
+      expect(shutterTarget([beyondTheCat], cats.all, at(col + 0.5, row + 1.5, "up"))).toEqual({ cat: berlioz });
+      expect(shutterTarget([beforeTheCat], cats.all, at(col + 0.5, row + 2.5, "up"))).toEqual({ poi: beforeTheCat });
+      expect(shutterTarget([beyondTheCat], cats.all, at(col + 0.5, row + 1.5, "down"))).toBeUndefined();
     });
   });
 

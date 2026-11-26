@@ -303,14 +303,6 @@ function distanceInCone(rect: WorldRect, { position, heading }: PlayerState): nu
   return distance <= TARGET_REACH ? distance : null;
 }
 
-/** The Point of Interest the Shutter would photograph: the nearest whose Footprint lies in the forward cone, within reach. */
-export function targetedPointOfInterest(
-  pointsOfInterest: readonly PointOfInterest[],
-  player: PlayerState,
-): PointOfInterest | undefined {
-  return nearestInCone(pointsOfInterest, (poi) => footprintWorldRect(poi.placement), player);
-}
-
 function nearestInCone<T>(items: readonly T[], rectOf: (item: T) => WorldRect, player: PlayerState): T | undefined {
   let best: { item: T; distance: number } | undefined;
   for (const item of items) {
@@ -326,16 +318,22 @@ export function catWorldPosition(cat: Cat): WorldPosition {
   return { x: col + 0.5, z: row + 0.5 };
 }
 
-/** The Cat the Shutter would reach, as for a Point of Interest: the nearest one-tile Cat in the forward cone. */
-export function targetedCat(cats: readonly Cat[], player: PlayerState): Cat | undefined {
-  return nearestInCone(
-    cats,
-    (cat) => {
-      const { x, z } = catWorldPosition(cat);
-      return { left: x - 0.5, top: z - 0.5, right: x + 0.5, bottom: z + 0.5 };
-    },
-    player,
-  );
+function catWorldRect(cat: Cat): WorldRect {
+  const { x, z } = catWorldPosition(cat);
+  return { left: x - 0.5, top: z - 0.5, right: x + 0.5, bottom: z + 0.5 };
+}
+
+/** What the Shutter is aimed at: a Point of Interest to photograph or a Cat to pet. */
+export type ShutterTarget = { poi: PointOfInterest } | { cat: Cat };
+
+/** The nearest Point of Interest or Cat in the forward cone, within reach; a tie goes to the Point of Interest. */
+export function shutterTarget(
+  pointsOfInterest: readonly PointOfInterest[],
+  cats: readonly Cat[],
+  player: PlayerState,
+): ShutterTarget | undefined {
+  const targets: ShutterTarget[] = [...pointsOfInterest.map((poi) => ({ poi })), ...cats.map((cat) => ({ cat }))];
+  return nearestInCone(targets, (target) => ("poi" in target ? footprintWorldRect(target.poi.placement) : catWorldRect(target.cat)), player);
 }
 
 /** What a Point of Interest is built as in the Third-person world. */

@@ -16,8 +16,7 @@ import {
   playerAnimation,
   snapToLanding,
   stepPlayer,
-  targetedCat,
-  targetedPointOfInterest,
+  shutterTarget,
   tileToWorld,
   type MoveInput,
   PLAYER_RADIUS,
@@ -185,7 +184,8 @@ export function startThirdPerson(
   let shot: { poi: PointOfInterest; seconds: number } | null = null;
 
   function updateTarget() {
-    const next = targetedPointOfInterest(pointsOfInterest, player);
+    const aimed = shutterTarget(pointsOfInterest, cats.all, player);
+    const next = aimed && "poi" in aimed ? aimed.poi : undefined;
     if (next === target) return;
     target = next;
     events.onFacingChange(target ?? null);
@@ -259,17 +259,17 @@ export function startThirdPerson(
   }
 
   function press(button: GameButton) {
-    if (button !== "shutter") held.add(button);
-    else if (shot || !events.canFireShutter()) return;
-    else if (target) {
-      shot = { poi: target, seconds: 0 };
+    if (button !== "shutter") {
+      held.add(button);
+      return;
+    }
+    if (shot || !events.canFireShutter()) return;
+    const aimed = shutterTarget(pointsOfInterest, cats.all, player);
+    if (!aimed) return;
+    if ("poi" in aimed) {
+      shot = { poi: aimed.poi, seconds: 0 };
       playerModel.pose("raise");
-    } else petTargetedCat();
-  }
-
-  function petTargetedCat() {
-    const cat = targetedCat(cats.all, player);
-    if (cat) cats.pet(cat, tilesUnder(player.position)[0]);
+    } else cats.pet(aimed.cat, tilesUnder(player.position)[0]);
   }
 
   function release(button: GameButton) {
