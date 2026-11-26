@@ -1,6 +1,6 @@
 import kaplay, { type GameObj, type Vec2 } from "kaplay";
 import { zoneById, type Content, type PointOfInterest, type Zone, type ZoneId } from "./content";
-import { CAT_STEP_TIME, CATS, catPose, createCats, isHeartShown, type Cats } from "./cats";
+import { CAT_STEP_TIME, CATS, catPose, isHeartShown, type Cats } from "./cats";
 import {
   isInNamePlateRange,
   LABEL_PADDING,
@@ -39,11 +39,11 @@ import {
   MAP_COLUMNS,
   MAP_ROWS,
   OVERWORLD_TILE_SIZE,
-  SPAWN_LANDING,
   tileAhead,
   tileKey,
   tileToPixels,
   zoneAt,
+  type Landing,
   type Tile,
 } from "./overworld";
 import { createPlayerWalk, STEP_TIME, type Step } from "./playerWalk";
@@ -82,9 +82,9 @@ export function startGame(
   container: HTMLElement,
   content: Content,
   events: GameEvents,
-  start = SPAWN_LANDING,
-  collectedFilmRolls: ReadonlySet<ZoneId> = new Set(),
-  cats: Cats = createCats(Math.random),
+  start: Landing,
+  collectedFilmRolls: ReadonlySet<ZoneId>,
+  cats: Cats,
 ): GameControls {
   // Stopping Kaplay loses the canvas's WebGL context for good, so each start adds a fresh one.
   const canvas = addCanvas(container, "game", "Portfolio game");

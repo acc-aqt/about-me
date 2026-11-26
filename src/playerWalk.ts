@@ -17,10 +17,8 @@ export type PlayerWalkEvents = {
   onBump(): void;
 };
 
-const NO_EVENTS: PlayerWalkEvents = { onTurn() {}, onStepStart() {}, onArrive() {}, onBump() {} };
-
 /** The Player's tile-by-tile walk: where it stands and faces, driven by direction presses and the passing of time. */
-export function createPlayerWalk(start: Landing, isBlocked: (tile: Tile) => boolean, events: PlayerWalkEvents = NO_EVENTS) {
+export function createPlayerWalk(start: Landing, isBlocked: (tile: Tile) => boolean, events: PlayerWalkEvents) {
   let tile = start.tile;
   let facing = start.facing;
   let step: Step | null = null;
