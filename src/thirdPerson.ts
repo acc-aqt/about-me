@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { GameButton, GameControls, GameEvents } from "./game";
+import { SPAWN_LANDING, type GameButton, type GameControls, type GameEvents } from "./game";
 import {
   fastTravelLanding,
   LEGEND,
@@ -10,7 +10,15 @@ import {
   type Tile,
   type TileKind,
 } from "./overworld";
-import { directionToHeading, stepPlayer, tileToWorld, isSolid, type MoveInput, type PlayerState } from "./thirdPersonWorld";
+import {
+  directionToHeading,
+  isSolid,
+  snapToLanding,
+  stepPlayer,
+  tileToWorld,
+  type MoveInput,
+  type PlayerState,
+} from "./thirdPersonWorld";
 
 /** Placeholder colours and heights per tile kind until real scenery replaces the boxes. */
 const TILE_LOOKS: Record<TileKind, { color: number; height: number }> = {
@@ -130,8 +138,20 @@ function standingAt({ tile, facing }: Landing): PlayerState {
   return { position: tileToWorld(tile), heading: directionToHeading(facing) };
 }
 
+function addCanvas(container: HTMLElement) {
+  const canvas = document.createElement("canvas");
+  canvas.id = "third-person";
+  canvas.tabIndex = 0;
+  canvas.setAttribute("role", "application");
+  canvas.setAttribute("aria-label", "Third-person world");
+  canvas.setAttribute("aria-describedby", "hint");
+  container.prepend(canvas);
+  return canvas;
+}
+
 /** Third-person mode: the same contract as the 2D game, rendering the Overworld in 3D with Three.js. */
-export function startThirdPerson(canvas: HTMLCanvasElement, events: GameEvents, start: Landing): GameControls {
+export function startThirdPerson(container: HTMLElement, events: GameEvents, start = SPAWN_LANDING): GameControls {
+  const canvas = addCanvas(container);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -242,7 +262,8 @@ export function startThirdPerson(canvas: HTMLCanvasElement, events: GameEvents, 
     { passive: false },
   );
 
-  new ResizeObserver(resize).observe(canvas);
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(canvas);
   resize();
   renderer.setAnimationLoop(frame);
 
@@ -252,6 +273,15 @@ export function startThirdPerson(canvas: HTMLCanvasElement, events: GameEvents, 
     travelTo(zoneId) {
       player = standingAt(fastTravelLanding(zoneId));
       orbit.yaw = player.heading;
+    },
+    position: () => snapToLanding(player.position, player.heading),
+    focus: () => canvas.focus(),
+    stop() {
+      renderer.setAnimationLoop(null);
+      resizeObserver.disconnect();
+      renderer.dispose();
+      renderer.forceContextLoss();
+      canvas.remove();
     },
   };
 }

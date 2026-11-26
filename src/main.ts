@@ -5,7 +5,6 @@ import { startGame, type GameButton, type GameControls, type GameEvents } from "
 import { createInventory, isInventoryKey } from "./inventory";
 import { createViewfinder } from "./viewfinder";
 import { query } from "./dom";
-import { SPAWN } from "./overworld";
 
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
 const startsInThirdPerson = !isTouch && new URLSearchParams(location.search).get("view") === "third-person";
@@ -22,20 +21,7 @@ function shutterPrompt() {
   return portrait.matches ? "press A" : "tap the Shutter";
 }
 
-const gameCanvas = query<HTMLCanvasElement>(document, "#game");
-const canvas = startsInThirdPerson ? createThirdPersonCanvas() : gameCanvas;
-
-function createThirdPersonCanvas() {
-  const thirdPersonCanvas = document.createElement("canvas");
-  thirdPersonCanvas.id = "third-person";
-  thirdPersonCanvas.tabIndex = 0;
-  thirdPersonCanvas.setAttribute("role", "application");
-  thirdPersonCanvas.setAttribute("aria-label", "Third-person world");
-  thirdPersonCanvas.setAttribute("aria-describedby", "hint");
-  gameCanvas.hidden = true;
-  gameCanvas.after(thirdPersonCanvas);
-  return thirdPersonCanvas;
-}
+const screenWindow = query<HTMLElement>(document, ".screen-window");
 const hint = query<HTMLElement>(document, "#hint");
 const dialog = query<HTMLDialogElement>(document, "#viewfinder");
 const filmRollCounter = query<HTMLElement>(document, "#film-rolls");
@@ -62,11 +48,11 @@ const audio = createAudio();
 
 const inventoryDialog = query<HTMLDialogElement>(document, "#inventory");
 
-const viewfinder = createViewfinder(dialog, () => canvas.focus());
-const inventory = createInventory(inventoryDialog, content.inventory, () => canvas.focus());
+const viewfinder = createViewfinder(dialog, () => controls.focus());
+const inventory = createInventory(inventoryDialog, content.inventory, () => controls.focus());
 
-canvas.addEventListener("keydown", (event) => {
-  if (isInventoryKey(event) && !viewfinder.isOpen()) {
+screenWindow.addEventListener("keydown", (event) => {
+  if (event.target instanceof HTMLCanvasElement && isInventoryKey(event) && !viewfinder.isOpen()) {
     event.preventDefault();
     inventory.toggle();
   }
@@ -94,14 +80,14 @@ const events: GameEvents = {
 
 async function startThirdPersonMode() {
   const { startThirdPerson } = await import("./thirdPerson");
-  return startThirdPerson(canvas, events, { tile: SPAWN, facing: "down" });
+  return startThirdPerson(screenWindow, events);
 }
 
-const controls = startsInThirdPerson ? await startThirdPersonMode() : startGame(canvas, content, events);
+const controls = startsInThirdPerson ? await startThirdPersonMode() : startGame(screenWindow, content, events);
 
 const fastTravel = createFastTravel(fastTravelToggle, fastTravelZones, content.zones, (zoneId) => {
   controls.travelTo(zoneId);
-  canvas.focus();
+  controls.focus();
 });
 
 function pressInFastTravel(button: GameButton) {
@@ -130,7 +116,7 @@ document
 query<HTMLButtonElement>(document, ".touch-button-inventory").addEventListener("click", () => {
   if (fastTravel.isOpen()) {
     fastTravel.close();
-    canvas.focus();
+    controls.focus();
   } else if (!viewfinder.isOpen()) inventory.toggle();
 });
 
