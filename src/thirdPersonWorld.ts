@@ -1,12 +1,20 @@
+import { content } from "./content";
 import {
   DIRECTIONS,
+  footprintTiles,
+  HUB_SIGNPOSTS,
   isReachableFromSpawn,
   isWalkable,
+  mapCharAt,
   MAP_COLUMNS,
   MAP_ROWS,
+  tileKey,
+  tileKindAt,
   type Direction,
   type Landing,
   type Tile,
+  type TileKind,
+  type TileRect,
 } from "./overworld";
 
 /**
@@ -57,11 +65,12 @@ export function isSolid(tile: Tile): boolean {
   return !isWalkable(tile);
 }
 
-const reachableTiles: Tile[] = Array.from({ length: MAP_ROWS }, (_, row) =>
+/** Every tile of the map, row by row from the top-left. */
+export const MAP_TILES: readonly Tile[] = Array.from({ length: MAP_ROWS }, (_, row) =>
   Array.from({ length: MAP_COLUMNS }, (_, col) => ({ col, row })),
-)
-  .flat()
-  .filter(isReachableFromSpawn);
+).flat();
+
+const reachableTiles = MAP_TILES.filter(isReachableFromSpawn);
 
 /** The reachable tile nearest a position, with the nearest of the four directions to a heading. */
 export function snapToLanding(position: WorldPosition, heading: number): Landing {
@@ -109,6 +118,107 @@ function moveCircle(from: WorldPosition, dx: number, dz: number): WorldPosition 
     position = next;
   }
   return position;
+}
+
+export type GroundKind = "grass" | "path" | "asphalt" | "track" | "snow" | "water";
+/** What stands on a tile; a placeholder is a Point of Interest or Signpost, drawn as such elsewhere. */
+export type SceneryKind = "tree" | "bush" | "building" | "fence" | "rock" | "car" | "placeholder";
+export type TileLayout = { ground: GroundKind; scenery: SceneryKind | null };
+
+export const TILE_LAYOUTS: Record<TileKind, TileLayout> = {
+  grass: { ground: "grass", scenery: null },
+  path: { ground: "path", scenery: null },
+  asphalt: { ground: "asphalt", scenery: null },
+  track: { ground: "track", scenery: null },
+  tree: { ground: "grass", scenery: "tree" },
+  bush: { ground: "grass", scenery: "bush" },
+  water: { ground: "water", scenery: null },
+  building: { ground: "grass", scenery: "building" },
+  fence: { ground: "grass", scenery: "fence" },
+  maypole: { ground: "grass", scenery: "placeholder" },
+  well: { ground: "grass", scenery: "placeholder" },
+  prop: { ground: "grass", scenery: "placeholder" },
+  landmark: { ground: "grass", scenery: "placeholder" },
+  car: { ground: "asphalt", scenery: "car" },
+  rock: { ground: "snow", scenery: "rock" },
+  snow: { ground: "snow", scenery: null },
+};
+
+const placeholderTiles = new Set([
+  ...content.zones.flatMap((zone) => zone.pointsOfInterest).flatMap((poi) => footprintTiles(poi.placement)),
+  ...HUB_SIGNPOSTS.map(({ tile }) => tile),
+].map(tileKey));
+
+/** What a tile becomes in the Third-person world; Points of Interest and Signposts stay placeholders. */
+export function layoutAt(tile: Tile): TileLayout {
+  const { ground, scenery } = TILE_LAYOUTS[tileKindAt(tile) ?? "tree"];
+  return placeholderTiles.has(tileKey(tile)) ? { ground, scenery: "placeholder" } : { ground, scenery };
+}
+
+const isTree = (tile: Tile) => layoutAt(tile).scenery === "tree";
+
+/** Steps (diagonals included) from each tree tile to the nearest tile that is not a tree. */
+const forestDepths = (() => {
+  const depths = new Map(MAP_TILES.filter((tile) => !isTree(tile)).map((tile) => [tileKey(tile), 0]));
+  let frontier = MAP_TILES.filter((tile) => !isTree(tile));
+  for (let depth = 1; frontier.length > 0; depth++) {
+    const next: Tile[] = [];
+    for (const { col, row } of frontier) {
+      for (let dRow = -1; dRow <= 1; dRow++) {
+        for (let dCol = -1; dCol <= 1; dCol++) {
+          const neighbour = { col: col + dCol, row: row + dRow };
+          if (mapCharAt(neighbour) === undefined || depths.has(tileKey(neighbour))) continue;
+          depths.set(tileKey(neighbour), depth);
+          next.push(neighbour);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return depths;
+})();
+
+/** How deep a tile lies inside the forest walls: 0 off the trees, 1 on their edge, more further in. */
+export function forestDepth(tile: Tile): number {
+  return forestDepths.get(tileKey(tile)) ?? 0;
+}
+
+/** Building tiles grouped into rectangles, scanned row by row, so each house is drawn whole. */
+export function buildingBlocks(): TileRect[] {
+  const claimed = new Set<string>();
+  const free = (tile: Tile) => layoutAt(tile).scenery === "building" && !claimed.has(tileKey(tile));
+  const blocks: TileRect[] = [];
+  for (const start of MAP_TILES) {
+    if (!free(start)) continue;
+    let right = start.col;
+    while (free({ col: right + 1, row: start.row })) right++;
+    let bottom = start.row;
+    const rowIsFree = (row: number) =>
+      Array.from({ length: right - start.col + 1 }, (_, i) => ({ col: start.col + i, row })).every(free);
+    while (rowIsFree(bottom + 1)) bottom++;
+    const block = { left: start.col, top: start.row, right, bottom };
+    for (let row = block.top; row <= bottom; row++) for (let col = block.left; col <= right; col++) claimed.add(tileKey({ col, row }));
+    blocks.push(block);
+  }
+  return blocks;
+}
+
+/**
+ * The Sport mountain rises south from its rocky foot (row 47) to the summit cross (row 60), and its flank fades
+ * eastwards into the forest, flat again by column 47. The skin track runs only south or across, so it always climbs.
+ */
+const MOUNTAIN = { height: 7, footZ: 47, summitZ: 60.5, flankStartX: 32, flankEndX: 47 };
+
+function smoothstep(from: number, to: number, value: number) {
+  const t = Math.min(Math.max((value - from) / (to - from), 0), 1);
+  return t * t * (3 - 2 * t);
+}
+
+/** How high the ground stands at a position, in world units: flat everywhere but the Sport mountain. */
+export function groundHeight({ x, z }: WorldPosition): number {
+  const rise = smoothstep(MOUNTAIN.footZ, MOUNTAIN.summitZ, z);
+  const flank = 1 - smoothstep(MOUNTAIN.flankStartX, MOUNTAIN.flankEndX, x);
+  return MOUNTAIN.height * rise * flank;
 }
 
 /** The Player after a frame of free movement relative to the camera's yaw, colliding with solid tiles. */
