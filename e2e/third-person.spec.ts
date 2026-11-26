@@ -38,16 +38,22 @@ async function typeCheatOutsideTheGame(page: Page) {
   await typeCheat(page);
 }
 
-/** The scripts and 3D models a page requests while `open` runs. */
-async function codeAndModelsRequestedBy(page: Page, open: () => Promise<void>) {
-  const requested = new Set<string>();
-  page.on("request", (request) => {
-    const path = new URL(request.url()).pathname;
-    if (request.resourceType() === "script" || path.endsWith(".glb")) requested.add(path);
+/** The scripts (by path, with their code) and 3D models a page loads while `open` runs. */
+async function codeAndModelsLoadedBy(page: Page, open: () => Promise<void>) {
+  const scripts = new Map<string, Promise<string>>();
+  const models = new Set<string>();
+  page.on("response", (response) => {
+    const path = new URL(response.url()).pathname;
+    if (response.request().resourceType() === "script") scripts.set(path, response.text());
+    else if (path.endsWith(".glb")) models.add(path);
   });
   await open();
-  return requested;
+  const code = await Promise.all(scripts.values());
+  return { scripts: new Set(scripts.keys()), code, models };
 }
+
+/** A message only Three.js's renderer carries, so it marks Three.js's code in a bundle. */
+const THREE_MARKER = "THREE.WebGLRenderer";
 
 const HEART_RED = [0xe0, 0x4a, 0x5a];
 
@@ -78,14 +84,15 @@ test("?view=third-person shows the full-window Third-person world instead of the
 
 test("a normal page load requests none of the Third-person mode's code or models", async ({ browser }) => {
   const normalPage = await browser.newPage();
-  const normal = await codeAndModelsRequestedBy(normalPage, () => openGame(normalPage));
+  const normal = await codeAndModelsLoadedBy(normalPage, () => openGame(normalPage));
   const thirdPersonPage = await browser.newPage();
-  const thirdPerson = await codeAndModelsRequestedBy(thirdPersonPage, () => openThirdPerson(thirdPersonPage));
+  const thirdPerson = await codeAndModelsLoadedBy(thirdPersonPage, () => openThirdPerson(thirdPersonPage));
 
-  const thirdPersonOnly = [...thirdPerson].filter((path) => !normal.has(path));
-  expect(thirdPersonOnly.some((path) => path.endsWith(".js"))).toBe(true);
-  expect(thirdPersonOnly.some((path) => path.endsWith(".glb"))).toBe(true);
-  expect([...normal].some((path) => path.endsWith(".glb"))).toBe(false);
+  expect(thirdPerson.code.some((code) => code.includes(THREE_MARKER))).toBe(true);
+  expect(normal.code.some((code) => code.includes(THREE_MARKER))).toBe(false);
+  expect([...thirdPerson.scripts].some((path) => !normal.scripts.has(path))).toBe(true);
+  expect(thirdPerson.models.size).toBeGreaterThan(0);
+  expect(normal.models.size).toBe(0);
   await expect(normalPage.getByRole("application", { name: "Third-person world" })).toHaveCount(0);
 });
 
@@ -104,6 +111,26 @@ test("dragging the mouse orbits the camera and the scroll wheel zooms it", async
   const orbited = await view(page);
   await page.mouse.wheel(0, -400);
   await expect.poll(() => view(page)).not.toBe(orbited);
+});
+
+test("while the Fast-travel menu is open, dragging and the scroll wheel leave the camera be", async ({ page }) => {
+  await openThirdPerson(page);
+  const box = (await thirdPersonWorld(page).boundingBox())!;
+  const centre = { x: box.width / 2, y: box.height / 2 };
+  await page.getByRole("button", { name: "Fast-travel" }).click();
+  // A press on the world focuses it, so focus it first; only the camera should be able to change the view.
+  await thirdPersonWorld(page).focus();
+  await page.mouse.move(centre.x, centre.y);
+  await page.waitForTimeout(500);
+  const before = await view(page);
+
+  await page.mouse.down();
+  await page.mouse.move(centre.x + 200, centre.y + 100, { steps: 5 });
+  await page.mouse.up();
+  await page.mouse.wheel(0, -400);
+  await page.waitForTimeout(1_000);
+
+  expect(await view(page)).toBe(before);
 });
 
 for (const zone of content.zones.filter((z) => z.fastTravelTo)) {
@@ -173,15 +200,16 @@ test("typing the cheat in the 2D game switches to the Third-person world", async
   await expect(game2d(page)).toHaveCount(0);
 });
 
-test("typing the cheat again returns to the 2D game at the same spot and facing", async ({ page }) => {
+test("the cheat's own arrow keys don't move the spot handed over, there or back", async ({ page }) => {
   await openGameWithKeyboard(page);
   const landing = await fastTravel(page, "career-road");
   const faced = facedPointOfInterest(landing.tile, landing.facing)!;
   await expect(page.getByRole("status")).toHaveText(facingStatus(faced.title));
 
-  await typeCheatOutsideTheGame(page);
-  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
-  await typeCheatOutsideTheGame(page);
+  await typeCheat(page);
+  await expect(thirdPersonWorld(page)).toBeFocused({ timeout: 20_000 });
+  await expect(page.getByRole("status")).toHaveText(facingStatus(faced.title));
+  await typeCheat(page);
 
   await expect(game2d(page)).toBeFocused();
   await expect(thirdPersonWorld(page)).toHaveCount(0);
@@ -243,6 +271,21 @@ test("a reload without the URL flag brings back the 2D game", async ({ page }) =
 
   await expect(game2d(page)).toBeVisible();
   await expect(thirdPersonWorld(page)).toHaveCount(0);
+});
+
+test("when the Third-person world fails to load, the 2D game carries on and the cheat can be tried again", async ({ page }) => {
+  await openGameWithKeyboard(page);
+  await page.route(/\.glb$/, (route) => route.abort());
+
+  await typeCheatOutsideTheGame(page);
+
+  await expect(page.getByText("Loading…")).toBeHidden({ timeout: 20_000 });
+  await expect(game2d(page)).toBeVisible();
+  await expect(thirdPersonWorld(page)).toHaveCount(0);
+
+  await page.unroute(/\.glb$/);
+  await typeCheatOutsideTheGame(page);
+  await expect(thirdPersonWorld(page)).toBeVisible({ timeout: 20_000 });
 });
 
 test("a Handheld loading screen shows until the Third-person world is ready", async ({ page }) => {

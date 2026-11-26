@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { createPlayerWalk, STEP_TIME } from "./playerWalk";
+import { createPlayerWalk, STEP_TIME, type PlayerWalkEvents } from "./playerWalk";
 
 const openField = () => false;
+const NO_EVENTS: PlayerWalkEvents = { onTurn() {}, onStepStart() {}, onArrive() {}, onBump() {} };
 
 describe("the Player's walk", () => {
   it("starts at the given tile and facing", () => {
-    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "left" }, openField);
+    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "left" }, openField, NO_EVENTS);
 
     expect(walk.position()).toEqual({ tile: { col: 40, row: 12 }, facing: "left" });
   });
 
   it("turns on a tap in a new direction, then steps onto the next tile on a tap the way it faces", () => {
-    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "down" }, openField);
+    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "down" }, openField, NO_EVENTS);
 
     walk.press("right");
     walk.release("right");
@@ -26,7 +27,7 @@ describe("the Player's walk", () => {
   });
 
   it("keeps walking while a direction is held", () => {
-    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "up" }, openField);
+    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "up" }, openField, NO_EVENTS);
 
     walk.press("up");
     for (let frame = 0; frame < 60; frame++) walk.update(0.016);
@@ -39,9 +40,7 @@ describe("the Player's walk", () => {
     const wallToTheRight = (tile: { col: number }) => tile.col === 41;
     const bumps: string[] = [];
     const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "right" }, wallToTheRight, {
-      onTurn() {},
-      onStepStart() {},
-      onArrive() {},
+      ...NO_EVENTS,
       onBump: () => bumps.push("bump"),
     });
 
@@ -54,7 +53,7 @@ describe("the Player's walk", () => {
   });
 
   it("reports the landing after travelling, even from the middle of a step", () => {
-    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "down" }, openField);
+    const walk = createPlayerWalk({ tile: { col: 40, row: 12 }, facing: "down" }, openField, NO_EVENTS);
     walk.press("down");
     walk.update(0.016);
 

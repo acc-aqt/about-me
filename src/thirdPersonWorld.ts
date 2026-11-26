@@ -48,9 +48,13 @@ export function directionToHeading(direction: Direction): number {
   return HEADINGS[direction];
 }
 
+/** The signed shorter turn from one heading to another, in (-π, π]. */
+export function angleDifference(to: number, from: number): number {
+  return ((((to - from) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+}
+
 function angleBetween(a: number, b: number) {
-  const difference = (((a - b) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
-  return Math.abs(difference);
+  return Math.abs(angleDifference(a, b));
 }
 
 function nearestDirection(heading: number): Direction {
@@ -62,6 +66,11 @@ function nearestDirection(heading: number): Direction {
 /** The centre of a tile. */
 export function tileToWorld({ col, row }: Tile): WorldPosition {
   return { x: col + 0.5, z: row + 0.5 };
+}
+
+/** The tile a position lies in. */
+export function worldToTile({ x, z }: WorldPosition): Tile {
+  return { col: Math.floor(x), row: Math.floor(z) };
 }
 
 export function isSolid(tile: Tile): boolean {
@@ -77,7 +86,7 @@ const reachableTiles = MAP_TILES.filter(isReachableFromSpawn);
 
 /** The reachable tile nearest a position, with the nearest of the four directions to a heading. */
 export function snapToLanding(position: WorldPosition, heading: number): Landing {
-  const under = { col: Math.floor(position.x), row: Math.floor(position.z) };
+  const under = worldToTile(position);
   const distance = (tile: Tile) => {
     const centre = tileToWorld(tile);
     return Math.hypot(centre.x - position.x, centre.z - position.z);
@@ -303,14 +312,6 @@ function distanceInCone(rect: WorldRect, { position, heading }: PlayerState): nu
   return distance <= TARGET_REACH ? distance : null;
 }
 
-/** The Point of Interest the Shutter would photograph: the nearest whose Footprint lies in the forward cone, within reach. */
-export function targetedPointOfInterest(
-  pointsOfInterest: readonly PointOfInterest[],
-  player: PlayerState,
-): PointOfInterest | undefined {
-  return nearestInCone(pointsOfInterest, (poi) => footprintWorldRect(poi.placement), player);
-}
-
 function nearestInCone<T>(items: readonly T[], rectOf: (item: T) => WorldRect, player: PlayerState): T | undefined {
   let best: { item: T; distance: number } | undefined;
   for (const item of items) {
@@ -322,20 +323,25 @@ function nearestInCone<T>(items: readonly T[], rectOf: (item: T) => WorldRect, p
 
 /** Where a Cat stands in the world: the centre of its tile, or part way along its step. */
 export function catWorldPosition(cat: Cat): WorldPosition {
-  const { col, row } = catPlace(cat);
-  return { x: col + 0.5, z: row + 0.5 };
+  return tileToWorld(catPlace(cat));
 }
 
-/** The Cat the Shutter would reach, as for a Point of Interest: the nearest one-tile Cat in the forward cone. */
-export function targetedCat(cats: readonly Cat[], player: PlayerState): Cat | undefined {
-  return nearestInCone(
-    cats,
-    (cat) => {
-      const { x, z } = catWorldPosition(cat);
-      return { left: x - 0.5, top: z - 0.5, right: x + 0.5, bottom: z + 0.5 };
-    },
-    player,
-  );
+function catWorldRect(cat: Cat): WorldRect {
+  const { x, z } = catWorldPosition(cat);
+  return { left: x - 0.5, top: z - 0.5, right: x + 0.5, bottom: z + 0.5 };
+}
+
+/** What the Shutter is aimed at: a Point of Interest to photograph or a Cat to pet. */
+export type ShutterTarget = { poi: PointOfInterest } | { cat: Cat };
+
+/** The nearest Point of Interest or Cat in the forward cone, within reach; a tie goes to the Point of Interest. */
+export function shutterTarget(
+  pointsOfInterest: readonly PointOfInterest[],
+  cats: readonly Cat[],
+  player: PlayerState,
+): ShutterTarget | undefined {
+  const targets: ShutterTarget[] = [...pointsOfInterest.map((poi) => ({ poi })), ...cats.map((cat) => ({ cat }))];
+  return nearestInCone(targets, (target) => ("poi" in target ? footprintWorldRect(target.poi.placement) : catWorldRect(target.cat)), player);
 }
 
 /** What a Point of Interest is built as in the Third-person world. */
@@ -397,6 +403,26 @@ export function pointOfInterestModel(poi: PointOfInterest): PoiModel & { base: W
 }
 
 export const SIGNPOST_HEIGHT = 1.5;
+export const SCENERY_PROP_HEIGHT = 1;
+
+/** A model standing on the ground: what it covers and how tall it stands, in world units. */
+export type SetPiece = { base: WorldRect; height: number };
+
+function tilesOfKind(kind: TileKind): Tile[] {
+  return MAP_TILES.filter((tile) => tileKindAt(tile) === kind);
+}
+
+function boundsOf(tiles: readonly Tile[]): WorldRect {
+  const cols = tiles.map((tile) => tile.col);
+  const rows = tiles.map((tile) => tile.row);
+  return { left: Math.min(...cols), top: Math.min(...rows), right: Math.max(...cols) + 1, bottom: Math.max(...rows) + 1 };
+}
+
+/** The Hub's maypole, across all its tiles, and its wells, one per tile. */
+export const HUB_SET_PIECES: { maypole: SetPiece; wells: SetPiece[] } = {
+  maypole: { base: boundsOf(tilesOfKind("maypole")), height: 8 },
+  wells: tilesOfKind("well").map((tile) => ({ base: footprintWorldRect(tile), height: 1.7 })),
+};
 /** The gap between the top of a model and the bottom of its Name plate. */
 const NAME_PLATE_GAP = 0.3;
 
@@ -421,21 +447,5 @@ export const FLOATING_NAME_PLATES: readonly FloatingNamePlate[] = NAME_PLATES.ma
 
 /** Whether a Name plate over a Footprint, or over a single tile such as a Cat's, shows: the 2D range rule. */
 export function isNamePlateShown(at: Footprint, player: WorldPosition): boolean {
-  return isInNamePlateRange({ col: Math.floor(player.x), row: Math.floor(player.z) }, at);
-}
-
-/** ↑ ↑ ↓ ↓ ← → ← → B A, as KeyboardEvent keys. */
-const CHEAT_SEQUENCE = ["arrowup", "arrowup", "arrowdown", "arrowdown", "arrowleft", "arrowright", "arrowleft", "arrowright", "b", "a"];
-
-/** Watches a stream of keys for the cheat that toggles Third-person mode. */
-export function createCheatDetector() {
-  const recent: string[] = [];
-  return {
-    /** True when this key completes the cheat. */
-    type(key: string): boolean {
-      recent.push(key.toLowerCase());
-      if (recent.length > CHEAT_SEQUENCE.length) recent.shift();
-      return recent.length === CHEAT_SEQUENCE.length && recent.every((typed, index) => typed === CHEAT_SEQUENCE[index]);
-    },
-  };
+  return isInNamePlateRange(worldToTile(player), at);
 }

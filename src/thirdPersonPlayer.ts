@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { PlayerAnimation } from "./thirdPersonWorld";
+import { angleDifference, type PlayerAnimation } from "./thirdPersonWorld";
 
 /** Kenney's Mini Characters "character-male-c", trimmed and recoloured to Alexander (see CREDITS.md). */
 const MODEL_PATH = "models/player.glb";
@@ -31,9 +31,6 @@ export type PlayerModel = {
   update(heading: number, seconds: number): void;
 };
 
-function angleDifference(to: number, from: number) {
-  return ((((to - from) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
-}
 
 /** A small code-built camera: dark body, grey lens pointing along the arm, a yellow shutter button. */
 function createCamera() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAT_STEP_TIME, createCats } from "./cats";
+import { CAT_STEP_TIME, createCats, type Cat } from "./cats";
 import { content, type Footprint, type PointOfInterest } from "./content";
 import {
   DIRECTIONS,
@@ -19,12 +19,13 @@ import {
   type Tile,
 } from "./overworld";
 import {
+  angleDifference,
   buildingBlocks,
-  createCheatDetector,
   directionToHeading,
   FLOATING_NAME_PLATES,
   forestDepth,
   groundHeight,
+  HUB_SET_PIECES,
   isNamePlateShown,
   isSolid,
   layoutAt,
@@ -33,10 +34,10 @@ import {
   pointOfInterestModel,
   snapToLanding,
   stepPlayer,
-  targetedCat,
-  targetedPointOfInterest,
+  shutterTarget,
   TILE_LAYOUTS,
   tileToWorld,
+  worldToTile,
   type MoveInput,
   type PlayerState,
   type WorldPosition,
@@ -107,6 +108,19 @@ describe("Third-person world", () => {
       expect(snapToLanding({ x: x + 0.4, z: z - 0.4 }, directionToHeading("right") - 0.6)).toEqual({ tile: SPAWN, facing: "right" });
       expect(snapToLanding({ x, z }, directionToHeading("up") + 0.7)).toEqual({ tile: SPAWN, facing: "up" });
       expect(snapToLanding({ x, z }, directionToHeading("down") + 4 * Math.PI)).toEqual({ tile: SPAWN, facing: "down" });
+    });
+
+    it("finds the tile under a position, edges belonging to the tile east and south", () => {
+      expect(worldToTile({ x: 29.99, z: 24.01 })).toEqual({ col: 29, row: 24 });
+      expect(worldToTile({ x: 30, z: 25 })).toEqual({ col: 30, row: 25 });
+      expect(worldToTile({ x: -0.2, z: 0.2 })).toEqual({ col: -1, row: 0 });
+    });
+
+    it("measures the signed shorter turn from one heading to another", () => {
+      expect(angleDifference(0.5, 0.2)).toBeCloseTo(0.3);
+      expect(angleDifference(0.2, 0.5)).toBeCloseTo(-0.3);
+      expect(angleDifference(0.1, 2 * Math.PI - 0.1)).toBeCloseTo(0.2);
+      expect(angleDifference(directionToHeading("left"), directionToHeading("up"))).toBeCloseTo(Math.PI / 2);
     });
 
     it("always snaps to a walkable tile reachable from the spawn, even from inside solid tiles or off the map", () => {
@@ -219,6 +233,16 @@ describe("Third-person world", () => {
   });
 
   describe("targeting", () => {
+    function targetedPointOfInterest(pointsOfInterest: PointOfInterest[], player: PlayerState) {
+      const target = shutterTarget(pointsOfInterest, [], player);
+      return target && "poi" in target ? target.poi : undefined;
+    }
+
+    function targetedCat(cats: readonly Cat[], player: PlayerState) {
+      const target = shutterTarget([], cats, player);
+      return target && "cat" in target ? target.cat : undefined;
+    }
+
     function poi(id: string, placement: Footprint): PointOfInterest {
       return { id, title: id, body: "", placement };
     }
@@ -293,6 +317,18 @@ describe("Third-person world", () => {
       const behind = { x: halfway.x - Math.sin(heading) * 1.2, z: halfway.z - Math.cos(heading) * 1.2 };
       expect(targetedCat(cats.all, { position: behind, heading })).toBe(berlioz);
     });
+
+    it("aims the Shutter at whichever is nearer in the cone, a Cat or a Point of Interest", () => {
+      const cats = createCats(() => 0);
+      const [berlioz] = cats.all;
+      const { col, row } = berlioz.tile;
+      const beyondTheCat = poi("beyond", { col, row: row - 1 });
+      const beforeTheCat = poi("before", { col, row: row + 1 });
+
+      expect(shutterTarget([beyondTheCat], cats.all, at(col + 0.5, row + 1.5, "up"))).toEqual({ cat: berlioz });
+      expect(shutterTarget([beforeTheCat], cats.all, at(col + 0.5, row + 2.5, "up"))).toEqual({ poi: beforeTheCat });
+      expect(shutterTarget([beyondTheCat], cats.all, at(col + 0.5, row + 1.5, "down"))).toBeUndefined();
+    });
   });
 
   describe("Point of Interest models", () => {
@@ -306,6 +342,11 @@ describe("Third-person world", () => {
     it("stands a model on its whole Footprint", () => {
       expect(pointOfInterestModel(byId("tum")).base).toEqual({ left: 40, top: 19, right: 47, bottom: 23 });
       expect(pointOfInterestModel(byId("intro")).base).toEqual({ left: 26, top: 21, right: 27, bottom: 22 });
+    });
+
+    it("stands the Hub's maypole on both its tiles, towering over the well", () => {
+      expect(HUB_SET_PIECES.maypole).toEqual({ base: { left: 34, top: 20, right: 35, bottom: 22 }, height: 8 });
+      expect(HUB_SET_PIECES.wells).toEqual([{ base: { left: 26, top: 25, right: 27, bottom: 26 }, height: 1.7 }]);
     });
   });
 
@@ -361,41 +402,6 @@ describe("Third-person world", () => {
       expect(playerAnimation({ ...FORWARD, running: true })).toBe("run");
       expect(playerAnimation({ forward: 0, right: -1, running: true })).toBe("run");
     });
-  });
-});
-
-const CHEAT = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
-
-/** Feeds keys to a fresh detector and returns the indices of the keys that completed the cheat. */
-function completions(keys: string[]) {
-  const cheat = createCheatDetector();
-  return keys.flatMap((key, index) => (cheat.type(key) ? [index] : []));
-}
-
-describe("cheat detection", () => {
-  it("recognises the exact sequence on its last key", () => {
-    expect(completions(CHEAT)).toEqual([CHEAT.length - 1]);
-  });
-
-  it("tolerates leading noise, even a false start of the sequence itself", () => {
-    const noise = ["w", "ArrowUp", "ArrowUp", "ArrowUp", "Shift", " "];
-    expect(completions([...noise, "ArrowUp", ...CHEAT])).toEqual([noise.length + CHEAT.length]);
-  });
-
-  it("rejects the keys in a wrong order or with a stray key inside", () => {
-    const swapped = [...CHEAT.slice(0, 8), "a", "b"];
-    const interrupted = [...CHEAT.slice(0, 5), "x", ...CHEAT.slice(5)];
-    expect(completions(swapped)).toEqual([]);
-    expect(completions(interrupted)).toEqual([]);
-    expect(completions(CHEAT.slice(0, -1))).toEqual([]);
-  });
-
-  it("accepts B and A typed in capitals", () => {
-    expect(completions([...CHEAT.slice(0, 8), "B", "A"])).toEqual([CHEAT.length - 1]);
-  });
-
-  it("recognises the cheat again each time it is typed", () => {
-    expect(completions([...CHEAT, ...CHEAT])).toEqual([CHEAT.length - 1, 2 * CHEAT.length - 1]);
   });
 });
 

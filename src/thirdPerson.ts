@@ -1,14 +1,15 @@
 import * as THREE from "three";
-import { createCats, type Cats } from "./cats";
+import type { Cats } from "./cats";
 import type { Content, PointOfInterest } from "./content";
-import { SPAWN_LANDING, type GameButton, type GameControls, type GameEvents } from "./game";
+import { addCanvas, clamp, KEY_BUTTONS, type GameButton, type GameControls, type GameEvents } from "./renderer";
 import { fastTravelLanding, type Landing } from "./overworld";
 import { createThirdPersonCats } from "./thirdPersonCats";
-import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
+import { createNamePlate, disposePixelSprite } from "./thirdPersonNamePlates";
 import { createPointsOfInterest } from "./thirdPersonPointsOfInterest";
-import { loadPlayerModel } from "./thirdPersonPlayer";
+import { loadPlayerModel, type PlayerModel } from "./thirdPersonPlayer";
 import { createScenery } from "./thirdPersonScenery";
 import {
+  angleDifference,
   directionToHeading,
   FLOATING_NAME_PLATES,
   groundHeight,
@@ -16,12 +17,12 @@ import {
   playerAnimation,
   snapToLanding,
   stepPlayer,
-  targetedCat,
-  targetedPointOfInterest,
+  shutterTarget,
   tileToWorld,
   type MoveInput,
   PLAYER_RADIUS,
   type PlayerState,
+  worldToTile,
   type WorldPosition,
 } from "./thirdPersonWorld";
 
@@ -48,18 +49,6 @@ const FLASH_SECONDS = 0.15;
 /** The flash keeps fading as the Viewfinder opens. */
 const FLASH_FADE_MS = 500;
 
-const KEY_BUTTONS: Record<string, GameButton> = {
-  arrowup: "up",
-  w: "up",
-  arrowdown: "down",
-  s: "down",
-  arrowleft: "left",
-  a: "left",
-  arrowright: "right",
-  d: "right",
-  " ": "shutter",
-};
-
 /** Sunny daytime light casting soft shadows around the Player. */
 function createSun() {
   const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
@@ -79,39 +68,21 @@ function createSun() {
   return sun;
 }
 
-function angleDifference(to: number, from: number) {
-  return ((((to - from) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function standingAt({ tile, facing }: Landing): PlayerState {
   return { position: tileToWorld(tile), heading: directionToHeading(facing) };
 }
 
 /** The tiles the Player's circle covers, its centre's tile first, so a Cat never walks into it. */
-function tilesUnder({ x, z }: WorldPosition) {
-  const centre = { col: Math.floor(x), row: Math.floor(z) };
-  const tiles = [centre];
+function tilesUnder(position: WorldPosition) {
+  const { x, z } = position;
+  const tiles = [worldToTile(position)];
   for (const col of [Math.floor(x - PLAYER_RADIUS), Math.floor(x + PLAYER_RADIUS)]) {
     for (const row of [Math.floor(z - PLAYER_RADIUS), Math.floor(z + PLAYER_RADIUS)]) {
       if (!tiles.some((tile) => tile.col === col && tile.row === row)) tiles.push({ col, row });
     }
   }
   return tiles;
-}
-
-function addCanvas(container: HTMLElement) {
-  const canvas = document.createElement("canvas");
-  canvas.id = "third-person";
-  canvas.tabIndex = 0;
-  canvas.setAttribute("role", "application");
-  canvas.setAttribute("aria-label", "Third-person world");
-  canvas.setAttribute("aria-describedby", "hint");
-  container.prepend(canvas);
-  return canvas;
 }
 
 /** A white full-window flash, as the photo is taken. */
@@ -126,17 +97,22 @@ function addFlash(container: HTMLElement) {
   };
 }
 
-/** Third-person mode: the same contract as the 2D game, rendering the Overworld in 3D with Three.js. */
-export async function startThirdPerson(
+export { loadPlayerModel };
+
+/**
+ * Third-person mode: the same contract as the 2D game, rendering the Overworld in 3D with Three.js. The Player's model
+ * is loaded beforehand, so a failed load leaves the running renderer untouched.
+ */
+export function startThirdPerson(
   container: HTMLElement,
   content: Content,
   events: GameEvents,
-  start = SPAWN_LANDING,
-  cats: Cats = createCats(Math.random),
-): Promise<GameControls> {
-  const playerModel = await loadPlayerModel();
+  start: Landing,
+  cats: Cats,
+  playerModel: PlayerModel,
+): GameControls {
   const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
-  const canvas = addCanvas(container);
+  const canvas = addCanvas(container, "third-person", "Third-person world");
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -180,7 +156,8 @@ export async function startThirdPerson(
   let shot: { poi: PointOfInterest; seconds: number } | null = null;
 
   function updateTarget() {
-    const next = targetedPointOfInterest(pointsOfInterest, player);
+    const aimed = shutterTarget(pointsOfInterest, cats.all, player);
+    const next = aimed && "poi" in aimed ? aimed.poi : undefined;
     if (next === target) return;
     target = next;
     events.onFacingChange(target ?? null);
@@ -254,17 +231,17 @@ export async function startThirdPerson(
   }
 
   function press(button: GameButton) {
-    if (button !== "shutter") held.add(button);
-    else if (shot || !events.canFireShutter()) return;
-    else if (target) {
-      shot = { poi: target, seconds: 0 };
+    if (button !== "shutter") {
+      held.add(button);
+      return;
+    }
+    if (shot || !events.canFireShutter()) return;
+    const aimed = shutterTarget(pointsOfInterest, cats.all, player);
+    if (!aimed) return;
+    if ("poi" in aimed) {
+      shot = { poi: aimed.poi, seconds: 0 };
       playerModel.pose("raise");
-    } else petTargetedCat();
-  }
-
-  function petTargetedCat() {
-    const cat = targetedCat(cats.all, player);
-    if (cat) cats.pet(cat, tilesUnder(player.position)[0]);
+    } else cats.pet(aimed.cat, tilesUnder(player.position)[0]);
   }
 
   function release(button: GameButton) {
@@ -289,12 +266,13 @@ export async function startThirdPerson(
   });
 
   canvas.addEventListener("pointerdown", (event) => {
+    if (events.isPaused()) return;
     dragging = { x: event.clientX, y: event.clientY };
     canvas.setPointerCapture(event.pointerId);
     canvas.focus();
   });
   canvas.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
+    if (!dragging || events.isPaused()) return;
     orbit.yaw -= (event.clientX - dragging.x) * ORBIT_SPEED;
     orbit.pitch = clamp(orbit.pitch + (event.clientY - dragging.y) * ORBIT_SPEED, MIN_PITCH, MAX_PITCH);
     dragging = { x: event.clientX, y: event.clientY };
@@ -304,6 +282,7 @@ export async function startThirdPerson(
     "wheel",
     (event) => {
       event.preventDefault();
+      if (events.isPaused()) return;
       orbit.distance = clamp(orbit.distance * Math.exp(event.deltaY * ZOOM_SPEED), MIN_ZOOM, MAX_ZOOM);
     },
     { passive: false },
@@ -330,7 +309,7 @@ export async function startThirdPerson(
     stop() {
       renderer.setAnimationLoop(null);
       resizeObserver.disconnect();
-      for (const { sprite } of namePlates) disposeNamePlate(sprite);
+      for (const { sprite } of namePlates) disposePixelSprite(sprite);
       catModels.dispose();
       renderer.dispose();
       renderer.forceContextLoss();

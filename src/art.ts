@@ -62,6 +62,7 @@ function hex(value: string): Rgb {
 }
 
 export const INK = hex("#1d1d24");
+export const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 
 function hash(n: number): number {
   let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b);
