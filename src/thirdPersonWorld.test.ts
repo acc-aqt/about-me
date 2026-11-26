@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { content } from "./content";
+import { content, type Footprint, type PointOfInterest } from "./content";
 import {
   DIRECTIONS,
+  fastTravelLanding,
   footprintTiles,
   HUB_SIGNPOSTS,
   isReachableFromSpawn,
@@ -19,6 +20,7 @@ import {
   PLAYER_RADIUS,
   snapToLanding,
   stepPlayer,
+  targetedPointOfInterest,
   tileToWorld,
   type MoveInput,
   type PlayerState,
@@ -197,6 +199,65 @@ describe("Third-person world", () => {
             expectOutsideSolids(p.position),
           );
         }
+      }
+    });
+  });
+
+  describe("targeting", () => {
+    function poi(id: string, placement: Footprint): PointOfInterest {
+      return { id, title: id, body: "", placement };
+    }
+
+    /** A Player standing at a point, looking along a heading. */
+    function at(x: number, z: number, facing: Direction | number): PlayerState {
+      return { position: { x, z }, heading: typeof facing === "number" ? facing : directionToHeading(facing) };
+    }
+
+    const north = poi("north", { col: 10, row: 8 });
+
+    it("targets a Point of Interest right in front of the Player", () => {
+      expect(targetedPointOfInterest([north], at(10.5, 9.5, "up"))).toBe(north);
+    });
+
+    it("ignores a Point of Interest behind the Player", () => {
+      expect(targetedPointOfInterest([north], at(10.5, 9.5, "down"))).toBeUndefined();
+    });
+
+    it("ignores a Point of Interest right beside the Player", () => {
+      expect(targetedPointOfInterest([north], at(10.5, 9.5, "left"))).toBeUndefined();
+      expect(targetedPointOfInterest([north], at(10.5, 9.5, "right"))).toBeUndefined();
+      expect(targetedPointOfInterest([north], at(9.5, 8.5, "up"))).toBeUndefined();
+    });
+
+    it("targets a Point of Interest about a tile and a half ahead, but not further", () => {
+      expect(targetedPointOfInterest([north], at(10.5, 10.4, "up"))).toBe(north);
+      expect(targetedPointOfInterest([north], at(10.5, 10.6, "up"))).toBeUndefined();
+    });
+
+    it("targets a Point of Interest slightly off to one side of straight ahead", () => {
+      expect(targetedPointOfInterest([north], at(10.5, 9.5, directionToHeading("up") + 0.4))).toBe(north);
+    });
+
+    it("targets a wide Footprint the Player looks at obliquely, though its nearest edge is beside the Player", () => {
+      const wall = poi("wall", { col: 8, row: 8, width: 6 });
+      const towardsNorthEast = directionToHeading("up") - 0.9;
+      expect(targetedPointOfInterest([wall], at(9.5, 9.5, towardsNorthEast))).toBe(wall);
+    });
+
+    it("targets the nearest of several Points of Interest in the cone", () => {
+      const near = poi("near", { col: 10, row: 8 });
+      const far = poi("far", { col: 9, row: 7, width: 3 });
+      const player = at(10.5, 9.5, "up");
+      expect(targetedPointOfInterest([far], player)).toBe(far);
+      expect(targetedPointOfInterest([far, near], player)).toBe(near);
+      expect(targetedPointOfInterest([near, far], player)).toBe(near);
+    });
+
+    it("targets each Zone's landing Point of Interest straight after Fast-travel", () => {
+      const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
+      for (const zone of content.zones.filter((z) => z.fastTravelTo)) {
+        const player = standingOn(fastTravelLanding(zone.id).tile, fastTravelLanding(zone.id).facing);
+        expect(targetedPointOfInterest(pointsOfInterest, player)?.id, zone.id).toBe(zone.fastTravelTo);
       }
     });
   });
