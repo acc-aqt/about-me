@@ -1,6 +1,5 @@
 import * as THREE from "three";
-import { INK, Pixels } from "./art";
-import { LABEL_PLATE_COLOR } from "./game";
+import { INK, LABEL_PLATE_COLOR, Pixels } from "./art";
 import { LABEL_PADDING, namePlateLines } from "./namePlates";
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH, paintPixelText } from "./pixel-font";
 

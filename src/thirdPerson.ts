@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { Cats } from "./cats";
 import type { Content, PointOfInterest } from "./content";
-import type { GameButton, GameControls, GameEvents } from "./game";
+import { addCanvas, clamp, KEY_BUTTONS, type GameButton, type GameControls, type GameEvents } from "./renderer";
 import { fastTravelLanding, type Landing } from "./overworld";
 import { createThirdPersonCats } from "./thirdPersonCats";
 import { createNamePlate, disposeNamePlate } from "./thirdPersonNamePlates";
@@ -49,18 +49,6 @@ const FLASH_SECONDS = 0.15;
 /** The flash keeps fading as the Viewfinder opens. */
 const FLASH_FADE_MS = 500;
 
-const KEY_BUTTONS: Record<string, GameButton> = {
-  arrowup: "up",
-  w: "up",
-  arrowdown: "down",
-  s: "down",
-  arrowleft: "left",
-  a: "left",
-  arrowright: "right",
-  d: "right",
-  " ": "shutter",
-};
-
 /** Sunny daytime light casting soft shadows around the Player. */
 function createSun() {
   const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
@@ -81,10 +69,6 @@ function createSun() {
 }
 
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
 function standingAt({ tile, facing }: Landing): PlayerState {
   return { position: tileToWorld(tile), heading: directionToHeading(facing) };
 }
@@ -99,17 +83,6 @@ function tilesUnder(position: WorldPosition) {
     }
   }
   return tiles;
-}
-
-function addCanvas(container: HTMLElement) {
-  const canvas = document.createElement("canvas");
-  canvas.id = "third-person";
-  canvas.tabIndex = 0;
-  canvas.setAttribute("role", "application");
-  canvas.setAttribute("aria-label", "Third-person world");
-  canvas.setAttribute("aria-describedby", "hint");
-  container.prepend(canvas);
-  return canvas;
 }
 
 /** A white full-window flash, as the photo is taken. */
@@ -139,7 +112,7 @@ export function startThirdPerson(
   playerModel: PlayerModel,
 ): GameControls {
   const pointsOfInterest = content.zones.flatMap((zone) => zone.pointsOfInterest);
-  const canvas = addCanvas(container);
+  const canvas = addCanvas(container, "third-person", "Third-person world");
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;

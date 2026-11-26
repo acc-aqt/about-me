@@ -20,6 +20,7 @@ import {
   CAT_SLEEPING_HEIGHT,
   catAnim,
   INK,
+  LABEL_PLATE_COLOR,
   PLAYER_ANIMS,
   PLAYER_FRAME_COUNT,
   paintCatSheet,
@@ -38,16 +39,15 @@ import {
   MAP_COLUMNS,
   MAP_ROWS,
   OVERWORLD_TILE_SIZE,
-  SPAWN,
+  SPAWN_LANDING,
   tileAhead,
   tileKey,
   tileToPixels,
   zoneAt,
-  type Direction,
-  type Landing,
   type Tile,
 } from "./overworld";
 import { createPlayerWalk, STEP_TIME, type Step } from "./playerWalk";
+import { addCanvas, clamp, KEY_BUTTONS, type GameButton, type GameControls, type GameEvents } from "./renderer";
 import { PIXEL_FONT_CELL_HEIGHT, PIXEL_FONT_CELL_WIDTH, PIXEL_FONT_CHARS, PIXEL_FONT_NAME, paintPixelFont } from "./pixel-font";
 
 const VIEW_WIDTH = 320;
@@ -56,7 +56,6 @@ const MAP_WIDTH = MAP_COLUMNS * OVERWORLD_TILE_SIZE;
 const MAP_HEIGHT = MAP_ROWS * OVERWORLD_TILE_SIZE;
 const HEART_HEIGHT = 6;
 const BACKGROUND: Rgb = [20, 20, 30];
-export const LABEL_PLATE_COLOR: Rgb = [251, 248, 240];
 const Z_FILM_ROLL = 1;
 /** A copy of the cover tile beside a Film roll, drawn over the roll so it peeks out from behind. */
 const Z_FILM_ROLL_COVER = 1.5;
@@ -64,45 +63,6 @@ const Z_FILM_ROLL_COVER = 1.5;
 const Z_CAT = 1.8;
 const Z_PLAYER = 2;
 const Z_LABEL = 3;
-
-const KEY_BUTTONS: Record<string, GameButton> = {
-  arrowup: "up",
-  w: "up",
-  arrowdown: "down",
-  s: "down",
-  arrowleft: "left",
-  a: "left",
-  arrowright: "right",
-  d: "right",
-  " ": "shutter",
-};
-
-export type GameButton = Direction | "shutter";
-
-export type GameControls = {
-  press(button: GameButton): void;
-  release(button: GameButton): void;
-  travelTo(zoneId: ZoneId): void;
-  /** Where the Player stands and which way it faces; mid-step, the tile it is leaving. */
-  position(): Landing;
-  focus(): void;
-  /** Frees the game's canvas, input and loop, so another renderer can take over the container. */
-  stop(): void;
-};
-
-/** The Player spawns in the Hub facing down. */
-export const SPAWN_LANDING: Landing = { tile: SPAWN, facing: "down" };
-
-export type GameEvents = {
-  onFacingChange(poi: PointOfInterest | null): void;
-  onShutter(poi: PointOfInterest): void;
-  canFireShutter(): boolean;
-  onFilmRollCollected(zone: Zone): void;
-  onFootstep(): void;
-  onBump(): void;
-  /** True while an overlay such as the Viewfinder covers the game, which stills the Cats. */
-  isPaused(): boolean;
-};
 
 type LabelOptions = { wrap?: boolean; fixed?: boolean };
 
@@ -118,22 +78,6 @@ function loadImage(path: string) {
   return image;
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-/** A fresh canvas each start: stopping Kaplay loses the canvas's WebGL context for good. */
-function addCanvas(container: HTMLElement) {
-  const canvas = document.createElement("canvas");
-  canvas.id = "game";
-  canvas.tabIndex = 0;
-  canvas.setAttribute("role", "application");
-  canvas.setAttribute("aria-label", "Portfolio game");
-  canvas.setAttribute("aria-describedby", "hint");
-  container.prepend(canvas);
-  return canvas;
-}
-
 export function startGame(
   container: HTMLElement,
   content: Content,
@@ -142,7 +86,8 @@ export function startGame(
   collectedFilmRolls: ReadonlySet<ZoneId> = new Set(),
   cats: Cats = createCats(Math.random),
 ): GameControls {
-  const canvas = addCanvas(container);
+  // Stopping Kaplay loses the canvas's WebGL context for good, so each start adds a fresh one.
+  const canvas = addCanvas(container, "game", "Portfolio game");
   let stopped = false;
   const k = kaplay({
     canvas,

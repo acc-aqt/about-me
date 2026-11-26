@@ -261,6 +261,9 @@ export function isReachableFromSpawn(tile: Tile): boolean {
 
 export type Landing = { tile: Tile; facing: Direction };
 
+/** The Player spawns in the Hub facing down. */
+export const SPAWN_LANDING: Landing = { tile: SPAWN, facing: "down" };
+
 /** The sides the Player may stand on to face a footprint, preferring below it, with the way it then faces. */
 const APPROACHES: { from: Direction; facing: Direction }[] = [
   { from: "down", facing: "up" },
