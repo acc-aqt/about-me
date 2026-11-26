@@ -216,7 +216,7 @@ test("the Shutter at a Cat in the Third-person world shows a heart instead of op
   // openGame's fixed roll keeps Manouche asleep where she started, so she is still in front after the switch.
   await typeCheatOutsideTheGame(page);
   await expect(thirdPersonWorld(page)).toBeFocused({ timeout: 20_000 });
-  await expect.poll(() => heartPixels(page)).toBe(0);
+  expect(await heartPixels(page)).toBe(0);
 
   await expect(async () => {
     await page.keyboard.press("Space");
