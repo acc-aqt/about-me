@@ -7,21 +7,29 @@ import {
   HUB_SIGNPOSTS,
   isReachableFromSpawn,
   isWalkable,
+  LEGEND,
   MAP_COLUMNS,
   MAP_ROWS,
   SPAWN,
   tileAhead,
+  tileKey,
+  tileKindAt,
   type Direction,
   type Tile,
 } from "./overworld";
 import {
+  buildingBlocks,
   createCheatDetector,
   directionToHeading,
+  forestDepth,
+  groundHeight,
   isSolid,
+  layoutAt,
   PLAYER_RADIUS,
   snapToLanding,
   stepPlayer,
   targetedPointOfInterest,
+  TILE_LAYOUTS,
   tileToWorld,
   type MoveInput,
   type PlayerState,
@@ -296,5 +304,89 @@ describe("cheat detection", () => {
 
   it("recognises the cheat again each time it is typed", () => {
     expect(completions([...CHEAT, ...CHEAT])).toEqual([CHEAT.length - 1, 2 * CHEAT.length - 1]);
+  });
+});
+
+describe("scene layout", () => {
+  it("maps every tile kind of the map to a layout entry", () => {
+    for (const { kind } of Object.values(LEGEND)) expect(TILE_LAYOUTS[kind], kind).toBeDefined();
+    for (const tile of allTiles) expect(layoutAt(tile), tileKey(tile)).toBeDefined();
+  });
+
+  it("draws something solid on every solid tile and nothing on open ground", () => {
+    for (const tile of allTiles) {
+      const { ground, scenery } = layoutAt(tile);
+      if (isSolid(tile)) expect(scenery !== null || ground === "water" || ground === "snow", tileKey(tile)).toBe(true);
+      else expect(scenery, tileKey(tile)).toBeNull();
+    }
+  });
+
+  it("leaves Points of Interest and Signposts as placeholders, even where they stand on building ground", () => {
+    const pois = content.zones.flatMap((zone) => zone.pointsOfInterest).flatMap((poi) => footprintTiles(poi.placement));
+    for (const tile of [...pois, ...HUB_SIGNPOSTS.map(({ tile }) => tile)]) {
+      expect(layoutAt(tile).scenery, tileKey(tile)).toBe("placeholder");
+    }
+    expect(layoutAt({ col: 40, row: 19 }).scenery).toBe("placeholder");
+    expect(layoutAt({ col: 3, row: 26 }).scenery).toBe("building");
+  });
+
+  it("measures how deep a tree stands inside the forest, counting diagonals", () => {
+    expect(forestDepth(SPAWN)).toBe(0);
+    expect(forestDepth({ col: 7, row: 4 })).toBe(1);
+    expect(forestDepth({ col: 0, row: 0 })).toBe(6);
+  });
+
+  it("groups building tiles into whole blocks, one per house", () => {
+    const covered = buildingBlocks().flatMap(({ left, top, right, bottom }) =>
+      footprintTiles({ col: left, row: top, width: right - left + 1, height: bottom - top + 1 }),
+    );
+    const buildingTiles = allTiles.filter((tile) => layoutAt(tile).scenery === "building");
+    expect(covered.map(tileKey).sort()).toEqual(buildingTiles.map(tileKey).sort());
+    expect(buildingBlocks()).toContainEqual({ left: 3, top: 26, right: 8, bottom: 28 });
+  });
+});
+
+/** The mountain's rocky foot is map row 47, and its last rocks to the east are in column 46. */
+const MOUNTAIN_FOOT_ROW = 47;
+const EAST_OF_MOUNTAIN_COL = 47;
+
+describe("ground height", () => {
+  it("is flat everywhere north of the mountain's foot and east of its flank", () => {
+    const outside = allTiles.filter(({ col, row }) => row < MOUNTAIN_FOOT_ROW || col >= EAST_OF_MOUNTAIN_COL);
+    for (const { col, row } of outside) {
+      for (const [dx, dz] of [[0.5, 0.5], [0, 0], [1, 0], [0, 1], [1, 1]]) {
+        expect(groundHeight({ x: col + dx, z: row + dz })).toBe(0);
+      }
+    }
+  });
+
+  /** The skin track's tiles in walking order, from where it leaves the Sport meadow to its end. */
+  function skinTrack(): Tile[] {
+    const track = [{ col: 16, row: MOUNTAIN_FOOT_ROW }];
+    const onTrack = (tile: Tile) => tileKindAt(tile) === "track" && !track.some((t) => t.col === tile.col && t.row === tile.row);
+    for (let next = track[0]; next; ) {
+      const onward = DIRECTIONS.map((direction) => tileAhead(next, direction)).filter(onTrack);
+      expect(onward.length).toBeLessThanOrEqual(1);
+      next = onward[0];
+      if (next) track.push(next);
+    }
+    return track;
+  }
+
+  it("climbs steadily along the skin track to the summit cross", () => {
+    const track = skinTrack();
+    expect(track.at(-1)).toEqual({ col: 14, row: 60 });
+
+    let previous = groundHeight(tileToWorld(track[0]));
+    for (let index = 1; index < track.length; index++) {
+      const from = tileToWorld(track[index - 1]);
+      const to = tileToWorld(track[index]);
+      for (let t = 0.25; t <= 1; t += 0.25) {
+        const height = groundHeight({ x: from.x + (to.x - from.x) * t, z: from.z + (to.z - from.z) * t });
+        expect(height).toBeGreaterThanOrEqual(previous);
+        previous = height;
+      }
+    }
+    expect(previous - groundHeight(tileToWorld(track[0]))).toBeGreaterThan(4);
   });
 });
