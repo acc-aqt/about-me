@@ -5,7 +5,7 @@ import { createFastTravel } from "./fastTravel";
 import { SPAWN_LANDING, startGame, type GameButton, type GameEvents } from "./game";
 import { createInventory, isInventoryKey } from "./inventory";
 import type { Landing } from "./overworld";
-import { createCheatDetector } from "./thirdPersonWorld";
+import { createCheatDetector } from "./cheat";
 import { createViewfinder } from "./viewfinder";
 import { query } from "./dom";
 
