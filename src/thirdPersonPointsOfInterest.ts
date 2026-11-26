@@ -453,6 +453,3 @@ export function createPointsOfInterest(pointsOfInterest: readonly PointOfInteres
   mesh.receiveShadow = true;
   return mesh;
 }
-
-/** Map tiles whose solid box the models above replace: they stand on these instead. */
-export const MODELLED_TILE_KINDS = new Set(["maypole", "well", "prop", "landmark"]);
